@@ -95,8 +95,12 @@ MoodTrip solves this problem in **three main stages:**
 │ Personalized Recommendation  │
 │          Output              │
 └──────────────────────────────┘
+```
+
+
 
 ---
+
 ## 🟨 4️⃣ Exploratory Data Analysis (EDA)
 
 Before building the system, we explored the data provided by **Outdooractive** and **Spotify** APIs.
