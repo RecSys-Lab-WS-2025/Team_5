@@ -1,8 +1,8 @@
 import * as React from "react"
 import { Smile, Frown, Meh, Heart, Send, Compass } from "lucide-react"
 
-import { AppSidebar } from "./app-sidebar"
-
+import { SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -21,10 +21,7 @@ function Chip({ children, onClick }: { children: React.ReactNode; onClick?: () =
 function ChatWelcome({ onPick }: { onPick: (text: string) => void }) {
   return (
     <div className="mx-auto w-full max-w-3xl px-6 pt-10 pb-24">
-      <div className="mb-8 flex items-center gap-2 text-sm text-muted-foreground">
-        <Compass className="h-4 w-4" />
-        <span>Travel Mood Assistant</span>
-      </div>
+
 
       <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Hey there 👋 How have you been lately?</h1>
       <p className="mt-3 text-muted-foreground leading-7">
@@ -75,7 +72,6 @@ function Composer() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault()
-                      // UI only
                     }
                   }}
                   className="w-full resize-none bg-transparent outline-none placeholder:text-muted-foreground/70 px-3 py-2 text-sm md:text-base"
@@ -95,14 +91,18 @@ function Composer() {
   )
 }
 
-export default function App() {
+export default function Chat() {
   const [draft, setDraft] = React.useState("")
 
   return (
     <div className="flex h-dvh w-full bg-background">
       <AppSidebar />
-
       <main className="flex-1 overflow-y-auto">
+        <header className="sticky top-0 z-10 flex h-12 items-center gap-2 border-b bg-background/80 backdrop-blur px-3">
+          <SidebarTrigger className="mr-1" />
+          <span className="text-sm text-muted-foreground">Travel Mood Assistant</span>
+        </header>
+
         <ChatWelcome onPick={(text) => {
           setDraft(text)
           const el = document.getElementById("chat-input") as HTMLTextAreaElement | null
