@@ -75,12 +75,10 @@ button {
   transition: border-color 0.25s;
 }
 
-/* 移除 hover 时的蓝色边框变化 */
 button:hover {
-  border-color: inherit; /* 或者直接删除整个规则 */
+  border-color: inherit;
 }
 
-/* 彻底移除点击/聚焦时的蓝色外框 */
 button:focus,
 button:focus-visible {
   outline: none;
@@ -173,7 +171,6 @@ button:focus-visible {
 }
 
 @layer base {
-  /* 去掉全局 outline 设定，避免出现任何默认轮廓颜色 */
   * {
     @apply border-border;
   }
