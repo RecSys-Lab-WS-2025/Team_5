@@ -1,5 +1,6 @@
 package de.tum.moodtrip_backend.service;
 
+import de.tum.moodtrip_backend.adapter_chatbot.service.EmotionService;
 import de.tum.moodtrip_backend.exception.ResourceNotFoundException;
 import de.tum.moodtrip_backend.model.Conversation;
 import de.tum.moodtrip_backend.model.Message;
@@ -17,7 +18,7 @@ public class ConversationService {
     private final MessageRepository messageRepository;
     private final EmotionService emotionService;
 
-    public ConversationService(ConversationRepository conversationRepository, 
+    public ConversationService(ConversationRepository conversationRepository,
                                MessageRepository messageRepository,
                                EmotionService emotionService) {
         this.conversationRepository = conversationRepository;
@@ -58,23 +59,23 @@ public class ConversationService {
         msg.setSender(sender);
         msg.setContent(content);
         msg.setTimestamp(LocalDateTime.now());
-        
+
         // Verify conversation exists first
         return conversationRepository.findById(conversationId)
-            .switchIfEmpty(Mono.error(new ResourceNotFoundException("Conversation with ID " + conversationId + " not found")))
-            .flatMap(conversation -> {
-                if ("user".equalsIgnoreCase(sender)) {
-                    return messageRepository.save(msg)
-                        .flatMap(savedMessage -> 
-                            emotionService.analyzeEmotion(content)
-                                .flatMap(emotion -> {
-                                    conversation.setEmotion(emotion);
-                                    return conversationRepository.save(conversation)
-                                        .thenReturn(savedMessage);
-                                })
-                        );
-                }
-                return messageRepository.save(msg);
-            });
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Conversation with ID " + conversationId + " not found")))
+                .flatMap(conversation -> {
+                    if ("user".equalsIgnoreCase(sender)) {
+                        return messageRepository.save(msg)
+                                .flatMap(savedMessage ->
+                                        emotionService.extractEmotion(content)
+                                                .flatMap(emotion -> {
+                                                    conversation.setEmotion(emotion.toString());
+                                                    return conversationRepository.save(conversation)
+                                                            .thenReturn(savedMessage);
+                                                })
+                                );
+                    }
+                    return messageRepository.save(msg);
+                });
     }
 }

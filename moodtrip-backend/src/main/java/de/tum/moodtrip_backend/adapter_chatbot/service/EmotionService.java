@@ -1,0 +1,80 @@
+package de.tum.moodtrip_backend.adapter_chatbot.service;
+
+import de.tum.moodtrip_backend.adapter_chatbot.mapper.EmotionMapper;
+import de.tum.moodtrip_backend.core.model.EmotionResult;
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.deepseek.DeepSeekChatModel;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+@Service
+public class EmotionService {
+
+    private static final String EMOTION_DETECTION_PROMPT = """
+            You are an emotion classifier. Given a single user message (any language), produce a compact single-line JSON with a confidence score in [0,1] for every label in the Mood Spectrum, plus the most likely label.
+            
+            Rules
+            - Translate internally if needed; consider explicit feeling words, tone, idioms, emojis, and context.
+            - Respect negation (e.g., “not sad” ≠ SAD).
+            - Compute independent confidences in [0,1] per label, then renormalize so all scores sum to 1. If no affect is present, allocate most probability to NEUTRAL.
+            - Round to 3 decimals. Do NOT include markdown, code fences, or explanations.
+            - Output keys:
+              - "scores": object mapping LABEL → score (UPPERCASE labels exactly as listed)
+              - "top_label": the LABEL with the highest score (ties broken by precedence below)
+              - "top_score": the score of top_label
+            
+            Tie-break precedence (from strongest to weakest when scores are equal):
+            OVERWHELMED > ANXIOUS > STRESSED > ANGRY > FRUSTRATED > SAD > LONELY > TIRED > BORED > CONFUSED > NEUTRAL > CURIOUS > NOSTALGIC > HOPEFUL > GRATEFUL > CONTENT > CALM > ENERGIZED > JOYFUL.
+            
+            Mood Spectrum (label → what ideas to look for → example keywords/phrases)
+            JOYFUL → high-energy positive affect, celebration, delight → happy, joyful, thrilled, ecstatic, delighted, amazing, great news
+            ENERGIZED → activation/motivation to act → energized, pumped, motivated, ready, fired up, productive
+            CALM → low-arousal positive/peaceful state → calm, relaxed, peaceful, serene, at ease, unwinding, tranquil
+            CONTENT → quiet satisfaction/okayness → content, satisfied, fine, okay, all good, can’t complain
+            HOPEFUL → optimism about future outcomes → hopeful, optimistic, looking forward, confident it will work out
+            GRATEFUL → appreciation/thankfulness → grateful, thankful, blessed, appreciate, lucky
+            CURIOUS → seeking to know/explore → curious, interested, wondering, exploring, want to learn
+            NOSTALGIC → longing for the past/bittersweet memories → nostalgic, reminisce, miss the old days, memories, bittersweet
+            NEUTRAL → factual/impersonal/no clear affect → just info, matter-of-fact, schedule details, no feelings indicated
+            CONFUSED → uncertainty/lack of understanding → confused, unsure, don’t understand, unclear, mixed up
+            BORED → low interest/stimulation → bored, meh, dull, monotonous, nothing to do
+            TIRED → fatigue/low energy → tired, exhausted, sleepy, drained, burnt out, need rest
+            LONELY → social disconnection → lonely, alone, isolated, nobody, miss people
+            SAD → low mood/grief → sad, down, blue, unhappy, heartbroken, crying
+            ANXIOUS → fear/worry/unease → anxious, worried, nervous, panic, dread, on edge
+            STRESSED → pressure/strain/tension (often work/time) → stressed, under pressure, tense, too many deadlines
+            FRUSTRATED → blocked/irritated by obstacles → frustrated, annoyed, irritated, fed up, stuck
+            ANGRY → strong displeasure/resentment/injustice → angry, mad, pissed, furious, rage, unfair, hate
+            OVERWHELMED → “too much to handle”/cognitive-emotional overload → overwhelmed, can’t cope, too much, drowning, everything at once, meltdown
+            
+            Output format (single line JSON):
+            {"scores":{"JOYFUL":0.000,"ENERGIZED":0.000,"CALM":0.000,"CONTENT":0.000,"HOPEFUL":0.000,"GRATEFUL":0.000,"CURIOUS":0.000,"NOSTALGIC":0.000,"NEUTRAL":1.000,"CONFUSED":0.000,"BORED":0.000,"TIRED":0.000,"LONELY":0.000,"SAD":0.000,"ANXIOUS":0.000,"STRESSED":0.000,"FRUSTRATED":0.000,"ANGRY":0.000,"OVERWHELMED":0.000},"top_label":"NEUTRAL","top_score":1.000}
+            """;
+
+    private final DeepSeekChatModel chatModel;
+
+    public EmotionService(DeepSeekChatModel chatModel) {
+        this.chatModel = chatModel;
+    }
+
+    public Mono<EmotionResult> extractEmotion(String message) {
+        var prompt = new Prompt(
+                List.of(
+                        new SystemMessage(EMOTION_DETECTION_PROMPT),
+                        new UserMessage(message)
+                )
+        );
+
+        return chatModel.stream(prompt)
+                .mapNotNull(resp -> resp.getResult().getOutput().getText())
+                .reduce(new StringBuilder(), StringBuilder::append)
+                .map(StringBuilder::toString)
+                .filter(result -> !result.isBlank())
+                .switchIfEmpty(Mono.error(new RuntimeException("AI returned empty response")))
+                .map(EmotionMapper::fromJson);
+    }
+}
