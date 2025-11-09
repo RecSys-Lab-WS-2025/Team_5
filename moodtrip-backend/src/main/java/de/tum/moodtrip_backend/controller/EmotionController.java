@@ -12,10 +12,6 @@ public class EmotionController {
     @Autowired
     private EmotionService emotionService;
 
-    @Autowired
-    public EmotionController(EmotionService emotionService) {
-        this.emotionService = emotionService;
-    }
 
     @GetMapping("/emotion/analyze")
     public Mono<String> getEmotion(@RequestParam String input) {
