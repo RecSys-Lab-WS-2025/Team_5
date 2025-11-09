@@ -5,8 +5,6 @@ import de.tum.moodtrip_backend.model.Recommendation;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.util.Collections;
-import java.util.List;
 
 @Service
 public class RecommendationService {

@@ -7,6 +7,6 @@ import reactor.core.publisher.Mono;
 public class EmotionService {
     public Mono<String> analyzeEmotion(String text) {
         // Placeholder for emotion analysis logic
-        return Mono.just("Detected emotion: Happy!");//mock
+        return Mono.just("Detected emotion: Happy!");// TODO: Replace with actual emotion analysis implementation
     }
 }
