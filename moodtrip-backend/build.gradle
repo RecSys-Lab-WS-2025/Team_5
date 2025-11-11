@@ -36,6 +36,8 @@ dependencies {
     implementation 'org.springframework.ai:spring-ai-starter-model-deepseek'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'io.projectreactor:reactor-test'
+    // GeoJson dependencies
+    implementation 'de.grundid.opendatalab:geojson-jackson:1.14'
 }
 dependencyManagement {
 	imports {
