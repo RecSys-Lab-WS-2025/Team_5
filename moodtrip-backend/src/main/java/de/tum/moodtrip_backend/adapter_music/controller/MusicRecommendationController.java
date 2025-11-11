@@ -1,6 +1,4 @@
 package de.tum.moodtrip_backend.adapter_music.controller;
-
-import de.tum.moodtrip_backend.adapter_chatbot.controller.ChatController;
 import de.tum.moodtrip_backend.adapter_music.mapper.EmotionToFeatureMapper;
 import de.tum.moodtrip_backend.adapter_music.service.MusicRecommendationService;
 import de.tum.moodtrip_backend.adapter_music.pojo.FeaturePair;
@@ -38,7 +36,7 @@ public class MusicRecommendationController {
                         "✅ Spotify playlist link:https://open.spotify.com/playlist/" + playlistUrl
                 )
                 .onErrorResume(e -> {
-                    LOGGER.error("Error while extracting emotions", e);
+                    LOGGER.error("Error while creating music recommendation", e);
                     return Mono.just("❌ error:" + e.getMessage());
                 });
     }

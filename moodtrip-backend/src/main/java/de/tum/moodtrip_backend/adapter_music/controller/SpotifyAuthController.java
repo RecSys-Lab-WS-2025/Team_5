@@ -9,8 +9,12 @@ import reactor.core.publisher.Mono;
 
 @RestController
 public class SpotifyAuthController {
-    @Autowired
-    private AuthService authService;
+
+    private final AuthService authService;
+
+    public SpotifyAuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     @GetMapping("/spotify/callback")
     public Mono<String> callback(@RequestParam String code) {

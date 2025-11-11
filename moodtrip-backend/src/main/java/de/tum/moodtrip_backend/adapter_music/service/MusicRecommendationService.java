@@ -24,7 +24,7 @@ public class MusicRecommendationService {
 
     private final String spotifyApiUrl = "api.spotify.com";
     private final String reccoBeatsUrl = "api.reccobeats.com";
-    private  String default_seeds = "1q4BCQssFe74UJmnWt5lov,2KslE17cAJNHTsI2MI0jb2,3rUGC1vUpkDG9CZFHMur1t,2HRgqmZQC0MC7GeNuDIXHN,0WtM2NBVQNNJLh6scP13H8";
+    private String default_seeds = "1q4BCQssFe74UJmnWt5lov,2KslE17cAJNHTsI2MI0jb2,3rUGC1vUpkDG9CZFHMur1t,2HRgqmZQC0MC7GeNuDIXHN,0WtM2NBVQNNJLh6scP13H8";
 
     public MusicRecommendationService(WebClient.Builder webClientBuilder, AuthService authService, SpotifyPlaylistService spotifyPlaylistService, PlaylistMapper playlistMapper) {
         this.webClient = webClientBuilder.build();
@@ -54,7 +54,6 @@ public class MusicRecommendationService {
     public Mono<String> findPlaylistIdByEmotion(String emotionKeyword) {
         System.out.println("Searching Spotify for playlist matching emotion: " + emotionKeyword);
         Mono<String> fallbackId = getNeutralPlaylistId();
-
 
 
         return authService.getAccessToken()
@@ -103,7 +102,7 @@ public class MusicRecommendationService {
                                 .map(json -> StreamSupport.stream(
                                                 json.path("items").spliterator(), false)
                                         .map(item -> item.path("track").path("id").asText())
-                                        .filter(id -> id != null && !id.isEmpty())
+                                        .filter(id -> !id.isEmpty())
                                         .toList()
                                 )
                 );
@@ -130,7 +129,7 @@ public class MusicRecommendationService {
                                     .queryParam("size", limit)
                                     .queryParam("energy", energy)
                                     .queryParam("valence", valence)
-                                    .queryParam("seeds", seedsParam)
+                                    .queryParam("seeds", seeds)
                                     .build())
                             .retrieve()
                             .bodyToMono(JsonNode.class)
