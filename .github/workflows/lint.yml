@@ -11,9 +11,10 @@ jobs:
     name: Backend Lint & Test
     runs-on: ubuntu-latest
     env:
-      spotify.client-id: ${{ secrets.SPOTIFY_CLIENT_ID }}
-      spotify.client-secret: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+      SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+      SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
       SPOTIFY_TOKEN: ${{ secrets.SPOTIFY_TOKEN }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
     
     steps:
       - name: Checkout code
