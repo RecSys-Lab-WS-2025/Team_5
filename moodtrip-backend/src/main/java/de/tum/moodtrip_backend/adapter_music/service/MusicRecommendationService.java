@@ -8,10 +8,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.SynchronousSink;
 
 import java.util.List;
-import java.util.stream.Collectors;
+
 import java.util.stream.StreamSupport;
 
 @Service
@@ -26,7 +25,7 @@ public class MusicRecommendationService {
 
 
     private final String spotifyApiUrl = "api.spotify.com";
-    private final String reccoBeatsUrl = "api.reccobeats.com/v1";
+    private final String reccoBeatsUrl = "api.reccobeats.com";
 
     public MusicRecommendationService(WebClient.Builder webClientBuilder, AuthService authService) {
         this.webClient = webClientBuilder.build();
@@ -74,7 +73,7 @@ public class MusicRecommendationService {
                                 .map(json -> json
                                         .path("playlists")
                                         .path("items")
-                                        .get(0)
+                                        .path(0)
                                         .path("id")
                                         .asText()
                                 )
@@ -104,14 +103,14 @@ public class MusicRecommendationService {
                                                 json.path("items").spliterator(), false)
                                         .map(item -> item.path("track").path("id").asText())
                                         .filter(id -> id != null && !id.isEmpty())
-                                        .collect(Collectors.toList())
+                                        .toList()
                                 )
                 );
     }
 
     public Mono<JsonNode> recommendByEmotion(String emotionKeyword, FeaturePair featurePair, int limit) {
-        float energy = featurePair.getEnergy();
-        float valence = featurePair.getValence();
+        float energy = featurePair.energy();
+        float valence = featurePair.valence();
         System.out.printf(" Generating music recommendation for emotion: %s (energy: %.2f, valence: %.2f)%n",
                 emotionKeyword, energy, valence);
         return findPlaylistIdByEmotion(emotionKeyword)
@@ -123,7 +122,7 @@ public class MusicRecommendationService {
                     return webClient.get()
                             .uri(uriBuilder -> uriBuilder
                                     .scheme("https")
-                                    .host("api.reccobeats.com")
+                                    .host(reccoBeatsUrl)
                                     .path("/v1/track/recommendation")
                                     .queryParam("size", limit)
                                     .queryParam("energy", energy)

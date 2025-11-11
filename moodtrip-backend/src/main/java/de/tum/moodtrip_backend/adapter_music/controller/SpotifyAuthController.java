@@ -16,10 +16,10 @@ public class SpotifyAuthController {
     public Mono<String> callback(@RequestParam String code) {
         return authService.exchangeCodeForToken(code)
                 .flatMap(json -> {
-                    System.out.printf("✅ 授权成功！Access Token: " + json.get("access_token").asText());
+                    System.out.printf("✅ Auth success！Access Token: " + json.get("access_token").asText());
                     return authService.getCurrentUserProfile(json.get("access_token").asText())
-                            .map(profile -> "✅ 授权成功！用户信息：" + profile.toString());
+                            .map(profile -> "✅ user profile：" + profile.toString());
                 })
-                .onErrorResume(e -> Mono.just("❌ 授权失败：" + e.getMessage()));
+                .onErrorResume(e -> Mono.just("❌ Auth error：" + e.getMessage()));
     }
 }

@@ -5,6 +5,7 @@ import org.springframework.data.relational.core.mapping.Table;
 
 @Table("spotify_tokens")
 public class SpotifyToken {
+    @Id
     private String userId;
     private String accessToken;
     private String refreshToken;

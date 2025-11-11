@@ -32,9 +32,7 @@ public class EmotionToFeatureMapper {
     );
 
 
-    /**
-     * 根据 EmotionService 输出的情绪标签返回能量和愉悦度参数
-     */
+
     public FeaturePair map(String emotionLabel) {
         System.out.println("Mapping emotion label: " + emotionLabel);
         return EMOTION_FEATURE_MAP.getOrDefault(

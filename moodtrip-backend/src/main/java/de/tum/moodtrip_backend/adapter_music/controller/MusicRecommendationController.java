@@ -31,11 +31,11 @@ public class MusicRecommendationController {
                         recommendationService.createSpotifyPlaylistFromRecommendation(json, emotion)
                 )
                 .map(playlistUrl ->
-                        "✅ spotify playlist link：https://open.spotify.com/playlist/" + playlistUrl
+                        "✅ spotify playlist link:https://open.spotify.com/playlist/" + playlistUrl
                 )
                 .onErrorResume(e -> {
                     e.printStackTrace();
-                    return Mono.just("❌ error：" + e.getMessage());
+                    return Mono.just("❌ error:" + e.getMessage());
                 });
     }
 }
