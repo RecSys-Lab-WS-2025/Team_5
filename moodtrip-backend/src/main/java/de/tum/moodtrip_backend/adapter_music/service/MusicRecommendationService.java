@@ -3,7 +3,6 @@ package de.tum.moodtrip_backend.adapter_music.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import de.tum.moodtrip_backend.adapter_music.mapper.PlaylistMapper;
 import de.tum.moodtrip_backend.adapter_music.pojo.FeaturePair;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -18,18 +17,20 @@ public class MusicRecommendationService {
 
     private final WebClient webClient;
     private final AuthService authService;
-    @Autowired
-    private SpotifyPlaylistService spotifyPlaylistService;
-    @Autowired
-    private PlaylistMapper playlistMapper;
+
+    private final SpotifyPlaylistService spotifyPlaylistService;
+    private final PlaylistMapper playlistMapper;
 
 
     private final String spotifyApiUrl = "api.spotify.com";
     private final String reccoBeatsUrl = "api.reccobeats.com";
+    private  String default_seeds = "1q4BCQssFe74UJmnWt5lov,2KslE17cAJNHTsI2MI0jb2,3rUGC1vUpkDG9CZFHMur1t,2HRgqmZQC0MC7GeNuDIXHN,0WtM2NBVQNNJLh6scP13H8";
 
-    public MusicRecommendationService(WebClient.Builder webClientBuilder, AuthService authService) {
+    public MusicRecommendationService(WebClient.Builder webClientBuilder, AuthService authService, SpotifyPlaylistService spotifyPlaylistService, PlaylistMapper playlistMapper) {
         this.webClient = webClientBuilder.build();
         this.authService = authService;
+        this.spotifyPlaylistService = spotifyPlaylistService;
+        this.playlistMapper = playlistMapper;
     }
 
     private Mono<String> getNeutralPlaylistId() {
@@ -117,6 +118,8 @@ public class MusicRecommendationService {
                 .flatMap(this::getFirstFiveTrackIdsOfPlaylist)
                 .flatMap(trackIds -> {
                     String seedsParam = String.join(",", trackIds);
+                    String seeds = seedsParam.isEmpty() ? default_seeds : seedsParam;
+
                     System.out.println("Seed track IDs for emotion [" + emotionKeyword + "] → " + seedsParam);
 
                     return webClient.get()

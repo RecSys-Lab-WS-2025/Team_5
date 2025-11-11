@@ -1,8 +1,11 @@
 package de.tum.moodtrip_backend.adapter_music.controller;
 
+import de.tum.moodtrip_backend.adapter_chatbot.controller.ChatController;
 import de.tum.moodtrip_backend.adapter_music.mapper.EmotionToFeatureMapper;
 import de.tum.moodtrip_backend.adapter_music.service.MusicRecommendationService;
 import de.tum.moodtrip_backend.adapter_music.pojo.FeaturePair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +18,7 @@ public class MusicRecommendationController {
 
     private final MusicRecommendationService recommendationService;
     private final EmotionToFeatureMapper mapper;
+    private static final Logger LOGGER = LoggerFactory.getLogger(MusicRecommendationController.class);
 
     public MusicRecommendationController(MusicRecommendationService recommendationService,
                                          EmotionToFeatureMapper mapper) {
@@ -26,15 +30,15 @@ public class MusicRecommendationController {
     public Mono<String> recommend(@RequestParam String emotion) {
         FeaturePair features = mapper.map(emotion);
 
-        return recommendationService.recommendByEmotion(emotion, features, 10)
+        return recommendationService.recommendByEmotion(emotion, features, 20)
                 .flatMap(json ->
                         recommendationService.createSpotifyPlaylistFromRecommendation(json, emotion)
                 )
                 .map(playlistUrl ->
-                        "✅ spotify playlist link:https://open.spotify.com/playlist/" + playlistUrl
+                        "✅ Spotify playlist link:https://open.spotify.com/playlist/" + playlistUrl
                 )
                 .onErrorResume(e -> {
-                    e.printStackTrace();
+                    LOGGER.error("Error while extracting emotions", e);
                     return Mono.just("❌ error:" + e.getMessage());
                 });
     }

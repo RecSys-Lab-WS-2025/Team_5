@@ -14,7 +14,7 @@ public class PlaylistMapper {
         List<String> trackIds = new ArrayList<>();
 
         if (recommendationJson == null || !recommendationJson.has("content")) {
-            System.err.println("no content field in recommendation JSON");
+            System.err.println("No content field in recommendation JSON");
             return trackIds;
         }
 

@@ -18,8 +18,8 @@ public class SpotifyAuthController {
                 .flatMap(json -> {
                     System.out.printf("✅ Auth success！Access Token: " + json.get("access_token").asText());
                     return authService.getCurrentUserProfile(json.get("access_token").asText())
-                            .map(profile -> "✅ user profile：" + profile.toString());
+                            .map(profile -> "✅ user profile:" + profile.toString());
                 })
-                .onErrorResume(e -> Mono.just("❌ Auth error：" + e.getMessage()));
+                .onErrorResume(e -> Mono.just("❌ Auth error:" + e.getMessage()));
     }
 }
