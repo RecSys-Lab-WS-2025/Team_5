@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0006-add-track-id-to-recommendation
+      author: moodtrip
+      changes:
+        - addColumn:
+            tableName: recommendation
+            columns:
+              - column:
+                  name: track_id
+                  type: VARCHAR(100)
+                  remarks: Spotify track ID for music recommendations
+        - createIndex:
+            tableName: recommendation
+            indexName: idx_recommendation_track_id
+            columns:
+              - column:
+                  name: track_id

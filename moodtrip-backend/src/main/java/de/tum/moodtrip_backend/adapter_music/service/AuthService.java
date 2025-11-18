@@ -1,14 +1,17 @@
 package de.tum.moodtrip_backend.adapter_music.service;
 
 
-import com.fasterxml.jackson.databind.JsonNode;
+import java.time.Duration;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
 import reactor.core.publisher.Mono;
-import java.time.Duration;
 
 
 @Service
@@ -20,7 +23,7 @@ public class AuthService {
     @Value("${spotify.client-secret}")
     private String clientSecret;
 
-    @Value("${SPOTIFY_TOKEN}")
+    @Value("${SPOTIFY_TOKEN:}")
     private String token;
 
     @Value("${spotify.redirect-uri}")
