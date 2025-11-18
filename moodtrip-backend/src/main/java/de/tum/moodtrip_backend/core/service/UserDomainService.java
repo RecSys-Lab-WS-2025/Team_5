@@ -2,6 +2,7 @@ package de.tum.moodtrip_backend.core.service;
 
 import java.time.LocalDateTime;
 
+import de.tum.moodtrip_backend.exception.UserNotFoundException;
 import org.springframework.stereotype.Service;
 
 import de.tum.moodtrip_backend.core.model.UserProfile;
@@ -34,18 +35,22 @@ public class UserDomainService {
     }
 
     public Mono<UserProfile> findById(Long id) {
-        return userPort.findById(id).switchIfEmpty(Mono.error(new RuntimeException("User not found")));
+        return userPort.findById(id).switchIfEmpty(Mono.error(new UserNotFoundException("User not found")));
     }
 
     public Mono<UserProfile> findByUsername(String username) {
-        return userPort.findByUsername(username).switchIfEmpty(Mono.error(new RuntimeException("User not found")));
+        return userPort.findByUsername(username).switchIfEmpty(Mono.error(new UserNotFoundException("User not found")));
     }
 
     public Mono<UserProfile> findByEmail(String email) {
-        return userPort.findByEmail(email).switchIfEmpty(Mono.error(new RuntimeException("User not found")));
+        return userPort.findByEmail(email).switchIfEmpty(Mono.error(new UserNotFoundException("User not found")));
     }
 
     public Mono<Void> deleteUser(Long id) {
-        return userPort.deleteById(id).switchIfEmpty(Mono.error(new RuntimeException("User not found")));
+
+        return userPort.findById(id)
+                .switchIfEmpty(Mono.error(new UserNotFoundException("User not found")))
+                .then(userPort.deleteById(id));
     }
 }
+

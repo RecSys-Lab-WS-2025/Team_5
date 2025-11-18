@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import de.tum.moodtrip_backend.core.model.RecommendationDomain;
 import de.tum.moodtrip_backend.core.port.RecommendationPort;
 import reactor.core.publisher.Flux;
@@ -12,9 +14,11 @@ import reactor.core.publisher.Mono;
 @Service
 public class RecommendationDomainService {
     private final RecommendationPort recommendationPort;
+    private final ObjectMapper objectMapper;
 
-    public RecommendationDomainService(RecommendationPort recommendationPort) {
+    public RecommendationDomainService(RecommendationPort recommendationPort, ObjectMapper objectMapper) {
         this.recommendationPort = recommendationPort;
+        this.objectMapper = objectMapper;
     }
 
     public Mono<RecommendationDomain> saveRecommendation(RecommendationDomain recommendation) {
@@ -37,6 +41,16 @@ public class RecommendationDomainService {
     public Mono<RecommendationDomain> createRecommendation(Long conversationId, String type, 
                                                            String title, String description, String link, 
                                                            String trackId, String routeData) {
+        // Validate routeData is valid JSON if provided
+        if (routeData != null && !routeData.isBlank()) {
+            try {
+                objectMapper.readTree(routeData);
+            } catch (Exception e) {
+                return Mono.error(new IllegalArgumentException(
+                    "Invalid routeData: must be valid JSON. Error: " + e.getMessage()));
+            }
+        }
+        
         RecommendationDomain recommendation = new RecommendationDomain(
                 null,
                 conversationId,

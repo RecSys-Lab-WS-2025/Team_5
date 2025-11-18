@@ -8,6 +8,10 @@ import de.tum.moodtrip_backend.core.model.UserProfile;
 import de.tum.moodtrip_backend.core.port.UserPort;
 import reactor.test.StepVerifier;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 @SpringBootTest(properties = {"spring.liquibase.enabled=false"})
 class DatabaseUserAdapterTest {
 
@@ -26,9 +30,9 @@ class DatabaseUserAdapterTest {
         StepVerifier.create(userPort.save(user))
                 .assertNext(savedUser -> {
                     System.out.println("✅ User saved successfully: " + savedUser);
-                    assert savedUser.id() != null;
-                    assert savedUser.username().equals(username);
-                    assert savedUser.email().equals(email);
+                   assertNotNull(savedUser.id());
+                   assertEquals(username, savedUser.username());
+                     assertEquals(email, savedUser.email());
                 })
                 .verifyComplete();
 
@@ -36,7 +40,7 @@ class DatabaseUserAdapterTest {
         StepVerifier.create(userPort.findByUsername(username))
                 .assertNext(foundUser -> {
                     System.out.println("✅ Found user by username: " + foundUser);
-                    assert foundUser.username().equals(username);
+                   assertEquals(username, foundUser.username());
                 })
                 .verifyComplete();
 
@@ -44,7 +48,7 @@ class DatabaseUserAdapterTest {
         StepVerifier.create(userPort.existsByUsername(username))
                 .assertNext(exists -> {
                     System.out.println("✅ Username exists: " + exists);
-                    assert exists;
+                    assertThat(exists).isTrue();
                 })
                 .verifyComplete();
     }
@@ -57,7 +61,7 @@ class DatabaseUserAdapterTest {
         StepVerifier.create(userPort.existsByEmail(email))
                 .assertNext(exists -> {
                     System.out.println("✅ New email does not exist: " + !exists);
-                    assert !exists;
+                    assertThat(exists).isFalse();
                 })
                 .verifyComplete();
     }
