@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono;
 
 @Component
 public class DatabaseUserAdapter implements UserPort {
-    
+
     private final R2dbcUserRepository userRepository;
     private final UserMapper userMapper;
 
