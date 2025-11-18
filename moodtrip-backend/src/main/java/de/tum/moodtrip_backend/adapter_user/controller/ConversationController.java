@@ -27,12 +27,6 @@ public class ConversationController {
         this.conversationService = conversationService;
     }
 
-    @PostMapping("/start")
-    public Mono<ConversationDomain> startConversation(
-            @RequestParam @NotBlank(message = "User ID cannot be blank") String userId,
-            @RequestParam @NotBlank(message = "Title cannot be blank") String title) {
-        return conversationService.startConversation(userId, title);
-    }
 
     @PostMapping("/start")
     public Mono<ConversationDomain> startConversation(
