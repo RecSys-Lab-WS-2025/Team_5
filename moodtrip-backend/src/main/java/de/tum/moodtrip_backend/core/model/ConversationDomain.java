@@ -16,4 +16,7 @@ public record ConversationDomain(
     public ConversationDomain withEmotion(String emotion) {
         return new ConversationDomain(id, userId, title, emotion, createdAt);
     }
+    public ConversationDomain withTitle(String title) {
+        return new ConversationDomain(id, userId, title, emotion, createdAt);
+    }
 }

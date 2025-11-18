@@ -34,6 +34,12 @@ public class ConversationController {
         return conversationService.startConversation(userId, title);
     }
 
+    @PostMapping("/start")
+    public Mono<ConversationDomain> startConversation(
+            @RequestParam @NotBlank(message = "User ID cannot be blank") String userId) {
+        return conversationService.startConversation(userId, "New Conversation");
+    }
+
     @GetMapping("/{userId}")
     public Flux<ConversationDomain> getConversations(
             @PathVariable @NotBlank(message = "User ID cannot be blank") String userId) {
