@@ -1,0 +1,44 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0003-create-message
+      author: moodtrip
+      changes:
+        - createTable:
+            tableName: message
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_message
+              - column:
+                  name: conversation_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sender
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+        - addForeignKeyConstraint:
+            baseTableName: message
+            baseColumnNames: conversation_id
+            referencedTableName: conversation
+            referencedColumnNames: id
+            onDelete: CASCADE
+            constraintName: fk_message_conversation
+        - createIndex:
+            tableName: message
+            indexName: idx_message_conversation_id
+            columns:
+              - column:
+                  name: conversation_id
