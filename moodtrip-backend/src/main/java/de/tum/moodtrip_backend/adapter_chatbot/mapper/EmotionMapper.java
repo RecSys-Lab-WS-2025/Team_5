@@ -21,11 +21,11 @@ public class EmotionMapper {
             if (scoresNode == null || !scoresNode.isObject()) {
                 throw new RuntimeException("Invalid emotion JSON: missing or invalid 'scores' field");
             }
-            if (root.get("top_score") == null) {
-                throw new RuntimeException("Invalid emotion JSON: missing 'top_score' field");
-            }
-            if (root.get("top_label") == null) {
-                throw new RuntimeException("Invalid emotion JSON: missing 'top_label' field");
+            if (root.get("top_score") == null
+                    || root.get("top_label") == null
+                    || root.get("success") == null
+                    || root.get("content") == null) {
+                throw new RuntimeException("Invalid emotion JSON: missing field");
             }
             Map<Emotion, Double> scores = new HashMap<>();
 
@@ -37,8 +37,10 @@ public class EmotionMapper {
 
             Emotion topLabel = Emotion.valueOf(root.get("top_label").asText());
             double topScore = root.get("top_score").asDouble();
+            boolean success = root.get("success").asBoolean();
+            String content = root.get("content").asText();
 
-            return new EmotionResult(scores, topLabel, topScore);
+            return new EmotionResult(scores, topLabel, topScore, content, success);
         } catch (IOException e) {
             throw new RuntimeException("Failed to parse emotion JSON", e);
         }
