@@ -1,0 +1,45 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0004-create-spotify-tokens
+      author: moodtrip
+      changes:
+        - createTable:
+            tableName: spotify_tokens
+            columns:
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_spotify_tokens
+              - column:
+                  name: access_token
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: refresh_token
+                  type: TEXT
+              - column:
+                  name: expires_in
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fetched_at
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: spotify_tokens
+            baseColumnNames: user_id
+            referencedTableName: user_profile
+            referencedColumnNames: id
+            onDelete: CASCADE
+            constraintName: fk_spotify_tokens_user
+        - createIndex:
+            tableName: spotify_tokens
+            indexName: idx_spotify_tokens_user_id
+            columns:
+              - column:
+                  name: user_id

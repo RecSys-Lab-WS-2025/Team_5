@@ -36,6 +36,7 @@ dependencies {
 	// PostgreSQL R2DBC and Driver
 	runtimeOnly 'org.postgresql:postgresql'
 	runtimeOnly 'org.postgresql:r2dbc-postgresql'
+	implementation 'org.postgresql:r2dbc-postgresql'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	// Spring AI dependencies
     implementation 'org.springframework.ai:spring-ai-starter-model-deepseek'
