@@ -18,6 +18,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @RestController
 @RequestMapping("/api/conversations")
@@ -33,7 +34,7 @@ public class ConversationController {
     @PostMapping("/start")
     public Mono<ConversationDomain> startConversation(
             @RequestParam @NotBlank(message = "User ID cannot be blank") String userId) {
-        return conversationService.startConversation(userId, "New Conversation-" + LocalDateTime.now());
+        return conversationService.startConversation(userId, "New Conversation-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
     }
 
     @GetMapping("/{userId}")

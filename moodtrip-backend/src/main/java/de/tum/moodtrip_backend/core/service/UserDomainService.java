@@ -35,15 +35,15 @@ public class UserDomainService {
     }
 
     public Mono<UserProfile> findById(Long id) {
-        return userPort.findById(id).switchIfEmpty(Mono.error(new UserNotFoundException("User not found")));
+        return userPort.findById(id).switchIfEmpty(Mono.error(new UserNotFoundException("User not found with Id: " + id)));
     }
 
     public Mono<UserProfile> findByUsername(String username) {
-        return userPort.findByUsername(username).switchIfEmpty(Mono.error(new UserNotFoundException("User not found")));
+        return userPort.findByUsername(username).switchIfEmpty(Mono.error(new UserNotFoundException("User not found with username: " + username)));
     }
 
     public Mono<UserProfile> findByEmail(String email) {
-        return userPort.findByEmail(email).switchIfEmpty(Mono.error(new UserNotFoundException("User not found")));
+        return userPort.findByEmail(email).switchIfEmpty(Mono.error(new UserNotFoundException("User not found with email: " + email)));
     }
 
     public Mono<Void> deleteUser(Long id) {
