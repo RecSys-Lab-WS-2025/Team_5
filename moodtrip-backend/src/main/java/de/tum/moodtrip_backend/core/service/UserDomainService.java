@@ -19,18 +19,18 @@ public class UserDomainService {
 
     public Mono<UserProfile> createUser(String username, String email) {
         return userPort.existsByUsername(username)
-                .flatMap(exists -> {
-                    if (exists) {
+                .flatMap(usernameExists -> {
+                    if (usernameExists) {
                         return Mono.error(new IllegalArgumentException("Username already exists: " + username));
                     }
-                    return userPort.existsByEmail(email);
-                })
-                .flatMap(emailExists -> {
-                    if (emailExists) {
-                        return Mono.error(new IllegalArgumentException("Email already exists: " + email));
-                    }
-                    UserProfile user = new UserProfile(null, username, email, LocalDateTime.now());
-                    return userPort.save(user);
+                    return userPort.existsByEmail(email)
+                            .flatMap(emailExists -> {
+                                if (emailExists) {
+                                    return Mono.error(new IllegalArgumentException("Email already exists: " + email));
+                                }
+                                UserProfile user = new UserProfile(null, username, email, LocalDateTime.now());
+                                return userPort.save(user);
+                            });
                 });
     }
 
@@ -49,7 +49,7 @@ public class UserDomainService {
     public Mono<Void> deleteUser(Long id) {
 
         return userPort.findById(id)
-                .switchIfEmpty(Mono.error(new UserNotFoundException("User not found")))
+                .switchIfEmpty(Mono.error(new UserNotFoundException("User not found with Id: " + id)))
                 .then(userPort.deleteById(id));
     }
 }

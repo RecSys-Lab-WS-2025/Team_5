@@ -30,13 +30,13 @@ public class RecommendationController {
     @PostMapping
     public Mono<RecommendationDomain> createRecommendation(@Valid @RequestBody CreateRecommendationRequest request) {
         return recommendationService.createRecommendation(
-            request.conversationId(),
-            request.type(),
-            request.title(),
-            request.description(),
-            request.link(),
-            request.trackId(),
-            request.routeData()
+                request.conversationId(),
+                request.type(),
+                request.title(),
+                request.description(),
+                request.link(),
+                request.trackId(),
+                request.routeData()
         );
     }
 
@@ -57,7 +57,6 @@ public class RecommendationController {
     public Mono<Void> deleteRecommendation(@PathVariable Long id) {
         return recommendationService.deleteRecommendation(id);
     }
-    
-    // DTO for request body
+
 
 }

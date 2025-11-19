@@ -31,6 +31,12 @@ databaseChangeLog:
             columns:
               - column:
                   name: username
+        - createIndex:
+            tableName: user_profile
+            indexName: idx_user_profile_email
+            columns:
+              - column:
+                  name: email
 
   - changeSet:
       id: 0002-create-conversation
