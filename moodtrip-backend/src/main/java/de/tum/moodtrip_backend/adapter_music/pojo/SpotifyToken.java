@@ -7,7 +7,7 @@ import org.springframework.data.relational.core.mapping.Table;
 @Table("spotify_tokens")
 public class SpotifyToken {
     @Id
-    private String userId;
+    private Long userId;
     @Column("access_token")
     private String accessToken;
     @Column("refresh_token")
@@ -20,7 +20,7 @@ public class SpotifyToken {
     public SpotifyToken() {
     }
 
-    public SpotifyToken(String accessToken, Long expiresIn, Long fetchedAt, String refreshToken, String userId) {
+    public SpotifyToken(String accessToken, Long expiresIn, Long fetchedAt, String refreshToken, Long userId) {
         this.accessToken = accessToken;
         this.expiresIn = expiresIn;
         this.fetchedAt = fetchedAt;
@@ -60,11 +60,11 @@ public class SpotifyToken {
         this.refreshToken = refreshToken;
     }
 
-    public String getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 }

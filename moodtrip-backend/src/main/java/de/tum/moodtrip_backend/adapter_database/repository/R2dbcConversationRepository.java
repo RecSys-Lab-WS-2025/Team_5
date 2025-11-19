@@ -11,14 +11,14 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface R2dbcConversationRepository extends ReactiveCrudRepository<ConversationEntity, Long> {
     @Query("SELECT * FROM conversation WHERE user_id = :userId")
-    Flux<ConversationEntity> findByUserId(String userId);
+    Flux<ConversationEntity> findByUserId(Long userId);
     
     @Query("SELECT * FROM conversation WHERE user_id = :userId ORDER BY created_at DESC")
-    Flux<ConversationEntity> findByUserIdOrderByCreatedAtDesc(String userId);
+    Flux<ConversationEntity> findByUserIdOrderByCreatedAtDesc(Long userId);
     
-    @Query("SELECT * FROM conversation WHERE emotion = :emotion")
-    Flux<ConversationEntity> findByEmotion(String emotion);
+    @Query("SELECT id FROM conversation WHERE id = :conversationId")
+    Mono<Long> findIdById(Long conversationId);
     
     @Query("SELECT COUNT(*) FROM conversation WHERE user_id = :userId")
-    Mono<Long> countByUserId(String userId);
+    Mono<Long> countByUserId(Long userId);
 }

@@ -45,7 +45,7 @@ public class DatabaseConversationAdapter implements ConversationPort {
     }
 
     @Override
-    public Flux<ConversationDomain> findByUserId(String userId) {
+    public Flux<ConversationDomain> findByUserId(Long userId) {
         return conversationRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .map(conversationMapper::toDomain);
     }

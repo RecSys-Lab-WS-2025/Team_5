@@ -2,6 +2,7 @@ package de.tum.moodtrip_backend.adapter_database.mapper;
 
 import java.time.LocalDateTime;
 
+import de.tum.moodtrip_backend.core.model.Emotion;
 import org.springframework.stereotype.Component;
 
 import de.tum.moodtrip_backend.adapter_database.entity.ConversationEntity;
@@ -18,7 +19,7 @@ public class ConversationMapper {
             entity.getId(),
             entity.getUserId(),
             entity.getTitle(),
-            entity.getEmotion(),
+            Emotion.fromString(entity.getEmotion()),
             entity.getCreatedAt()
         );
     }
@@ -27,11 +28,12 @@ public class ConversationMapper {
         if (domain == null) {
             return null;
         }
+        String emotionString = (domain.emotion() != null) ? domain.emotion().name() : null;
         return new ConversationEntity(
             domain.id(),
             domain.userId(),
             domain.title(),
-            domain.emotion(),
+            emotionString,
             domain.createdAt() != null ? domain.createdAt() : LocalDateTime.now()
         );
     }

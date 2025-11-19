@@ -1,7 +1,13 @@
 databaseChangeLog:
   - include:
-      file: db/changelog/changes/001-initial-schema.yaml
+      file: db/changelog/changes/001-create-user-profile.yaml
   - include:
-      file: db/changelog/changes/002-add-track-id.yaml
+      file: db/changelog/changes/002-create-conversation.yaml
   - include:
-      file: db/changelog/changes/003-add-route-data.yaml
+      file: db/changelog/changes/003-create-message.yaml
+  - include:
+      file: db/changelog/changes/004-create-spotify-tokens.yaml
+  - include:
+      file: db/changelog/changes/005-create-music-recommendation.yaml
+  - include:
+      file: db/changelog/changes/006-create-route-recommendation.yaml

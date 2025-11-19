@@ -19,5 +19,13 @@ public enum Emotion {
     STRESSED,
     FRUSTRATED,
     ANGRY,
-    OVERWHELMED
+    OVERWHELMED;
+    public static Emotion fromString(String text) {
+        if (text == null) return NEUTRAL;
+        try {
+            return Emotion.valueOf(text.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return NEUTRAL;
+        }
+    }
 }

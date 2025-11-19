@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 public record MessageDomain(
     Long id,
     Long conversationId,
-    String sender,
+    Sender sender,
     String content,
     LocalDateTime timestamp
 ) {

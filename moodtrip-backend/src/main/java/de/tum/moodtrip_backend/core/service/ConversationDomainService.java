@@ -2,6 +2,8 @@ package de.tum.moodtrip_backend.core.service;
 
 import java.time.LocalDateTime;
 
+import de.tum.moodtrip_backend.core.model.Emotion;
+import de.tum.moodtrip_backend.core.model.Sender;
 import org.springframework.stereotype.Service;
 
 import de.tum.moodtrip_backend.adapter_chatbot.service.EmotionService;
@@ -23,7 +25,7 @@ public class ConversationDomainService {
         this.emotionService = emotionService;
     }
 
-    public Flux<ConversationDomain> getConversationsByUserId(String userId) {
+    public Flux<ConversationDomain> getConversationsByUserId(Long userId) {
         return conversationPort.findByUserId(userId);
     }
 
@@ -40,23 +42,23 @@ public class ConversationDomainService {
         return conversationPort.countMessagesByConversationId(conversationId);
     }
 
-    public Mono<ConversationDomain> startConversation(String userId, String title) {
+    public Mono<ConversationDomain> startConversation(Long userId, String title) {
         ConversationDomain conversation = new ConversationDomain(
                 null,
                 userId,
                 title,
-                "neutral",
+                Emotion.NEUTRAL,
                 LocalDateTime.now()
         );
         return conversationPort.save(conversation);
     }
 
-    public Mono<MessageDomain> addMessage(Long conversationId, String sender, String content) {
+    public Mono<MessageDomain> addMessage(Long conversationId, Sender sender, String content) {
         if (conversationId == null) {
             return Mono.error(new IllegalArgumentException("Conversation ID cannot be null"));
         }
-        if (sender == null || sender.trim().isEmpty()) {
-            return Mono.error(new IllegalArgumentException("Sender cannot be null or empty"));
+        if (sender == null) {
+            return Mono.error(new IllegalArgumentException("Sender cannot be null"));
         }
         if (content == null || content.trim().isEmpty()) {
             return Mono.error(new IllegalArgumentException("Content cannot be null or empty"));
@@ -73,13 +75,13 @@ public class ConversationDomainService {
         return conversationPort.findById(conversationId)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Conversation with ID " + conversationId + " not found")))
                 .flatMap(conversation -> {
-                    if ("user".equalsIgnoreCase(sender)) {
+                    if (sender == Sender.USER) {
                         return conversationPort.saveMessage(message)
                                 .flatMap(savedMessage ->
                                         emotionService.extractEmotion(content)
                                                 .flatMap(emotionResult -> {
                                                     String emotion = emotionResult.topLabel().toString();
-                                                    ConversationDomain updated = conversation.withEmotion(emotion);
+                                                    ConversationDomain updated = conversation.withEmotion(Emotion.fromString(emotion));
                                                     return conversationPort.save(updated)
                                                             .thenReturn(savedMessage);
                                                 })

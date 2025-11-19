@@ -12,7 +12,7 @@ public class ConversationEntity {
     private Long id;
     
     @Column("user_id")
-    private String userId;
+    private Long userId;
     
     private String title;
     private String emotion;
@@ -23,7 +23,7 @@ public class ConversationEntity {
     public ConversationEntity() {
     }
 
-    public ConversationEntity(Long id, String userId, String title, String emotion, LocalDateTime createdAt) {
+    public ConversationEntity(Long id, Long userId, String title, String emotion, LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.title = title;
@@ -39,11 +39,11 @@ public class ConversationEntity {
         this.id = id;
     }
 
-    public String getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 

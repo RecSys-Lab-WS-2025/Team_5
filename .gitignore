@@ -8,3 +8,4 @@
 # Environment
 .env
 moodtrip-backend/.env
+.vscode/settings.json

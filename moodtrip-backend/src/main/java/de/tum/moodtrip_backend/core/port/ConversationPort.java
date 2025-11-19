@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
 public interface ConversationPort {
     Mono<ConversationDomain> save(ConversationDomain conversation);
     Mono<ConversationDomain> findById(Long id);
-    Flux<ConversationDomain> findByUserId(String userId);
+    Flux<ConversationDomain> findByUserId(Long userId);
     Mono<Void> deleteById(Long id);
     
     Mono<MessageDomain> saveMessage(MessageDomain message);

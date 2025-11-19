@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 import de.tum.moodtrip_backend.adapter_music.pojo.SpotifyToken;
 
 @Repository
-public interface SpotifyTokenRepository extends ReactiveCrudRepository<SpotifyToken, String> {
+public interface SpotifyTokenRepository extends ReactiveCrudRepository<SpotifyToken, Long> {
 }

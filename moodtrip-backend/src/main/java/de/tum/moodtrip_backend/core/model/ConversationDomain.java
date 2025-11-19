@@ -4,16 +4,16 @@ import java.time.LocalDateTime;
 
 public record ConversationDomain(
     Long id,
-    String userId,
+    Long userId,
     String title,
-    String emotion,
+    Emotion emotion,
     LocalDateTime createdAt
 ) {
     public ConversationDomain withId(Long id) {
         return new ConversationDomain(id, userId, title, emotion, createdAt);
     }
     
-    public ConversationDomain withEmotion(String emotion) {
+    public ConversationDomain withEmotion(Emotion emotion) {
         return new ConversationDomain(id, userId, title, emotion, createdAt);
     }
     public ConversationDomain withTitle(String title) {

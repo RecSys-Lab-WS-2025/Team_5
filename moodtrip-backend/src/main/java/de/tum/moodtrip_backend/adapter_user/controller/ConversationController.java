@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import de.tum.moodtrip_backend.core.model.ConversationDomain;
 import de.tum.moodtrip_backend.core.model.MessageDomain;
+import de.tum.moodtrip_backend.core.model.Sender;
 import de.tum.moodtrip_backend.core.service.ConversationDomainService;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -33,13 +34,13 @@ public class ConversationController {
 
     @PostMapping("/start")
     public Mono<ConversationDomain> startConversation(
-            @RequestParam @NotBlank(message = "User ID cannot be blank") String userId) {
+            @RequestParam @NotNull(message = "User ID cannot be null") Long userId) {
         return conversationService.startConversation(userId, "New Conversation-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
     }
 
     @GetMapping("/{userId}")
     public Flux<ConversationDomain> getConversations(
-            @PathVariable @NotBlank(message = "User ID cannot be blank") String userId) {
+            @PathVariable @NotNull(message = "User ID cannot be null") Long userId) {
         return conversationService.getConversationsByUserId(userId);
     }
 
@@ -54,6 +55,9 @@ public class ConversationController {
             @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
             @RequestParam @NotBlank(message = "Sender cannot be blank") String sender,
             @RequestBody @NotBlank(message = "Content cannot be blank") String content) {
-        return conversationService.addMessage(conversationId, sender, content);
+        return Mono.fromCallable(() -> Sender.fromString(sender))
+                .onErrorMap(IllegalArgumentException.class, e -> 
+                        new IllegalArgumentException("Invalid sender: " + sender + ". Must be USER or BOT."))
+                .flatMap(senderEnum -> conversationService.addMessage(conversationId, senderEnum, content));
     }
 }
