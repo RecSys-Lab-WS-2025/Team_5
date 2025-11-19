@@ -47,7 +47,7 @@ databaseChangeLog:
                     primaryKeyName: pk_conversation
               - column:
                   name: user_id
-                  type: VARCHAR(100)
+                  type: BIGINT
                   constraints:
                     nullable: false
               - column:
@@ -66,6 +66,13 @@ databaseChangeLog:
             columns:
               - column:
                   name: user_id
+        - addForeignKeyConstraint:
+            baseTableName: conversation
+            baseColumnNames: user_id
+            referencedTableName: user_profile
+            referencedColumnNames: id
+            onDelete: CASCADE
+            constraintName: fk_conversation_user_profile
 
   - changeSet:
       id: 0003-create-message

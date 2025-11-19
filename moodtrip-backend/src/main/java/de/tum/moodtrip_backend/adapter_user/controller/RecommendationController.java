@@ -1,5 +1,6 @@
 package de.tum.moodtrip_backend.adapter_user.controller;
 
+import de.tum.moodtrip_backend.adapter_user.dto.CreateRecommendationRequest;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -58,13 +59,5 @@ public class RecommendationController {
     }
     
     // DTO for request body
-    public record CreateRecommendationRequest(
-        @NotNull Long conversationId,
-        @NotNull String type,
-        @NotNull String title,
-        String description,
-        String link,
-        String trackId,
-        String routeData
-    ) {}
+
 }

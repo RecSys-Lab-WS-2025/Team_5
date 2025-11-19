@@ -37,19 +37,33 @@ public class DatabaseRecommendationAdapter implements RecommendationPort {
         RecommendationEntity entity = recommendationMapper.toEntity(recommendation);
 
         var sql = databaseClient.sql(
-                        "INSERT INTO recommendation (conversation_id, type, title, description, link, created_at, track_id, route_data) " +
-                                "VALUES (:conversationId, :type, :title, :description, :link, :createdAt, :trackId, CAST(:routeData AS jsonb)) " +
-                                "RETURNING id, conversation_id, type, title, description, link, created_at, track_id, route_data"
-                )
-                .bind("conversationId", entity.getConversationId())
-                .bind("type", entity.getType())
-                .bind("title", entity.getTitle() != null ? entity.getTitle() : "")
-                .bind("description", entity.getDescription() != null ? entity.getDescription() : "")
-                .bind("link", entity.getLink() != null ? entity.getLink() : "")
-                .bind("createdAt", entity.getCreatedAt())
-                .bind("trackId", entity.getTrackId() != null ? entity.getTrackId() : "");
+                "INSERT INTO recommendation (conversation_id, type, title, description, link, created_at, track_id, route_data) " +
+                        "VALUES (:conversationId, :type, :title, :description, :link, :createdAt, :trackId, CAST(:routeData AS jsonb)) " +
+                        "RETURNING id, conversation_id, type, title, description, link, created_at, track_id, route_data"
+        );
+        // Handle nullable conversationId
+        if (entity.getConversationId() != null) {
+            sql = sql.bind("conversationId", entity.getConversationId());
+        } else {
+            sql = sql.bindNull("conversationId", Long.class);
+        }
+        // Handle nullable type
+        sql = sql.bind("type", entity.getType() != null ? entity.getType() : "");
+        // Handle nullable title
+        sql = sql.bind("title", entity.getTitle() != null ? entity.getTitle() : "");
+        // Handle nullable description
+        sql = sql.bind("description", entity.getDescription() != null ? entity.getDescription() : "");
+        // Handle nullable link
+        sql = sql.bind("link", entity.getLink() != null ? entity.getLink() : "");
+        // Handle nullable createdAt
+        sql = sql.bind("createdAt", entity.getCreatedAt());
+        // Handle nullable trackId
+        if (entity.getTrackId() != null) {
+            sql = sql.bind("trackId", entity.getTrackId());
+        } else {
+            sql = sql.bindNull("trackId", String.class);
+        }
 
-        // Handle nullable routeData: use bindNull for null values
         if (entity.getRouteData() != null && !entity.getRouteData().isBlank()) {
             sql = sql.bind("routeData", entity.getRouteData());
         } else {
@@ -168,12 +182,17 @@ public class DatabaseRecommendationAdapter implements RecommendationPort {
         }
 
         // Last resort: generic toString with logging
-        LOG.debug("Extracting JSONB using toString() for type: {}", obj.getClass().getName());
-        String s = obj.toString();
-        // Remove known wrapper pattern if present (shouldn't happen with direct toString approach)
-        if (s.startsWith("JsonByteArrayInput{") && s.endsWith("}")) {
-            s = s.substring("JsonByteArrayInput{".length(), s.length() - 1);
+        try {
+            LOG.debug("Extracting JSONB using toString() for type: {}", obj.getClass().getName());
+            String s = obj.toString();
+            // Remove known wrapper pattern if present (shouldn't happen with direct toString approach)
+            if (s.startsWith("JsonByteArrayInput{") && s.endsWith("}")) {
+                s = s.substring("JsonByteArrayInput{".length(), s.length() - 1);
+            }
+            return s.isBlank() ? null : s;
+        } catch (Exception e) {
+            LOG.error("Failed to extract JSONB using toString() for type: {}", obj.getClass().getName(), e);
+            return null;
         }
-        return s.isBlank() ? null : s;
     }
 }

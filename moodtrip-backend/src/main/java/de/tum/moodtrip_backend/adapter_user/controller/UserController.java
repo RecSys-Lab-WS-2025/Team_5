@@ -1,13 +1,7 @@
 package de.tum.moodtrip_backend.adapter_user.controller;
 
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import de.tum.moodtrip_backend.adapter_user.dto.CreateUserRequest;
 import de.tum.moodtrip_backend.adapter_user.dto.UserResponse;
@@ -42,17 +36,17 @@ public class UserController {
         return userService.findById(id).map(mapper::toResponse);
     }
 
-    @GetMapping("/by-username/{username}")
-    public Mono<UserResponse> getUserByUsername(@PathVariable @NotBlank String username) {
+    @GetMapping("/search")
+    public Mono<UserResponse> getUserByUsername(@RequestParam @NotBlank String username) {
         return userService.findByUsername(username).map(mapper::toResponse);
     }
 
-    @GetMapping("/by-email/{email}")
-    public Mono<UserResponse> getUserByEmail(@PathVariable @NotBlank @Email String email) {
+    @GetMapping("/search")
+    public Mono<UserResponse> getUserByEmail(@RequestParam @NotBlank @Email String email) {
         return userService.findByEmail(email).map(mapper::toResponse);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/delete/{id}")
     public Mono<Void> deleteUser(@PathVariable Long id) {
         return userService.deleteUser(id);
     }

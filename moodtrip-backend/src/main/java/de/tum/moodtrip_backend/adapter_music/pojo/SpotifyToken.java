@@ -7,7 +7,6 @@ import org.springframework.data.relational.core.mapping.Table;
 @Table("spotify_tokens")
 public class SpotifyToken {
     @Id
-    @Column("user_id")
     private String userId;
     @Column("access_token")
     private String accessToken;

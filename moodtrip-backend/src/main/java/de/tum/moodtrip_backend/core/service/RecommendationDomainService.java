@@ -42,7 +42,7 @@ public class RecommendationDomainService {
                                                            String title, String description, String link, 
                                                            String trackId, String routeData) {
         // Validate routeData is valid JSON if provided
-        if (routeData != null && !routeData.isBlank()) {
+        if (routeData != null && !routeData.trim().isEmpty()) {
             try {
                 objectMapper.readTree(routeData);
             } catch (Exception e) {
