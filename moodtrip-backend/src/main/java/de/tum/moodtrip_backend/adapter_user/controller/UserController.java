@@ -36,12 +36,12 @@ public class UserController {
         return userService.findById(id).map(mapper::toResponse);
     }
 
-    @GetMapping("/search")
+    @GetMapping(value ="/search",params = "username")
     public Mono<UserResponse> getUserByUsername(@RequestParam @NotBlank String username) {
         return userService.findByUsername(username).map(mapper::toResponse);
     }
 
-    @GetMapping("/search")
+    @GetMapping(value = "/search",params = "email")
     public Mono<UserResponse> getUserByEmail(@RequestParam @NotBlank @Email String email) {
         return userService.findByEmail(email).map(mapper::toResponse);
     }

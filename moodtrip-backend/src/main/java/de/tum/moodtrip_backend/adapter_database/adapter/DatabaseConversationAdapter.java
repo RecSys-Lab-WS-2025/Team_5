@@ -65,7 +65,7 @@ public class DatabaseConversationAdapter implements ConversationPort {
 
     @Override
     public Flux<MessageDomain> findMessagesByConversationId(Long conversationId) {
-        return messageRepository.findByConversationIdOrderByTimestampAsc(conversationId)
+        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId)
                 .map(messageMapper::toDomain);
     }
 
