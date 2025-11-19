@@ -17,6 +17,8 @@ import jakarta.validation.constraints.NotNull;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
+
 @RestController
 @RequestMapping("/api/conversations")
 @Validated
@@ -31,7 +33,7 @@ public class ConversationController {
     @PostMapping("/start")
     public Mono<ConversationDomain> startConversation(
             @RequestParam @NotBlank(message = "User ID cannot be blank") String userId) {
-        return conversationService.startConversation(userId, "New Conversation");
+        return conversationService.startConversation(userId, "New Conversation-" + LocalDateTime.now());
     }
 
     @GetMapping("/{userId}")

@@ -75,8 +75,12 @@ public class DatabaseRecommendationAdapter implements RecommendationPort {
                     }
 
                     Object trackIdObj = row.get("track_id");
-                    saved.setTrackId(trackIdObj != null && !trackIdObj.toString().isEmpty() ? trackIdObj.toString() : null);
-
+                    if (trackIdObj != null) {
+                        String trackIdStr = trackIdObj.toString();
+                        saved.setTrackId(!trackIdStr.isEmpty() ? trackIdStr : null);
+                    } else {
+                        saved.setTrackId(null);
+                    }
                     Object routeDataObj = row.get("route_data");
                     if (routeDataObj != null) {
                         String jsonStr = extractJsonb(routeDataObj);
