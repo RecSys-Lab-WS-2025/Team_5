@@ -23,7 +23,7 @@ public class SpotifyPlaylistService {
 
 
 
-    public Mono<String> createPlaylist( String name, boolean isPublic, String description,Long userId) {
+    public Mono<String> createPlaylist(String name, boolean isPublic, String description, Long userId) {
         return authService.getAccessToken(userId)
                 .flatMap(token -> webClient.post()
                         .uri("/v1/me/playlists")

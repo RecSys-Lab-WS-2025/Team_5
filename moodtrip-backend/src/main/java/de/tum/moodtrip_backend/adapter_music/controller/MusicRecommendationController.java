@@ -25,7 +25,7 @@ public class MusicRecommendationController {
     }
 
     @GetMapping("/recommend")
-    public Mono<String> recommend(@RequestParam String emotion,@RequestParam Long userId) {
+    public Mono<String> recommend(@RequestParam String emotion, @RequestParam Long userId) {
         FeaturePair features = mapper.map(emotion);
 
         return recommendationService.recommendByEmotion(emotion, features, 20, userId)

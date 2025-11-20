@@ -113,8 +113,8 @@ public class MusicRecommendationService {
         float valence = featurePair.valence();
         System.out.printf(" Generating music recommendation for emotion: %s (energy: %.2f, valence: %.2f)%n",
                 emotionKeyword, energy, valence);
-        return findPlaylistIdByEmotion(emotionKeyword,userId)
-                .flatMap(playlistid->getFirstFiveTrackIdsOfPlaylist(playlistid,userId))
+        return findPlaylistIdByEmotion(emotionKeyword, userId)
+                .flatMap(playlistid -> getFirstFiveTrackIdsOfPlaylist(playlistid, userId))
                 .flatMap(trackIds -> {
                     String seedsParam = String.join(",", trackIds);
                     String seeds = seedsParam.isEmpty() ? default_seeds : seedsParam;
@@ -140,7 +140,7 @@ public class MusicRecommendationService {
                 });
     }
 
-    public Mono<String> createSpotifyPlaylistFromRecommendation(JsonNode recommendationJson, String mood,Long userId) {
+    public Mono<String> createSpotifyPlaylistFromRecommendation(JsonNode recommendationJson, String mood, Long userId) {
         String playlistName = "MoodTrip - " + mood + " Vibes";
         String description = "A playlist generated based on your mood: " + mood;
         return Mono.fromCallable(() -> playlistMapper.extractTrackIdsFromJson(recommendationJson))

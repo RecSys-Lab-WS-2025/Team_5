@@ -9,8 +9,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 @Component
 public class DatabaseSpotifyTokenAdapter implements SpotifyTokenPort {
-    SpotifyTokenMapper spotifyTokenMapper;
-    R2dbcSpotifyTokenRepository spotifyTokenRepository;
+    private final SpotifyTokenMapper spotifyTokenMapper;
+    private final R2dbcSpotifyTokenRepository spotifyTokenRepository;
 
     public DatabaseSpotifyTokenAdapter(SpotifyTokenMapper spotifyTokenMapper, R2dbcSpotifyTokenRepository spotifyTokenRepository) {
         this.spotifyTokenMapper = spotifyTokenMapper;
