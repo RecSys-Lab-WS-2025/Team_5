@@ -140,7 +140,7 @@ public class MusicRecommendationService {
                 });
     }
 
-    public Mono<String> createSpotifyPlaylistFromRecommendation(JsonNode recommendationJson, String mood,Long userId) {
+    public Mono<String> createSpotifyPlaylistFromRecommendation(JsonNode recommendationJson, String mood, Long userId) {
         String playlistName = "MoodTrip - " + mood + " Vibes";
         String description = "A playlist generated based on your mood: " + mood;
         return Mono.fromCallable(() -> playlistMapper.extractTrackIdsFromJson(recommendationJson))
