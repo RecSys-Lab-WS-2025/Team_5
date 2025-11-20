@@ -33,7 +33,7 @@ public class SpotifyTokenController {
                 request.accessToken,
                 request.refreshToken,
                 request.expiresIn,
-                System.currentTimeMillis()
+                System.currentTimeMillis() / 1000
         );
         return SpotifyTokenPort.save(domain);
     }
