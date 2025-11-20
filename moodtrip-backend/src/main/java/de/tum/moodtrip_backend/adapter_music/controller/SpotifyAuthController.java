@@ -51,14 +51,16 @@ public class SpotifyAuthController {
                     .body("❌ Authorization failed: " + error));
         }
 
-        long userIdFromState = 1L;
-        if (state != null) {
-            try {
-                userIdFromState = Long.parseLong(state);
-            } catch (NumberFormatException e) {
-                return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("❌ Invalid state parameter"));
-            }
+        if (state == null || state.isEmpty()) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("❌ Missing required state parameter"));
+        }
+        long userIdFromState;
+        try {
+            userIdFromState = Long.parseLong(state);
+        } catch (NumberFormatException e) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("❌ Invalid state parameter"));
         }
         final long userId = userIdFromState;
 
