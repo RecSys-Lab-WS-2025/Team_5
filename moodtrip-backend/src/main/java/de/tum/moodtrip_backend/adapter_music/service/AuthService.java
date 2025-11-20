@@ -154,16 +154,14 @@ public class AuthService {
     private Mono<SpotifyTokenDomain> saveOrUpdateToken(Long userId, String accessToken, String refreshToken, long expiresIn, long fetchedAt) {
         return spotifyTokenPort.findByUserId(userId)
                 .next()
-                .map(existingToken -> {
-                    return new SpotifyTokenDomain(
-                            existingToken.id(),
-                            userId,
-                            accessToken,
-                            refreshToken,
-                            expiresIn,
-                            fetchedAt
-                    );
-                })
+                .map(existingToken -> new SpotifyTokenDomain(
+                        existingToken.id(),
+                        userId,
+                        accessToken,
+                        refreshToken,
+                        expiresIn,
+                        fetchedAt
+                ))
                 .defaultIfEmpty(
                         new SpotifyTokenDomain(
                                 null,
