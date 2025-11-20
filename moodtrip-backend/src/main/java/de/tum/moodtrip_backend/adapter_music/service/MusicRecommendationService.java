@@ -33,8 +33,8 @@ public class MusicRecommendationService {
         this.playlistMapper = playlistMapper;
     }
 
-    private Mono<String> getNeutralPlaylistId() {
-        return authService.getAccessToken()
+    private Mono<String> getNeutralPlaylistId(Long userId) {
+        return authService.getAccessToken(userId)
                 .flatMap(token -> webClient.get()
                         .uri(uriBuilder -> uriBuilder
                                 .scheme("https")
@@ -51,12 +51,12 @@ public class MusicRecommendationService {
     }
 
 
-    public Mono<String> findPlaylistIdByEmotion(String emotionKeyword) {
+    public Mono<String> findPlaylistIdByEmotion(String emotionKeyword, Long userId) {
         System.out.println("Searching Spotify for playlist matching emotion: " + emotionKeyword);
-        Mono<String> fallbackId = getNeutralPlaylistId();
+        Mono<String> fallbackId = getNeutralPlaylistId(userId);
 
 
-        return authService.getAccessToken()
+        return authService.getAccessToken(userId)
                 .flatMap(token ->
                         webClient.get()
                                 .uri(uriBuilder -> uriBuilder
@@ -85,9 +85,9 @@ public class MusicRecommendationService {
                 );
     }
 
-    public Mono<List<String>> getFirstFiveTrackIdsOfPlaylist(String playlistId) {
+    public Mono<List<String>> getFirstFiveTrackIdsOfPlaylist(String playlistId, Long userId) {
         System.out.printf("Fetching first five track IDs from Spotify playlist: %s%n", playlistId);
-        return authService.getAccessToken()
+        return authService.getAccessToken(userId)
                 .flatMap(token ->
                         webClient.get()
                                 .uri(uriBuilder -> uriBuilder
@@ -108,13 +108,13 @@ public class MusicRecommendationService {
                 );
     }
 
-    public Mono<JsonNode> recommendByEmotion(String emotionKeyword, FeaturePair featurePair, int limit) {
+    public Mono<JsonNode> recommendByEmotion(String emotionKeyword, FeaturePair featurePair, int limit, Long userId) {
         float energy = featurePair.energy();
         float valence = featurePair.valence();
         System.out.printf(" Generating music recommendation for emotion: %s (energy: %.2f, valence: %.2f)%n",
                 emotionKeyword, energy, valence);
-        return findPlaylistIdByEmotion(emotionKeyword)
-                .flatMap(this::getFirstFiveTrackIdsOfPlaylist)
+        return findPlaylistIdByEmotion(emotionKeyword,userId)
+                .flatMap(playlistid->getFirstFiveTrackIdsOfPlaylist(playlistid,userId))
                 .flatMap(trackIds -> {
                     String seedsParam = String.join(",", trackIds);
                     String seeds = seedsParam.isEmpty() ? default_seeds : seedsParam;
@@ -140,14 +140,14 @@ public class MusicRecommendationService {
                 });
     }
 
-    public Mono<String> createSpotifyPlaylistFromRecommendation(JsonNode recommendationJson, String mood) {
+    public Mono<String> createSpotifyPlaylistFromRecommendation(JsonNode recommendationJson, String mood,Long userId) {
         String playlistName = "MoodTrip - " + mood + " Vibes";
         String description = "A playlist generated based on your mood: " + mood;
         return Mono.fromCallable(() -> playlistMapper.extractTrackIdsFromJson(recommendationJson))
                 .flatMap(trackIds ->
-                        spotifyPlaylistService.createPlaylist(playlistName, true, description)
+                        spotifyPlaylistService.createPlaylist(playlistName, true, description,userId)
                                 .flatMap(id ->
-                                        spotifyPlaylistService.addTracksToPlaylist(id, trackIds)
+                                        spotifyPlaylistService.addTracksToPlaylist(id, trackIds,userId)
                                                 .thenReturn(id)
                                 )
                 );

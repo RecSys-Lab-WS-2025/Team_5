@@ -25,12 +25,12 @@ public class MusicRecommendationController {
     }
 
     @GetMapping("/recommend")
-    public Mono<String> recommend(@RequestParam String emotion) {
+    public Mono<String> recommend(@RequestParam String emotion,@RequestParam Long userId) {
         FeaturePair features = mapper.map(emotion);
 
-        return recommendationService.recommendByEmotion(emotion, features, 20)
+        return recommendationService.recommendByEmotion(emotion, features, 20, userId)
                 .flatMap(json ->
-                        recommendationService.createSpotifyPlaylistFromRecommendation(json, emotion)
+                        recommendationService.createSpotifyPlaylistFromRecommendation(json, emotion, userId)
                 )
                 .map(playlistUrl ->
                         "✅ Spotify playlist link:https://open.spotify.com/playlist/" + playlistUrl

@@ -8,7 +8,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class SpotifyPlaylistService {
@@ -24,8 +23,8 @@ public class SpotifyPlaylistService {
 
 
 
-    public Mono<String> createPlaylist( String name, boolean isPublic, String description) {
-        return authService.getAccessToken()
+    public Mono<String> createPlaylist( String name, boolean isPublic, String description,Long userId) {
+        return authService.getAccessToken(userId)
                 .flatMap(token -> webClient.post()
                         .uri("/v1/me/playlists")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -40,12 +39,12 @@ public class SpotifyPlaylistService {
                 );
     }
 
-    public Mono<Void> addTracksToPlaylist(String playlistId, List<String> trackIds) {
+    public Mono<Void> addTracksToPlaylist(String playlistId, List<String> trackIds, Long userId) {
         List<String> uris = trackIds.stream()
                 .map(id -> "spotify:track:" + id)
                 .toList();
 
-        return authService.getAccessToken()
+        return authService.getAccessToken(userId)
                 .flatMap(token -> webClient.post()
                         .uri("/v1/playlists/{playlist_id}/tracks", playlistId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
