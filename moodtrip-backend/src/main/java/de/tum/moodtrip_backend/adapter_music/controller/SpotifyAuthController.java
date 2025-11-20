@@ -56,7 +56,7 @@ public class SpotifyAuthController {
                     .body("❌ Invalid state parameter"));
             }
         }
-        final Long userId = userIdFromState;
+        final long userId = userIdFromState;
 
         return authService.exchangeCodeForToken(code, userId)
                 .flatMap(spotifyToken -> 
