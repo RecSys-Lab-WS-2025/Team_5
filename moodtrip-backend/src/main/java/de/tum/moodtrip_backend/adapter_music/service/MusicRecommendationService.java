@@ -113,8 +113,8 @@ public class MusicRecommendationService {
         float valence = featurePair.valence();
         System.out.printf(" Generating music recommendation for emotion: %s (energy: %.2f, valence: %.2f)%n",
                 emotionKeyword, energy, valence);
-        return findPlaylistIdByEmotion(emotionKeyword,userId)
-                .flatMap(playlistid->getFirstFiveTrackIdsOfPlaylist(playlistid,userId))
+        return findPlaylistIdByEmotion(emotionKeyword, userId)
+                .flatMap(playlistid -> getFirstFiveTrackIdsOfPlaylist(playlistid, userId))
                 .flatMap(trackIds -> {
                     String seedsParam = String.join(",", trackIds);
                     String seeds = seedsParam.isEmpty() ? default_seeds : seedsParam;
