@@ -26,11 +26,11 @@ public class MusicRecommendationTestController {
     @PostMapping
     public Mono<MusicRecommendationDomain> create(@RequestBody CreateMusicRecommendationRequest request) {
         MusicRecommendationDomain domain = new MusicRecommendationDomain(
-            null,
-            request.conversationId(),
-            request.title(),
-            request.link(),
-            null
+                null,
+                request.conversationId(),
+                request.title(),
+                request.link(),
+                null
         );
         return musicRecommendationPort.save(domain);
     }
@@ -51,8 +51,9 @@ public class MusicRecommendationTestController {
     }
 
     public record CreateMusicRecommendationRequest(
-        Long conversationId,
-        String title,
-        String link
-    ) {}
+            Long conversationId,
+            String title,
+            String link
+    ) {
+    }
 }

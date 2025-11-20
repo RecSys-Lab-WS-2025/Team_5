@@ -37,6 +37,7 @@ public class SpotifyTokenController {
         );
         return SpotifyTokenPort.save(domain);
     }
+
     @GetMapping("/{userId}")
     public Mono<SpotifyTokenDomain> getByUserId(@PathVariable Long userId) {
         return SpotifyTokenPort.findByUserId(userId)

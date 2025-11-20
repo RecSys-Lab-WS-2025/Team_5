@@ -41,6 +41,7 @@ public class MusicRecommendationController {
                     return Mono.just("❌ error:" + e.getMessage());
                 });
     }
+
     @GetMapping("/{conversationId}")
     public Flux<MusicRecommendationDomain> getHistory(@PathVariable Long conversationId) {
         return recommendationService.getPlaylistsByConversation(conversationId);

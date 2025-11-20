@@ -29,7 +29,7 @@ public class SpotifyAuthController {
         String authorizeUrl = authService.buildAuthorizeUrl(state);
 
         return Mono.just(ResponseEntity.ok(
-            "{\"authUrl\":\"" + authorizeUrl + "\"}"
+                "{\"authUrl\":\"" + authorizeUrl + "\"}"
         ));
     }
 
@@ -44,7 +44,7 @@ public class SpotifyAuthController {
     ) {
         if (error != null) {
             return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body("❌ Authorization failed: " + error));
+                    .body("❌ Authorization failed: " + error));
         }
 
         long userIdFromState = 1L;
@@ -53,24 +53,24 @@ public class SpotifyAuthController {
                 userIdFromState = Long.parseLong(state);
             } catch (NumberFormatException e) {
                 return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("❌ Invalid state parameter"));
+                        .body("❌ Invalid state parameter"));
             }
         }
         final long userId = userIdFromState;
 
         return authService.exchangeCodeForToken(code, userId)
-                .flatMap(spotifyToken -> 
-                    authService.getCurrentUserProfile(spotifyToken.accessToken())
-                        .map(profile -> ResponseEntity.ok(
-                            "✅ Authorization successful!\n" +
-                            "User: " + profile.path("display_name").asText() + "\n" +
-                            "Email: " + profile.path("email").asText() + "\n" +
-                            "Token saved for userId: " + userId
-                        ))
+                .flatMap(spotifyToken ->
+                        authService.getCurrentUserProfile(spotifyToken.accessToken())
+                                .map(profile -> ResponseEntity.ok(
+                                        "✅ Authorization successful!\n" +
+                                                "User: " + profile.path("display_name").asText() + "\n" +
+                                                "Email: " + profile.path("email").asText() + "\n" +
+                                                "Token saved for userId: " + userId
+                                ))
                 )
                 .onErrorResume(e -> Mono.just(
-                    ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("❌ Token exchange failed: " + e.getMessage())
+                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body("❌ Token exchange failed: " + e.getMessage())
                 ));
     }
 
@@ -80,16 +80,16 @@ public class SpotifyAuthController {
     @GetMapping("/status")
     public Mono<ResponseEntity<String>> checkStatus(@RequestParam Long userId) {
         return authService.getAccessToken(userId)
-                .flatMap(token -> 
-                    authService.getCurrentUserProfile(token)
-                        .map(profile -> ResponseEntity.ok(
-                            "✅ User " + userId + " has valid token\n" +
-                            "Spotify User: " + profile.path("display_name").asText()
-                        ))
+                .flatMap(token ->
+                        authService.getCurrentUserProfile(token)
+                                .map(profile -> ResponseEntity.ok(
+                                        "✅ User " + userId + " has valid token\n" +
+                                                "Spotify User: " + profile.path("display_name").asText()
+                                ))
                 )
                 .onErrorResume(e -> Mono.just(
-                    ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body("❌ No valid token for user " + userId + ": " + e.getMessage())
+                        ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body("❌ No valid token for user " + userId + ": " + e.getMessage())
                 ));
     }
 }
