@@ -77,18 +77,6 @@ public class AuthService {
                 }));
     }
 
-    /**
-     * Get access token without user context (uses env token or first available user token)
-     */
-    public Mono<String> getAccessToken(long userId) {
-        if (token != null && !token.isBlank()) {
-            return Mono.just(token);
-        }
-        return spotifyTokenPort.findByUserId(userId)
-                .next()
-                .flatMap(t -> getAccessToken(t.userId()))
-                .switchIfEmpty(Mono.error(new IllegalStateException("No access token configured.")));
-    }
 
 
     /**
