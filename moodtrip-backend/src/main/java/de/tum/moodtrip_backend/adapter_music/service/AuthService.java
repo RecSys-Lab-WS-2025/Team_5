@@ -57,7 +57,7 @@ public class AuthService {
                     long currentTime = System.currentTimeMillis() / 1000;
                     long tokenAge = currentTime - spotifyTokenEntity.fetchedAt();
 
-                    // Token expires in spotifyToken.getExpiresIn() seconds, refresh if less than 5 minutes left
+                    // Token expires in spotifyTokenEntity.expiresIn() seconds, refresh if less than 5 minutes left
                     if (tokenAge + 300 >= spotifyTokenEntity.expiresIn()) {
                         System.out.println("Token expired or about to expire, refreshing...");
                         return refreshAndSaveToken(userId, spotifyTokenEntity.refreshToken());
