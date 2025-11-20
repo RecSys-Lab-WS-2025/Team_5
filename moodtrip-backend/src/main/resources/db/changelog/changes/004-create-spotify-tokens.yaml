@@ -7,11 +7,16 @@ databaseChangeLog:
             tableName: spotify_tokens
             columns:
               - column:
-                  name: user_id
-                  type: BIGINT
+                  name: id
+                  type: BIGSERIAL
                   constraints:
                     primaryKey: true
                     primaryKeyName: pk_spotify_tokens
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
               - column:
                   name: access_token
                   type: TEXT

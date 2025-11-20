@@ -1,12 +1,14 @@
-package de.tum.moodtrip_backend.adapter_music.pojo;
+package de.tum.moodtrip_backend.adapter_database.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("spotify_tokens")
-public class SpotifyToken {
+public class SpotifyTokenEntity {
     @Id
+    private Long id;
+    @Column("user_id")
     private Long userId;
     @Column("access_token")
     private String accessToken;
@@ -17,15 +19,24 @@ public class SpotifyToken {
     @Column("fetched_at")
     private Long fetchedAt;
 
-    public SpotifyToken() {
+    public SpotifyTokenEntity() {
     }
 
-    public SpotifyToken(String accessToken, Long expiresIn, Long fetchedAt, String refreshToken, Long userId) {
+    public SpotifyTokenEntity(Long id, Long userId, String accessToken, String refreshToken, Long expiresIn, Long fetchedAt) {
         this.accessToken = accessToken;
         this.expiresIn = expiresIn;
         this.fetchedAt = fetchedAt;
         this.refreshToken = refreshToken;
         this.userId = userId;
+        this.id = id;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getAccessToken() {

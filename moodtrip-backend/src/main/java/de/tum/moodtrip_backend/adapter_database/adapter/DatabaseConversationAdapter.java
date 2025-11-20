@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono;
 
 @Component
 public class DatabaseConversationAdapter implements ConversationPort {
-    
+
     private final R2dbcConversationRepository conversationRepository;
     private final R2dbcMessageRepository messageRepository;
     private final ConversationMapper conversationMapper;

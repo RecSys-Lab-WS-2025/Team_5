@@ -26,23 +26,23 @@ public class RouteRecommendationTestController {
 
     public RouteRecommendationTestController(RouteRecommendationPort routeRecommendationPort) {
         this.routeRecommendationPort = routeRecommendationPort;
-        
+
     }
 
     @PostMapping
     public Mono<RouteRecommendationDomain> create(@RequestBody CreateRouteRecommendationRequest request) {
         if (request.routeData() == null) {
             return Mono.error(new ResponseStatusException(
-                HttpStatus.BAD_REQUEST, 
-                "routeData cannot be null"
+                    HttpStatus.BAD_REQUEST,
+                    "routeData cannot be null"
             ));
         }
-        
+
         RouteRecommendationDomain domain = new RouteRecommendationDomain(
-            null,
-            request.conversationId(),
-            request.routeData(),
-            null
+                null,
+                request.conversationId(),
+                request.routeData(),
+                null
         );
         return routeRecommendationPort.save(domain);
     }
@@ -63,7 +63,8 @@ public class RouteRecommendationTestController {
     }
 
     public record CreateRouteRecommendationRequest(
-        Long conversationId,
-        JsonNode routeData
-    ) {}
+            Long conversationId,
+            JsonNode routeData
+    ) {
+    }
 }
