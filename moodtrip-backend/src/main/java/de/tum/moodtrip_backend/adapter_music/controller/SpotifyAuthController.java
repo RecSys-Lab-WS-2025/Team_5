@@ -24,7 +24,11 @@ public class SpotifyAuthController {
      * Redirect user to Spotify authorization page
      */
     @GetMapping("/authorize")
-    public Mono<ResponseEntity<String>> authorize(@RequestParam Long userId) {
+    public Mono<ResponseEntity<String>> authorize(@RequestParam(required = true) Long userId) {
+        if (userId == null) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("{\"error\":\"Missing required parameter: userId\"}"));
+        }
         String state = String.valueOf(userId);
         String authorizeUrl = authService.buildAuthorizeUrl(state);
 
