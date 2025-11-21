@@ -310,7 +310,7 @@ export default function Chatbot() {
       createSidebarChatEntry(cleanText);
     }
 
-    // send to backend; onError 会自动加一条“网络错误”回复
+    // send to backend; onError will automatically add a "network error" reply
     sendMessage({ text: cleanText });
   };
 
