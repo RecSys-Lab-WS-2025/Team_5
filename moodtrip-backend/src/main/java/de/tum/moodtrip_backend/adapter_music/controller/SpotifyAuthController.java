@@ -1,5 +1,10 @@
 package de.tum.moodtrip_backend.adapter_music.controller;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,10 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import de.tum.moodtrip_backend.adapter_music.service.AuthService;
 import reactor.core.publisher.Mono;
-
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/spotify")
@@ -29,14 +30,9 @@ public class SpotifyAuthController {
      * Redirect user to Spotify authorization page
      */
     @GetMapping("/login")
-    public Mono<ResponseEntity<String>> login(@RequestParam(required = true) Long userId) {
-        if (userId == null) {
-            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("{\"error\":\"Missing required parameter: userId\"}"));
-        }
-        String state = String.valueOf(userId);
+    public Mono<ResponseEntity<String>> login() {
+        String state = UUID.randomUUID().toString(); // Random state for CSRF protection
         String authorizeUrl = authService.buildAuthorizeUrl(state);
-
         return Mono.just( ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(authorizeUrl))
                 .build()
@@ -45,6 +41,7 @@ public class SpotifyAuthController {
 
     /**
      * OAuth callback endpoint - Spotify redirects here after user authorization
+     * Creates or updates SpotifyToken, returns the auto-generated userId
      */
     @GetMapping("/callback")
     public Mono<ResponseEntity<Object>> callback(
@@ -62,18 +59,11 @@ public class SpotifyAuthController {
             return redirectWithError("missing_state");
         }
 
-        long userIdFromState;
-        try {
-            userIdFromState = Long.parseLong(state);
-        } catch (NumberFormatException e) {
-            return redirectWithError("invalid_state_format");
-        }
-        final long userId = userIdFromState;
 
-        return authService.exchangeCodeForToken(code, userId)
+        return authService.exchangeCodeForToken(code)
                 .map(tokenDomain ->
                         ResponseEntity.status(HttpStatus.FOUND)
-                            .location(URI.create(FRONTEND_URL + "?spotify=success"))
+                            .location(URI.create(FRONTEND_URL + "?spotify=success&userId=" + tokenDomain.id()))
                             .build()
                 )
                 .onErrorResume(e ->

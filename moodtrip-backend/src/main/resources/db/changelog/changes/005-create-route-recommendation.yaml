@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 0006-create-route-recommendation
+      id: 0005-create-route-recommendation
       author: moodtrip
       changes:
         - createTable:

@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 0005-create-music-recommendation
+      id: 0004-create-music-recommendation
       author: moodtrip
       changes:
         - createTable:

@@ -6,6 +6,7 @@ import reactor.core.publisher.Mono;
 public interface SpotifyTokenPort {
     Mono<SpotifyTokenDomain> save(SpotifyTokenDomain spotifyTokenDomain);
     Mono<SpotifyTokenDomain> findById(Long id);
-    Flux<SpotifyTokenDomain> findByUserId(Long userId);
+    Mono<SpotifyTokenDomain> findBySpotifyUserId(String spotifyUserId);
+    Flux<SpotifyTokenDomain> findAll();
     Mono<Void> deleteById(Long id);
 }

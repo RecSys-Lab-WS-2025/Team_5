@@ -8,8 +8,6 @@ import org.springframework.data.relational.core.mapping.Table;
 public class SpotifyTokenEntity {
     @Id
     private Long id;
-    @Column("user_id")
-    private Long userId;
     @Column("access_token")
     private String accessToken;
     @Column("refresh_token")
@@ -18,17 +16,25 @@ public class SpotifyTokenEntity {
     private Long expiresIn;
     @Column("fetched_at")
     private Long fetchedAt;
+    @Column("spotify_user_id")
+    private String spotifyUserId;
+    @Column("spotify_email")
+    private String spotifyEmail;
+    @Column("spotify_display_name")
+    private String spotifyDisplayName;
 
     public SpotifyTokenEntity() {
     }
 
-    public SpotifyTokenEntity(Long id, Long userId, String accessToken, String refreshToken, Long expiresIn, Long fetchedAt) {
+    public SpotifyTokenEntity(Long id, String accessToken, String refreshToken, Long expiresIn, Long fetchedAt, String spotifyUserId, String spotifyEmail, String spotifyDisplayName) {
+        this.id = id;
         this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
         this.expiresIn = expiresIn;
         this.fetchedAt = fetchedAt;
-        this.refreshToken = refreshToken;
-        this.userId = userId;
-        this.id = id;
+        this.spotifyUserId = spotifyUserId;
+        this.spotifyEmail = spotifyEmail;
+        this.spotifyDisplayName = spotifyDisplayName;
     }
 
     public Long getId() {
@@ -71,11 +77,27 @@ public class SpotifyTokenEntity {
         this.refreshToken = refreshToken;
     }
 
-    public Long getUserId() {
-        return userId;
+    public String getSpotifyUserId() {
+        return spotifyUserId;
     }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public void setSpotifyUserId(String spotifyUserId) {
+        this.spotifyUserId = spotifyUserId;
+    }
+
+    public String getSpotifyEmail() {
+        return spotifyEmail;
+    }
+
+    public void setSpotifyEmail(String spotifyEmail) {
+        this.spotifyEmail = spotifyEmail;
+    }
+
+    public String getSpotifyDisplayName() {
+        return spotifyDisplayName;
+    }
+
+    public void setSpotifyDisplayName(String spotifyDisplayName) {
+        this.spotifyDisplayName = spotifyDisplayName;
     }
 }

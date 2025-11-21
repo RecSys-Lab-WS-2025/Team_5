@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 0004-create-spotify-tokens
+      id: 0001-create-spotify-tokens
       author: moodtrip
       changes:
         - createTable:

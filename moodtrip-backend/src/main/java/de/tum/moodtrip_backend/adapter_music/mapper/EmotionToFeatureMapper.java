@@ -1,13 +1,18 @@
 package de.tum.moodtrip_backend.adapter_music.mapper;
 
 
-import de.tum.moodtrip_backend.adapter_music.pojo.FeaturePair;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
+import de.tum.moodtrip_backend.adapter_music.pojo.FeaturePair;
 
 @Component
 public class EmotionToFeatureMapper {
+
+    private static final Logger logger = LoggerFactory.getLogger(EmotionToFeatureMapper.class);
 
 
     private static final Map<String, FeaturePair> EMOTION_FEATURE_MAP = Map.ofEntries(
@@ -34,7 +39,7 @@ public class EmotionToFeatureMapper {
 
 
     public FeaturePair map(String emotionLabel) {
-        System.out.println("Mapping emotion label: " + emotionLabel);
+        logger.debug("Mapping emotion label: {}", emotionLabel);
         return EMOTION_FEATURE_MAP.getOrDefault(
                 emotionLabel.toUpperCase(),
                 new FeaturePair(0.5f, 0.5f)

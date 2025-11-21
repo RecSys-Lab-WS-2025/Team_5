@@ -1,8 +1,11 @@
 package de.tum.moodtrip_backend.adapter_music.service;
 
 
-import de.tum.moodtrip_backend.core.model.SpotifyTokenDomain;
-import de.tum.moodtrip_backend.core.port.SpotifyTokenPort;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -10,14 +13,16 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import reactor.core.publisher.Mono;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import de.tum.moodtrip_backend.core.model.SpotifyTokenDomain;
+import de.tum.moodtrip_backend.core.port.SpotifyTokenPort;
+import reactor.core.publisher.Mono;
 
 
 @Service
 public class AuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     @Value("${spotify.client-id}")
     private String clientId;
@@ -43,32 +48,33 @@ public class AuthService {
     private final WebClient webClientAuth;
     private final SpotifyTokenPort spotifyTokenPort;
 
+
     public AuthService(WebClient.Builder webClientBuilder, SpotifyTokenPort spotifyTokenPort) {
         this.webClientAuth = webClientBuilder.baseUrl("https://accounts.spotify.com").build();
         this.spotifyTokenPort = spotifyTokenPort;
     }
 
     /**
-     * Get access token for a specific user, with automatic refresh if expired
+     * Get access token for a specific user ID (SpotifyToken.id), with automatic refresh if expired
      */
     public Mono<String> getAccessToken(Long userId) {
-        return spotifyTokenPort.findByUserId(userId).next()
-                .flatMap(spotifyTokenEntity -> {
+        return spotifyTokenPort.findById(userId)
+                .flatMap(spotifyToken -> {
                     long currentTime = System.currentTimeMillis() / 1000;
-                    long tokenAge = currentTime - spotifyTokenEntity.fetchedAt();
+                    long tokenAge = currentTime - spotifyToken.fetchedAt();
 
-                    // Token expires in spotifyTokenEntity.expiresIn() seconds, refresh if less than 5 minutes left
-                    if (tokenAge + 300 >= spotifyTokenEntity.expiresIn()) {
-                        System.out.println("Token expired or about to expire, refreshing...");
-                        return refreshAndSaveToken(userId, spotifyTokenEntity.refreshToken());
+                    // Token expires in spotifyToken.expiresIn() seconds, refresh if less than 5 minutes left
+                    if (tokenAge + 300 >= spotifyToken.expiresIn()) {
+                        logger.info("Token expired or about to expire, refreshing...");
+                        return refreshAndSaveToken(spotifyToken);
                     }
 
-                    return Mono.just(spotifyTokenEntity.accessToken());
+                    return Mono.just(spotifyToken.accessToken());
                 })
                 .switchIfEmpty(Mono.defer(() -> {
                     // Fallback to env token if no user token found (for backward compatibility)
                     if (token != null && !token.isBlank()) {
-                        System.out.println("Using fallback env token for user " + userId);
+                        logger.warn("Using fallback env token for user {}", userId);
                         return Mono.just(token);
                     }
                     return Mono.error(new IllegalStateException(
@@ -77,17 +83,33 @@ public class AuthService {
                 }));
     }
 
+    /**
+     * Get access token without user context (uses env token or first available user token)
+     */
+    public Mono<String> getAccessToken() {
+        if (token != null && !token.isBlank()) {
+            return Mono.just(token);
+        }
+
+        // Try to get any available user token
+        return spotifyTokenPort.findAll()
+                .next()
+                .flatMap(spotifyToken -> getAccessToken(spotifyToken.id()))
+                .switchIfEmpty(Mono.error(new IllegalStateException(
+                        "No access token configured. Please authorize via OAuth."
+                )));
+    }
 
 
     /**
      * Refresh token and save to database
      */
-    private Mono<String> refreshAndSaveToken(Long userId, String refreshToken) {
+    private Mono<String> refreshAndSaveToken(SpotifyTokenDomain existingToken) {
         return webClientAuth.post()
                 .uri("/api/token")
                 .headers(headers -> headers.setBasicAuth(clientId, clientSecret))
                 .body(BodyInserters.fromFormData("grant_type", "refresh_token")
-                        .with("refresh_token", refreshToken))
+                        .with("refresh_token", existingToken.refreshToken()))
                 .retrieve()
                 .bodyToMono(JsonNode.class)
                 .flatMap(json -> {
@@ -97,10 +119,21 @@ public class AuthService {
 
                     String newRefreshToken = json.path("refresh_token").asText("");
                     if (newRefreshToken.isEmpty()) {
-                        newRefreshToken = refreshToken;
+                        newRefreshToken = existingToken.refreshToken();
                     }
 
-                    return saveOrUpdateToken(userId, newAccessToken, newRefreshToken, expiresIn, fetchedAt)
+                    SpotifyTokenDomain updatedToken = new SpotifyTokenDomain(
+                            existingToken.id(),
+                            newAccessToken,
+                            newRefreshToken,
+                            expiresIn,
+                            fetchedAt,
+                            existingToken.spotifyUserId(),
+                            existingToken.spotifyEmail(),
+                            existingToken.spotifyDisplayName()
+                    );
+
+                    return spotifyTokenPort.save(updatedToken)
                             .map(SpotifyTokenDomain::accessToken);
                 });
     }
@@ -119,8 +152,12 @@ public class AuthService {
     }
 
 
-    public Mono<SpotifyTokenDomain> exchangeCodeForToken(String code, Long userId) {
-        System.out.printf("Exchanging code for token, code: %s, userId: %d%n", code, userId);
+    /**
+     * Exchange authorization code for tokens and save to database
+     * Returns SpotifyTokenDomain where id is the userId
+     */
+    public Mono<SpotifyTokenDomain> exchangeCodeForToken(String code) {
+        logger.info("Exchanging code for token, code: {}", code);
         return webClientAuth.post()
                 .uri("/api/token")
                 .headers(headers -> headers.setBasicAuth(clientId, clientSecret))
@@ -130,37 +167,51 @@ public class AuthService {
                 )
                 .retrieve()
                 .bodyToMono(JsonNode.class)
-                .flatMap(json -> {
-                    String accessToken = json.path("access_token").asText();
-                    String refreshToken = json.path("refresh_token").asText();
-                    long expiresIn = json.path("expires_in").asLong();
+                .flatMap(tokenJson -> {
+                    String accessToken = tokenJson.path("access_token").asText();
+                    String refreshToken = tokenJson.path("refresh_token").asText();
+                    long expiresIn = tokenJson.path("expires_in").asLong();
                     long fetchedAt = System.currentTimeMillis() / 1000;
-                    return saveOrUpdateToken(userId, accessToken, refreshToken, expiresIn, fetchedAt);
-                });
-    }
 
-    private Mono<SpotifyTokenDomain> saveOrUpdateToken(Long userId, String accessToken, String refreshToken, long expiresIn, long fetchedAt) {
-        return spotifyTokenPort.findByUserId(userId)
-                .next()
-                .map(existingToken -> new SpotifyTokenDomain(
-                        existingToken.id(),
-                        userId,
-                        accessToken,
-                        refreshToken,
-                        expiresIn,
-                        fetchedAt
-                ))
-                .defaultIfEmpty(
-                        new SpotifyTokenDomain(
-                                null,
-                                userId,
-                                accessToken,
-                                refreshToken,
-                                expiresIn,
-                                fetchedAt
-                        )
-                )
-                .flatMap(spotifyTokenPort::save);
+                    // Get Spotify user profile to obtain spotifyUserId
+                    return getCurrentUserProfile(accessToken)
+                            .flatMap(profileJson -> {
+                                String spotifyUserId = profileJson.path("id").asText();
+                                String spotifyEmail = profileJson.path("email").asText();
+                                String spotifyDisplayName = profileJson.path("display_name").asText();
+
+                                // Check if user already exists by spotifyUserId
+                                return spotifyTokenPort.findBySpotifyUserId(spotifyUserId)
+                                        .flatMap(existingToken -> {
+                                            // Update existing token
+                                            SpotifyTokenDomain updated = new SpotifyTokenDomain(
+                                                    existingToken.id(),
+                                                    accessToken,
+                                                    refreshToken,
+                                                    expiresIn,
+                                                    fetchedAt,
+                                                    spotifyUserId,
+                                                    spotifyEmail,
+                                                    spotifyDisplayName
+                                            );
+                                            return spotifyTokenPort.save(updated);
+                                        })
+                                        .switchIfEmpty(Mono.defer(() -> {
+                                            // Create new token (id will be auto-generated)
+                                            SpotifyTokenDomain newToken = new SpotifyTokenDomain(
+                                                    null,
+                                                    accessToken,
+                                                    refreshToken,
+                                                    expiresIn,
+                                                    fetchedAt,
+                                                    spotifyUserId,
+                                                    spotifyEmail,
+                                                    spotifyDisplayName
+                                            );
+                                            return spotifyTokenPort.save(newToken);
+                                        }));
+                            });
+                });
     }
 
     public String buildAuthorizeUrl(String state) {
@@ -175,10 +226,21 @@ public class AuthService {
 
 
     public Mono<JsonNode> getCurrentUserProfile(String accessToken) {
+        logger.debug("Calling /v1/me with token");
         return webClientAuth.get()
                 .uri("https://api.spotify.com/v1/me")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .retrieve()
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .flatMap(body -> {
+                                    logger.error("Spotify /v1/me error: {} - {}", clientResponse.statusCode(), body);
+                                    return Mono.error(new IllegalStateException(
+                                            "Spotify API error " + clientResponse.statusCode() + ": " + body
+                                    ));
+                                })
+                )
                 .bodyToMono(JsonNode.class);
     }
 

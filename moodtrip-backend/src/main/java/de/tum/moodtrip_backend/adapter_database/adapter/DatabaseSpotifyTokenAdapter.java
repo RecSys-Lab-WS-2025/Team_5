@@ -32,8 +32,14 @@ public class DatabaseSpotifyTokenAdapter implements SpotifyTokenPort {
     }
 
     @Override
-    public Flux<SpotifyTokenDomain> findByUserId(Long userId) {
-        return spotifyTokenRepository.findByUserIdOrderByFetchedAtDesc(userId)
+    public Mono<SpotifyTokenDomain> findBySpotifyUserId(String spotifyUserId) {
+        return spotifyTokenRepository.findBySpotifyUserId(spotifyUserId)
+                .map(spotifyTokenMapper::toDomain);
+    }
+
+    @Override
+    public Flux<SpotifyTokenDomain> findAll() {
+        return spotifyTokenRepository.findAll()
                 .map(spotifyTokenMapper::toDomain);
     }
 
