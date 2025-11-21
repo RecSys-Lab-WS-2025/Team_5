@@ -1,5 +1,9 @@
 package de.tum.moodtrip_backend.adapter_music.controller;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,10 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import de.tum.moodtrip_backend.adapter_music.service.AuthService;
 import reactor.core.publisher.Mono;
-
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/spotify")
@@ -45,6 +45,7 @@ public class SpotifyAuthController {
 
     /**
      * OAuth callback endpoint - Spotify redirects here after user authorization
+     * Creates or updates SpotifyToken, returns the auto-generated userId
      */
     @GetMapping("/callback")
     public Mono<ResponseEntity<Object>> callback(
@@ -70,7 +71,7 @@ public class SpotifyAuthController {
         }
         final long userId = userIdFromState;
 
-        return authService.exchangeCodeForToken(code, userId)
+        return authService.exchangeCodeForToken(code)
                 .map(tokenDomain ->
                         ResponseEntity.status(HttpStatus.FOUND)
                             .location(URI.create(FRONTEND_URL + "?spotify=success"))

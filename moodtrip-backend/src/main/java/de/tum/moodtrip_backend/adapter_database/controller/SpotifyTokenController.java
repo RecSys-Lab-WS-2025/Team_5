@@ -20,31 +20,41 @@ public class SpotifyTokenController {
 
     @PostMapping
     public Mono<SpotifyTokenDomain> create(@RequestBody CreateSpotifyTokenRequest request) {
-        if (request.userId == null) {
+        if (request.accessToken == null || request.accessToken.isBlank()) {
             return Mono.error(new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "UserId cannot be null"
+                    "AccessToken cannot be null or empty"
             ));
         }
 
         SpotifyTokenDomain domain = new SpotifyTokenDomain(
                 null,
-                request.userId,
                 request.accessToken,
                 request.refreshToken,
                 request.expiresIn,
-                System.currentTimeMillis() / 1000
+                System.currentTimeMillis() / 1000,
+                request.spotifyUserId,
+                request.spotifyEmail,
+                request.spotifyDisplayName
         );
         return SpotifyTokenPort.save(domain);
     }
 
-    @GetMapping("/{userId}")
-    public Mono<SpotifyTokenDomain> getByUserId(@PathVariable Long userId) {
-        return SpotifyTokenPort.findByUserId(userId)
-                .next()
+    @GetMapping("/{id}")
+    public Mono<SpotifyTokenDomain> getById(@PathVariable Long id) {
+        return SpotifyTokenPort.findById(id)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
-                        "Spotify token not found for userId: " + userId
+                        "Spotify token not found for id: " + id
+                )));
+    }
+
+    @GetMapping("/spotify-user/{spotifyUserId}")
+    public Mono<SpotifyTokenDomain> getBySpotifyUserId(@PathVariable String spotifyUserId) {
+        return SpotifyTokenPort.findBySpotifyUserId(spotifyUserId)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Spotify token not found for spotifyUserId: " + spotifyUserId
                 )));
     }
 
@@ -54,8 +64,13 @@ public class SpotifyTokenController {
     }
 
 
-    public record CreateSpotifyTokenRequest(Long userId,
-                                            String accessToken, String refreshToken,
-                                            Long expiresIn) {
+    public record CreateSpotifyTokenRequest(
+            String accessToken,
+            String refreshToken,
+            Long expiresIn,
+            String spotifyUserId,
+            String spotifyEmail,
+            String spotifyDisplayName
+    ) {
     }
 }

@@ -1,50 +1,46 @@
 databaseChangeLog:
   - changeSet:
-      id: 0004-create-spotify-tokens
+      id: 0004-create-music-recommendation
       author: moodtrip
       changes:
         - createTable:
-            tableName: spotify_tokens
+            tableName: music_recommendation
             columns:
               - column:
                   name: id
                   type: BIGSERIAL
                   constraints:
                     primaryKey: true
-                    primaryKeyName: pk_spotify_tokens
+                    primaryKeyName: pk_music_recommendation
               - column:
-                  name: user_id
+                  name: conversation_id
                   type: BIGINT
                   constraints:
                     nullable: false
               - column:
-                  name: access_token
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: link
                   type: TEXT
                   constraints:
                     nullable: false
               - column:
-                  name: refresh_token
-                  type: TEXT
-              - column:
-                  name: expires_in
-                  type: BIGINT
-                  constraints:
-                    nullable: false
-              - column:
-                  name: fetched_at
-                  type: BIGINT
-                  constraints:
-                    nullable: false
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
         - addForeignKeyConstraint:
-            baseTableName: spotify_tokens
-            baseColumnNames: user_id
-            referencedTableName: user_profile
+            baseTableName: music_recommendation
+            baseColumnNames: conversation_id
+            referencedTableName: conversation
             referencedColumnNames: id
             onDelete: CASCADE
-            constraintName: fk_spotify_tokens_user
+            constraintName: fk_music_recommendation_conversation
         - createIndex:
-            tableName: spotify_tokens
-            indexName: idx_spotify_tokens_user_id
+            tableName: music_recommendation
+            indexName: idx_music_recommendation_conversation_id
             columns:
               - column:
-                  name: user_id
+                  name: conversation_id

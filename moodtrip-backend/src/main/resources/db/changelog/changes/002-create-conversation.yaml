@@ -30,7 +30,7 @@ databaseChangeLog:
         - addForeignKeyConstraint:
             baseTableName: conversation
             baseColumnNames: user_id
-            referencedTableName: user_profile
+            referencedTableName: spotify_tokens
             referencedColumnNames: id
             onDelete: CASCADE
             constraintName: fk_conversation_user

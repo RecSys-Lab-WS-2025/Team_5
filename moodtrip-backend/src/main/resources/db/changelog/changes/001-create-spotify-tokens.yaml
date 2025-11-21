@@ -1,0 +1,50 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0001-create-spotify-tokens
+      author: moodtrip
+      changes:
+        - createTable:
+            tableName: spotify_tokens
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_spotify_tokens
+              - column:
+                  name: access_token
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: refresh_token
+                  type: TEXT
+              - column:
+                  name: expires_in
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fetched_at
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: spotify_user_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: spotify_email
+                  type: VARCHAR(255)
+              - column:
+                  name: spotify_display_name
+                  type: VARCHAR(255)
+        - createIndex:
+            tableName: spotify_tokens
+            indexName: idx_spotify_tokens_spotify_user_id
+            unique: true
+            columns:
+              - column:
+                  name: spotify_user_id

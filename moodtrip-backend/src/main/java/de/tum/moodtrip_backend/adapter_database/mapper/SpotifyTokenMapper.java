@@ -12,11 +12,13 @@ public class SpotifyTokenMapper {
         }
         return new SpotifyTokenDomain(
                 entity.getId(),
-                entity.getUserId(),
                 entity.getAccessToken(),
                 entity.getRefreshToken(),
                 entity.getExpiresIn(),
-                entity.getFetchedAt()
+                entity.getFetchedAt(),
+                entity.getSpotifyUserId(),
+                entity.getSpotifyEmail(),
+                entity.getSpotifyDisplayName()
         );
     }
 
@@ -26,11 +28,13 @@ public class SpotifyTokenMapper {
         }
         return new SpotifyTokenEntity(
                 domain.id(),
-                domain.userId(),
                 domain.accessToken(),
                 domain.refreshToken(),
                 domain.expiresIn(),
-                domain.fetchedAt()
+                domain.fetchedAt(),
+                domain.spotifyUserId(),
+                domain.spotifyEmail(),
+                domain.spotifyDisplayName()
         );
     }
 }
