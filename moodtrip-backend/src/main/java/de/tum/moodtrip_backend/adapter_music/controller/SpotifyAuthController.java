@@ -3,6 +3,7 @@ package de.tum.moodtrip_backend.adapter_music.controller;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,14 +30,9 @@ public class SpotifyAuthController {
      * Redirect user to Spotify authorization page
      */
     @GetMapping("/login")
-    public Mono<ResponseEntity<String>> login(@RequestParam(required = true) Long userId) {
-        if (userId == null) {
-            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("{\"error\":\"Missing required parameter: userId\"}"));
-        }
-        String state = String.valueOf(userId);
+    public Mono<ResponseEntity<String>> login() {
+        String state = UUID.randomUUID().toString();
         String authorizeUrl = authService.buildAuthorizeUrl(state);
-
         return Mono.just( ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(authorizeUrl))
                 .build()

@@ -227,7 +227,7 @@ public class AuthService {
 
 
     public Mono<JsonNode> getCurrentUserProfile(String accessToken) {
-        logger.debug("Calling /v1/me with token: {}...", accessToken.substring(0, Math.min(20, accessToken.length())));
+        logger.debug("Calling /v1/me with token");
         return webClientAuth.get()
                 .uri("https://api.spotify.com/v1/me")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
