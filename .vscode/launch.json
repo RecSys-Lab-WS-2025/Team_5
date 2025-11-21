@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-MoodtripBackendApplication<moodtrip-backend>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "de.tum.moodtrip_backend.MoodtripBackendApplication",
+            "projectName": "moodtrip-backend",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

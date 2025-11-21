@@ -79,7 +79,7 @@ public class AuthService {
     }
 
     public Mono<JsonNode> getCurrentUserProfile(String accessToken) {
-        return webClientAuth.get()
+        return webClientApi.get()
                 .uri("https://api.spotify.com/v1/me")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .retrieve()
@@ -104,7 +104,7 @@ public class AuthService {
     public String buildAuthorizeUrl(String state) {
         String scopeParam = scopes.replace(" ", "%20").replace(",", "%20");
         return authBaseUrl
-                + "/authorize?response_type=code"
+                + "?response_type=code"
                 + "&client_id=" + clientId
                 + "&redirect_uri=" + redirectUri
                 + "&scope=" + scopeParam

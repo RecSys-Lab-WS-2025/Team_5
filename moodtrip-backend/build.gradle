@@ -25,6 +25,7 @@ ext {
 
 spotbugs {
 	ignoreFailures = true
+	showProgress = true
 }
 
 dependencies {
