@@ -382,7 +382,7 @@ export default function Chatbot() {
         userText,
       );
     } else {
-      // already in a chat: just append locally, still不走后端
+      // already in a chat: just append locally, still not hitting backend
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
     }
   };
