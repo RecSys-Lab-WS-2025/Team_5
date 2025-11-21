@@ -10,13 +10,13 @@ import org.springframework.data.relational.core.mapping.Table;
 public class MessageEntity {
     @Id
     private Long id;
-    
+
     @Column("conversation_id")
     private Long conversationId;
-    
+
     private String sender;
     private String content;
-    
+
     @Column("created_at")
     private LocalDateTime createdAt;
 

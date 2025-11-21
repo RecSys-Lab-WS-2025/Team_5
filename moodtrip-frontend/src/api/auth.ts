@@ -47,8 +47,9 @@ return res.statusText;
 
 export const OAUTH = {
   SPOTIFY:
+  //TODO: dynamically input current UserId, now is the mock version
     import.meta.env.VITE_SPOTIFY_AUTH_URL ??
-    `${BASE}/spotify/login`,
+    `${BASE}/api/spotify/login?userId=3`,
   GOOGLE:
     import.meta.env.VITE_GOOGLE_AUTH_URL ??
     `${BASE}/oauth2/authorization/google`,

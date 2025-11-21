@@ -1,8 +1,29 @@
 import { Navbar } from "@/components/layout/navbar";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export function AppLayout() {
   const location = useLocation();
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get("spotify");
+    if (!flag) return;
+
+    if (flag === "success") {
+      alert("Spotify Authorization successful");
+    } else if (flag === "error") {
+      const raw = params.get("msg") || "Spotify Authorization failed";
+      const msg = decodeURIComponent(raw);
+      alert(`Spotify Authorization failed：${msg}`);
+    }
+
+    window.history.replaceState(null, document.title, window.location.pathname);
+
+    navigate("/", { replace: true });
+  }, [navigate]);
 
   // Hide Navbar on /chat
   const hideNavbar =
