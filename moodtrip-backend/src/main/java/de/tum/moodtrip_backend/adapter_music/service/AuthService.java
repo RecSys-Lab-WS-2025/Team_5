@@ -47,7 +47,7 @@ public class AuthService {
 
     private final WebClient webClientAuth;
     private final SpotifyTokenPort spotifyTokenPort;
-    
+
 
     public AuthService(WebClient.Builder webClientBuilder, SpotifyTokenPort spotifyTokenPort) {
         this.webClientAuth = webClientBuilder.baseUrl("https://accounts.spotify.com").build();
@@ -99,7 +99,6 @@ public class AuthService {
                         "No access token configured. Please authorize via OAuth."
                 )));
     }
-
 
 
     /**

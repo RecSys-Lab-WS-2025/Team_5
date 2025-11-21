@@ -34,7 +34,7 @@ public class MusicRecommendationService {
 
     private final String spotifyApiUrl = "api.spotify.com";
     private final String reccoBeatsUrl = "api.reccobeats.com";
-    private String default_seeds = "1q4BCQssFe74UJmnWt5lov,2KslE17cAJNHTsI2MI0jb2,3rUGC1vUpkDG9CZFHMur1t,2HRgqmZQC0MC7GeNuDIXHN,0WtM2NBVQNNJLh6scP13H8";
+    private String default_seeds = "1q4BCQssFe74UJmnWt5lov,2KslE17cAJNHTsI2MI0jb2,3rUGC1vUpkDG9CZFHMur1t,5N0qx4UmFQdl6pSbIRNoSy,2bjz6oD7rexmUUXMtCCOo1";
 
     public MusicRecommendationService(WebClient.Builder webClientBuilder, AuthService authService, SpotifyPlaylistService spotifyPlaylistService, PlaylistMapper playlistMapper, MusicRecommendationPort musicRecommendationPort) {
         this.webClient = webClientBuilder.build();
