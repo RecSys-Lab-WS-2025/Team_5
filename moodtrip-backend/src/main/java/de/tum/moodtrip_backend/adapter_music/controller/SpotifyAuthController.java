@@ -31,7 +31,7 @@ public class SpotifyAuthController {
      */
     @GetMapping("/login")
     public Mono<ResponseEntity<String>> login() {
-        String state = UUID.randomUUID().toString();
+        String state = UUID.randomUUID().toString(); // Random state for CSRF protection
         String authorizeUrl = authService.buildAuthorizeUrl(state);
         return Mono.just( ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(authorizeUrl))
@@ -59,18 +59,11 @@ public class SpotifyAuthController {
             return redirectWithError("missing_state");
         }
 
-        long userIdFromState;
-        try {
-            userIdFromState = Long.parseLong(state);
-        } catch (NumberFormatException e) {
-            return redirectWithError("invalid_state_format");
-        }
-        final long userId = userIdFromState;
 
         return authService.exchangeCodeForToken(code)
                 .map(tokenDomain ->
                         ResponseEntity.status(HttpStatus.FOUND)
-                            .location(URI.create(FRONTEND_URL + "?spotify=success"))
+                            .location(URI.create(FRONTEND_URL + "?spotify=success&userId=" + tokenDomain.id()))
                             .build()
                 )
                 .onErrorResume(e ->
