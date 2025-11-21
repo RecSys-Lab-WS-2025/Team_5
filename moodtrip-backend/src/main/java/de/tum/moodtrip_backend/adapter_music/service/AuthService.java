@@ -1,8 +1,11 @@
 package de.tum.moodtrip_backend.adapter_music.service;
 
 
-import de.tum.moodtrip_backend.core.model.SpotifyTokenDomain;
-import de.tum.moodtrip_backend.core.port.SpotifyTokenPort;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -10,14 +13,16 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import reactor.core.publisher.Mono;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import de.tum.moodtrip_backend.core.model.SpotifyTokenDomain;
+import de.tum.moodtrip_backend.core.port.SpotifyTokenPort;
+import reactor.core.publisher.Mono;
 
 
 @Service
 public class AuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     @Value("${spotify.client-id}")
     private String clientId;
@@ -42,6 +47,7 @@ public class AuthService {
 
     private final WebClient webClientAuth;
     private final SpotifyTokenPort spotifyTokenPort;
+    
 
     public AuthService(WebClient.Builder webClientBuilder, SpotifyTokenPort spotifyTokenPort) {
         this.webClientAuth = webClientBuilder.baseUrl("https://accounts.spotify.com").build();
@@ -59,7 +65,7 @@ public class AuthService {
 
                     // Token expires in spotifyToken.expiresIn() seconds, refresh if less than 5 minutes left
                     if (tokenAge + 300 >= spotifyToken.expiresIn()) {
-                        System.out.println("Token expired or about to expire, refreshing...");
+                        logger.info("Token expired or about to expire, refreshing...");
                         return refreshAndSaveToken(spotifyToken);
                     }
 
@@ -68,7 +74,7 @@ public class AuthService {
                 .switchIfEmpty(Mono.defer(() -> {
                     // Fallback to env token if no user token found (for backward compatibility)
                     if (token != null && !token.isBlank()) {
-                        System.out.println("Using fallback env token for user " + userId);
+                        logger.warn("Using fallback env token for user {}", userId);
                         return Mono.just(token);
                     }
                     return Mono.error(new IllegalStateException(
@@ -152,7 +158,7 @@ public class AuthService {
      * Returns SpotifyTokenDomain where id is the userId
      */
     public Mono<SpotifyTokenDomain> exchangeCodeForToken(String code) {
-        System.out.printf("Exchanging code for token, code: %s%n", code);
+        logger.info("Exchanging code for token, code: {}", code);
         return webClientAuth.post()
                 .uri("/api/token")
                 .headers(headers -> headers.setBasicAuth(clientId, clientSecret))
@@ -221,7 +227,7 @@ public class AuthService {
 
 
     public Mono<JsonNode> getCurrentUserProfile(String accessToken) {
-        System.out.println("Calling /v1/me with token: " + accessToken.substring(0, Math.min(20, accessToken.length())) + "...");
+        logger.debug("Calling /v1/me with token: {}...", accessToken.substring(0, Math.min(20, accessToken.length())));
         return webClientAuth.get()
                 .uri("https://api.spotify.com/v1/me")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
@@ -230,7 +236,7 @@ public class AuthService {
                         status -> status.is4xxClientError() || status.is5xxServerError(),
                         clientResponse -> clientResponse.bodyToMono(String.class)
                                 .flatMap(body -> {
-                                    System.err.println("Spotify /v1/me error: " + clientResponse.statusCode() + " - " + body);
+                                    logger.error("Spotify /v1/me error: {} - {}", clientResponse.statusCode(), body);
                                     return Mono.error(new IllegalStateException(
                                             "Spotify API error " + clientResponse.statusCode() + ": " + body
                                     ));

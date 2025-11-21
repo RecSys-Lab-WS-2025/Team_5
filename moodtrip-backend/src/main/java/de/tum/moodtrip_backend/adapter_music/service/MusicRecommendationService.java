@@ -1,23 +1,28 @@
 package de.tum.moodtrip_backend.adapter_music.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.StreamSupport;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
 import com.fasterxml.jackson.databind.JsonNode;
+
 import de.tum.moodtrip_backend.adapter_music.mapper.PlaylistMapper;
 import de.tum.moodtrip_backend.adapter_music.pojo.FeaturePair;
 import de.tum.moodtrip_backend.core.model.MusicRecommendationDomain;
 import de.tum.moodtrip_backend.core.port.MusicRecommendationPort;
-import org.springframework.http.HttpHeaders;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
-import java.util.stream.StreamSupport;
-
 @Service
 public class MusicRecommendationService {
+
+    private static final Logger logger = LoggerFactory.getLogger(MusicRecommendationService.class);
 
     private final WebClient webClient;
     private final AuthService authService;
@@ -58,7 +63,7 @@ public class MusicRecommendationService {
 
 
     public Mono<String> findPlaylistIdByEmotion(String emotionKeyword, Long userId) {
-        System.out.println("Searching Spotify for playlist matching emotion: " + emotionKeyword);
+        logger.info("Searching Spotify for playlist matching emotion: {}", emotionKeyword);
         Mono<String> fallbackId = getNeutralPlaylistId(userId);
 
 
@@ -84,7 +89,7 @@ public class MusicRecommendationService {
                                         .asText()
                                 )
                                 .map(str -> {
-                                    System.out.println("Found playlist ID for emotion [" + emotionKeyword + "]: " + str);
+                                    logger.info("Found playlist ID for emotion [{}]: {}", emotionKeyword, str);
                                     return str;
                                 }).filter(id -> id != null && !id.isEmpty())
                                 .switchIfEmpty(fallbackId)
@@ -92,7 +97,7 @@ public class MusicRecommendationService {
     }
 
     public Mono<List<String>> getFirstFiveTrackIdsOfPlaylist(String playlistId, Long userId) {
-        System.out.printf("Fetching first five track IDs from Spotify playlist: %s%n", playlistId);
+        logger.info("Fetching first five track IDs from Spotify playlist: {}", playlistId);
         return authService.getAccessToken(userId)
                 .flatMap(token ->
                         webClient.get()
@@ -117,7 +122,7 @@ public class MusicRecommendationService {
     public Mono<JsonNode> recommendByEmotion(String emotionKeyword, FeaturePair featurePair, int limit, Long userId) {
         float energy = featurePair.energy();
         float valence = featurePair.valence();
-        System.out.printf(" Generating music recommendation for emotion: %s (energy: %.2f, valence: %.2f)%n",
+        logger.info("Generating music recommendation for emotion: {} (energy: {}, valence: {})",
                 emotionKeyword, energy, valence);
         return findPlaylistIdByEmotion(emotionKeyword, userId)
                 .flatMap(playlistid -> getFirstFiveTrackIdsOfPlaylist(playlistid, userId))
@@ -125,7 +130,7 @@ public class MusicRecommendationService {
                     String seedsParam = String.join(",", trackIds);
                     String seeds = seedsParam.isEmpty() ? default_seeds : seedsParam;
 
-                    System.out.println("Seed track IDs for emotion [" + emotionKeyword + "] → " + seedsParam);
+                    logger.debug("Seed track IDs for emotion [{}] → {}", emotionKeyword, seedsParam);
 
                     return webClient.get()
                             .uri(uriBuilder -> uriBuilder
@@ -140,7 +145,7 @@ public class MusicRecommendationService {
                             .retrieve()
                             .bodyToMono(JsonNode.class)
                             .onErrorResume(e -> {
-                                System.err.println("ReccoBeats call failed: " + e.getMessage());
+                                logger.error("ReccoBeats call failed: {}", e.getMessage());
                                 return Mono.empty();
                             });
                 });
@@ -164,7 +169,7 @@ public class MusicRecommendationService {
                                                             playlistUrl,
                                                             LocalDateTime.now());
 
-                                                    System.out.println("Saving playlist to DB: " + playlistUrl);
+                                                    logger.info("Saving playlist to DB: {}", playlistUrl);
 
                                                     return musicRecommendationPort.save(domain)
                                                             .thenReturn(playlistId);

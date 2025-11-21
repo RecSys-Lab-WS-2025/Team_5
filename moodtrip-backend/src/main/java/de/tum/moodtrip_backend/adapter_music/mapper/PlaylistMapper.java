@@ -1,20 +1,25 @@
 package de.tum.moodtrip_backend.adapter_music.mapper;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
 @Component
 public class PlaylistMapper {
+
+    private static final Logger logger = LoggerFactory.getLogger(PlaylistMapper.class);
 
 
     public List<String> extractTrackIdsFromJson(JsonNode recommendationJson) {
         List<String> trackIds = new ArrayList<>();
 
         if (recommendationJson == null || !recommendationJson.has("content")) {
-            System.err.println("No content field in recommendation JSON");
+            logger.warn("No content field in recommendation JSON");
             return trackIds;
         }
 
@@ -27,7 +32,7 @@ public class PlaylistMapper {
             }
         }
 
-        System.out.println("Track IDs " + trackIds);
+        logger.debug("Track IDs {}", trackIds);
         return trackIds;
     }
 
