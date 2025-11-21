@@ -57,7 +57,7 @@ public class SpotifyAuthController {
             return redirectWithError("spotify_error: " + error);
         }
 
-        // 2. 校验 State
+        // 2. Validate state parameter
         if (state == null || state.isEmpty()) {
             return redirectWithError("missing_state");
         }
