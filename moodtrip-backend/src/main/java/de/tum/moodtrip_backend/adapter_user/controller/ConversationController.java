@@ -1,5 +1,8 @@
 package de.tum.moodtrip_backend.adapter_user.controller;
 
+import de.tum.moodtrip_backend.core.model.EmotionResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +28,9 @@ import java.time.format.DateTimeFormatter;
 @RequestMapping("/api/conversations")
 @Validated
 public class ConversationController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConversationController.class);
+
     private final ConversationDomainService conversationService;
 
     public ConversationController(ConversationDomainService conversationService) {
@@ -56,8 +62,19 @@ public class ConversationController {
             @RequestParam @NotBlank(message = "Sender cannot be blank") String sender,
             @RequestBody @NotBlank(message = "Content cannot be blank") String content) {
         return Mono.fromCallable(() -> Sender.fromString(sender))
-                .onErrorMap(IllegalArgumentException.class, e -> 
+                .onErrorMap(IllegalArgumentException.class, e ->
                         new IllegalArgumentException("Invalid sender: " + sender + ". Must be USER or BOT."))
                 .flatMap(senderEnum -> conversationService.addMessage(conversationId, senderEnum, content));
+    }
+
+    @PostMapping("/extract-emotion")
+    public Mono<EmotionResult> extractEmotion(
+            @RequestParam @NotNull(message = "Conversation ID cannot be null") Long conversationId,
+            @RequestParam @NotNull(message = "User ID cannot be null") Long userId,
+            @RequestParam @NotBlank(message = "Message cannot be blank") String message) {
+        LOGGER.info("Start extracting user emotions");
+        return conversationService.extractEmotion(conversationId, userId, message)
+                .doOnSuccess(e -> LOGGER.info("Successfully extracted user emotions"))
+                .doOnError(err -> LOGGER.error("Error while extracting emotions", err));
     }
 }

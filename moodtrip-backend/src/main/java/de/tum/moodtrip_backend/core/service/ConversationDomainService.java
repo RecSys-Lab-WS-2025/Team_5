@@ -1,28 +1,28 @@
 package de.tum.moodtrip_backend.core.service;
 
-import java.time.LocalDateTime;
-
-import de.tum.moodtrip_backend.core.model.Emotion;
-import de.tum.moodtrip_backend.core.model.Sender;
-import org.springframework.stereotype.Service;
-
-import de.tum.moodtrip_backend.adapter_chatbot.service.EmotionService;
 import de.tum.moodtrip_backend.core.model.ConversationDomain;
+import de.tum.moodtrip_backend.core.model.Emotion;
+import de.tum.moodtrip_backend.core.model.EmotionResult;
 import de.tum.moodtrip_backend.core.model.MessageDomain;
+import de.tum.moodtrip_backend.core.model.Sender;
 import de.tum.moodtrip_backend.core.port.ConversationPort;
+import de.tum.moodtrip_backend.core.port.EmotionPort;
 import de.tum.moodtrip_backend.exception.ResourceNotFoundException;
+
+import java.time.LocalDateTime;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
 public class ConversationDomainService {
     private final ConversationPort conversationPort;
-    private final EmotionService emotionService;
+    private final EmotionPort emotionPort;
 
     public ConversationDomainService(ConversationPort conversationPort,
-                                     EmotionService emotionService) {
+                                     EmotionPort emotionPort) {
         this.conversationPort = conversationPort;
-        this.emotionService = emotionService;
+        this.emotionPort = emotionPort;
     }
 
     public Flux<ConversationDomain> getConversationsByUserId(Long userId) {
@@ -78,7 +78,7 @@ public class ConversationDomainService {
                     if (sender == Sender.USER) {
                         return conversationPort.saveMessage(message)
                                 .flatMap(savedMessage ->
-                                        emotionService.extractEmotion(content)
+                                        emotionPort.extractEmotion(conversationId, conversation.userId(), content)
                                                 .flatMap(emotionResult -> {
                                                     String emotion = emotionResult.topLabel().toString();
                                                     ConversationDomain updated = conversation.withEmotion(Emotion.fromString(emotion));
@@ -110,5 +110,9 @@ public class ConversationDomainService {
         return conversationPort.findById(conversationId)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Conversation with ID " + conversationId + " not found")))
                 .flatMap(conversation -> conversationPort.deleteById(conversationId));
+    }
+
+    public Mono<EmotionResult> extractEmotion(Long conversationId, Long userId, String message) {
+        return emotionPort.extractEmotion(conversationId, userId, message);
     }
 }
