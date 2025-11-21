@@ -10,11 +10,16 @@ import org.springframework.web.bind.annotation.RestController;
 import de.tum.moodtrip_backend.adapter_music.service.AuthService;
 import reactor.core.publisher.Mono;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 @RestController
 @RequestMapping("/api/spotify")
 public class SpotifyAuthController {
 
     private final AuthService authService;
+    private static final String FRONTEND_URL = "http://localhost:5173";
 
     public SpotifyAuthController(AuthService authService) {
         this.authService = authService;
@@ -23,8 +28,8 @@ public class SpotifyAuthController {
     /**
      * Redirect user to Spotify authorization page
      */
-    @GetMapping("/authorize")
-    public Mono<ResponseEntity<String>> authorize(@RequestParam(required = true) Long userId) {
+    @GetMapping("/login")
+    public Mono<ResponseEntity<String>> login(@RequestParam(required = true) Long userId) {
         if (userId == null) {
             return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("{\"error\":\"Missing required parameter: userId\"}"));
@@ -32,54 +37,57 @@ public class SpotifyAuthController {
         String state = String.valueOf(userId);
         String authorizeUrl = authService.buildAuthorizeUrl(state);
 
-        return Mono.just(ResponseEntity.ok(
-                "{\"authUrl\":\"" + authorizeUrl + "\"}"
-        ));
+        return Mono.just( ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(authorizeUrl))
+                .build()
+        );
     }
 
     /**
      * OAuth callback endpoint - Spotify redirects here after user authorization
      */
     @GetMapping("/callback")
-    public Mono<ResponseEntity<String>> callback(
+    public Mono<ResponseEntity<Object>> callback(
             @RequestParam String code,
             @RequestParam(required = false) String state,
             @RequestParam(required = false) String error
     ) {
+        // 1. Handle errors returned by Spotify
         if (error != null) {
-            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("❌ Authorization failed: " + error));
+            return redirectWithError("spotify_error: " + error);
         }
 
+        // 2. Validate state parameter
         if (state == null || state.isEmpty()) {
-            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("❌ Missing required state parameter"));
+            return redirectWithError("missing_state");
         }
+
         long userIdFromState;
         try {
             userIdFromState = Long.parseLong(state);
         } catch (NumberFormatException e) {
-            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("❌ Invalid state parameter"));
+            return redirectWithError("invalid_state_format");
         }
         final long userId = userIdFromState;
 
         return authService.exchangeCodeForToken(code, userId)
-                .flatMap(spotifyToken ->
-                        authService.getCurrentUserProfile(spotifyToken.accessToken())
-                                .map(profile -> ResponseEntity.ok(
-                                        "✅ Authorization successful!\n" +
-                                                "User: " + profile.path("display_name").asText() + "\n" +
-                                                "Email: " + profile.path("email").asText() + "\n" +
-                                                "Token saved for userId: " + userId
-                                ))
+                .map(tokenDomain ->
+                        ResponseEntity.status(HttpStatus.FOUND)
+                            .location(URI.create(FRONTEND_URL + "?spotify=success"))
+                            .build()
                 )
-                .onErrorResume(e -> Mono.just(
-                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body("❌ Token exchange failed: " + e.getMessage())
-                ));
+                .onErrorResume(e ->
+                        redirectWithError("token_exchange_failed")
+                );
     }
 
+
+    private Mono<ResponseEntity<Object>> redirectWithError(String errorMessage) {
+        String encodedError = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
+        return Mono.just(ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(FRONTEND_URL + "?spotify=error&msg=" + encodedError))
+                .build());
+    }
     /**
      * Test endpoint to check if user has valid token
      */

@@ -1,15 +1,14 @@
-import React from "react"
-import ReactDOM from "react-dom/client"
-import "./index.css"
-
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-
-import App from "@/components/chat" 
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { AppRoutes } from "@/router/AppRoutes";
+import "./index.css";
+import "leaflet/dist/leaflet.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <SidebarProvider>
-      <App /> 
-    </SidebarProvider>
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   </React.StrictMode>
-)
+);
