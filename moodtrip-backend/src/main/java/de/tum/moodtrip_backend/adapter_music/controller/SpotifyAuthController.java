@@ -52,7 +52,7 @@ public class SpotifyAuthController {
             @RequestParam(required = false) String state,
             @RequestParam(required = false) String error
     ) {
-        // 1. 处理 Spotify 返回的错误
+        // 1. Handle errors returned by Spotify
         if (error != null) {
             return redirectWithError("spotify_error: " + error);
         }
