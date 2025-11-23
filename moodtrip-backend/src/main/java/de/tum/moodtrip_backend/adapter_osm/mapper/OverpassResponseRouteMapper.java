@@ -10,8 +10,12 @@ import java.util.Comparator;
 import java.util.List;
 
 @Component
-public class OverpassResponseRouteMapper {
-    public Route toDomain(OverpassResponse overpassResponse, Long relationId) {
+public final class OverpassResponseRouteMapper {
+
+    private OverpassResponseRouteMapper() {
+    }
+
+    public static Route toDomain(OverpassResponse overpassResponse, Long relationId) {
         String name = overpassResponse.elements().stream()
                 .filter(e -> "relation".equals(e.type()))
                 .map(e -> firstNonBlank(

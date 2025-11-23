@@ -24,11 +24,9 @@ import org.slf4j.LoggerFactory;
 public class OverpassAdapter implements OsmPort {
 
     private final WebClient webClient;
-    private final OverpassResponseRouteMapper overpassResponseRouteMapper;
     private static final Logger LOGGER = LoggerFactory.getLogger(OverpassAdapter.class);
 
-    public OverpassAdapter(OverpassResponseRouteMapper overpassResponseRouteMapper, Builder webClientBuilder) {
-        this.overpassResponseRouteMapper = overpassResponseRouteMapper;
+    public OverpassAdapter(Builder webClientBuilder) {
 
         ExchangeStrategies strategies = ExchangeStrategies.builder()
                 .codecs(cfg -> cfg.defaultCodecs().maxInMemorySize(10 * 1024 * 1024)) // 10 MB
@@ -59,7 +57,7 @@ public class OverpassAdapter implements OsmPort {
                 .body(BodyInserters.fromFormData("data", q))
                 .retrieve()
                 .bodyToMono(OverpassResponse.class)
-                .map(overpassResponse -> overpassResponseRouteMapper.toDomain(overpassResponse, relationId));
+                .map(overpassResponse -> OverpassResponseRouteMapper.toDomain(overpassResponse, relationId));
     }
 
     @Override

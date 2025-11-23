@@ -7,7 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class POICategoryOsmQueryMapper {
+public final class POICategoryOsmQueryMapper {
 
     private static final int DEFAULT_TIMEOUT_SECONDS = 60;
 
@@ -78,6 +78,9 @@ public class POICategoryOsmQueryMapper {
                     )
             );
 
+    private POICategoryOsmQueryMapper() {
+    }
+
     /**
      * Returns the pure tag fragments (without any range or around clause).
      */
@@ -87,13 +90,13 @@ public class POICategoryOsmQueryMapper {
 
     /**
      * Builds a full Overpass query for a single category using an (around:radius,lat,lon) filter.
-     *
+     * <p>
      * Example output:
-     *
-     * [out:json][timeout:25];
+     * <p>
+     * [out:json][timeout:60];
      * (
-     *   nwr["natural"~"beach|coastline|bay|dune"](around:1000,48.137400,11.575500);
-     *   ...
+     * nwr["natural"~"beach|coastline|bay|dune"](around:1000,48.137400,11.575500);
+     * ...
      * );
      * out center tags;
      */

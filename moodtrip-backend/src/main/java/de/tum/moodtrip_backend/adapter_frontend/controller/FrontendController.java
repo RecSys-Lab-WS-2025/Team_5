@@ -42,11 +42,10 @@ public class FrontendController {
                              @RequestParam("poiCategory") String poiCategory,
                              @RequestParam("radiusMeters") int radiusMeters) {
 
-        LOGGER.info("GET /frontend/poi lat={}, lon={}, routeType={}, radius={}",
+        LOGGER.info("GET /frontend/poi lat={}, lon={}, poiCategory={}, radius={}",
                 lat, lon, poiCategory, radiusMeters);
 
-        POICategory category = POICategory.fromDisplayName(poiCategory)
-;
+        POICategory category = POICategory.fromDisplayName(poiCategory);
         return overpassService
                 .getPois(lat, lon, category, radiusMeters);
     }
