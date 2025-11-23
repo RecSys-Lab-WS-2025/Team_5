@@ -32,13 +32,22 @@ public class OverpassService {
     public Flux<POI> getPois(double lat, double lon, POICategory poiCategory, int radiusMeters) {
         return osmPort.findAmenitiesAround(lat, lon, poiCategory, radiusMeters)
                 .flatMap(poi ->
-                        wikipediaPort.fetchSummaryForTags(poi.tags().get("wikipedia"))
+                        wikipediaPort.fetchSummaryForTag(poi.tags().get("wikipedia"))
                                 .defaultIfEmpty("")
                                 .doOnNext(summary -> {
                                     LOGGER.info(PoiDescriptionBuilder.buildDisplayName(poi));
                                     LOGGER.info(PoiDescriptionBuilder.buildShortDescription(poi, summary));
                                 })
-                                .thenReturn(poi)
-                );
+                                .then(wikipediaPort.fetchImageUrl(
+                                                        poi.tags().get("image"),
+                                                        poi.tags().get("wikipedia"),
+                                                        poi.tags().get("wikidata"),
+                                                        poi.tags().get("wikimedia_commons")
+                                                )
+                                                .doOnNext(imageUrl ->
+                                                        LOGGER.info("Image URL for {}: {}", PoiDescriptionBuilder.buildDisplayName(poi), imageUrl)
+                                                )
+                                )
+                                .thenReturn(poi));
     }
 }
