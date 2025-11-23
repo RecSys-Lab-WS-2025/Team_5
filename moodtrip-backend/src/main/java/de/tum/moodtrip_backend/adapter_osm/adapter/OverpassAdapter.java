@@ -1,7 +1,11 @@
-package de.tum.moodtrip_backend.adapter_osm.webclient;
+package de.tum.moodtrip_backend.adapter_osm.adapter;
 
+import de.tum.moodtrip_backend.adapter_osm.mapper.OverpassResponsePOIMapper;
 import de.tum.moodtrip_backend.adapter_osm.mapper.OverpassResponseRouteMapper;
+import de.tum.moodtrip_backend.adapter_osm.mapper.POICategoryOsmQueryMapper;
 import de.tum.moodtrip_backend.adapter_osm.model.OverpassResponse;
+import de.tum.moodtrip_backend.core.model.POI;
+import de.tum.moodtrip_backend.core.model.POICategory;
 import de.tum.moodtrip_backend.core.model.Route;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import org.springframework.http.MediaType;
@@ -10,19 +14,20 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component
-public class OverpassWebClient implements OsmPort {
+public class OverpassAdapter implements OsmPort {
 
     private final WebClient webClient;
     private final OverpassResponseRouteMapper overpassResponseRouteMapper;
-    private static final Logger LOGGER = LoggerFactory.getLogger(OverpassWebClient.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OverpassAdapter.class);
 
-    public OverpassWebClient(OverpassResponseRouteMapper overpassResponseRouteMapper, Builder webClientBuilder) {
+    public OverpassAdapter(OverpassResponseRouteMapper overpassResponseRouteMapper, Builder webClientBuilder) {
         this.overpassResponseRouteMapper = overpassResponseRouteMapper;
 
         ExchangeStrategies strategies = ExchangeStrategies.builder()
@@ -88,5 +93,19 @@ public class OverpassWebClient implements OsmPort {
                     LOGGER.info("[Overpass] picked relationId={} from search results", id);
                     return Mono.just(id);
                 });
+    }
+
+    @Override
+    public Flux<POI> findAmenitiesAround(double lat, double lon, POICategory poiCategory, int radiusMeters) {
+        String query = POICategoryOsmQueryMapper.buildAroundQuery(poiCategory, lat, lon, radiusMeters);
+        return webClient.post()
+                .uri("/api/interpreter")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromFormData("data", query))
+                .retrieve()
+                .bodyToMono(OverpassResponse.class)
+                .map(OverpassResponsePOIMapper::toPois)
+                .flatMapMany(Flux::fromIterable);
     }
 }
