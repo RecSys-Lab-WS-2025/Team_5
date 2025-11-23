@@ -2,7 +2,7 @@ package de.tum.moodtrip_backend.adapter_osm.adapter;
 
 import de.tum.moodtrip_backend.adapter_osm.mapper.OverpassResponsePOIMapper;
 import de.tum.moodtrip_backend.adapter_osm.mapper.OverpassResponseRouteMapper;
-import de.tum.moodtrip_backend.adapter_osm.mapper.POICategoryOsmQueryMapper;
+import de.tum.moodtrip_backend.adapter_osm.builder.POICategoryOsmQueryBuilder;
 import de.tum.moodtrip_backend.adapter_osm.model.OverpassResponse;
 import de.tum.moodtrip_backend.core.model.POI;
 import de.tum.moodtrip_backend.core.model.POICategory;
@@ -95,7 +95,7 @@ public class OverpassAdapter implements OsmPort {
 
     @Override
     public Flux<POI> findAmenitiesAround(double lat, double lon, POICategory poiCategory, int radiusMeters) {
-        String query = POICategoryOsmQueryMapper.buildAroundQuery(poiCategory, lat, lon, radiusMeters);
+        String query = POICategoryOsmQueryBuilder.buildAroundQuery(poiCategory, lat, lon, radiusMeters);
         return webClient.post()
                 .uri("/api/interpreter")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)

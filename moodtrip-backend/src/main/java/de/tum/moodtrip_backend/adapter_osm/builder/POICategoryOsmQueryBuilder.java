@@ -1,4 +1,4 @@
-package de.tum.moodtrip_backend.adapter_osm.mapper;
+package de.tum.moodtrip_backend.adapter_osm.builder;
 
 import de.tum.moodtrip_backend.core.model.POICategory;
 
@@ -7,7 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public final class POICategoryOsmQueryMapper {
+public final class POICategoryOsmQueryBuilder {
 
     private static final int DEFAULT_TIMEOUT_SECONDS = 60;
 
@@ -78,7 +78,7 @@ public final class POICategoryOsmQueryMapper {
                     )
             );
 
-    private POICategoryOsmQueryMapper() {
+    private POICategoryOsmQueryBuilder() {
     }
 
     /**
