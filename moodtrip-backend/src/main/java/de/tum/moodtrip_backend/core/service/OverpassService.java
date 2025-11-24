@@ -1,19 +1,18 @@
 package de.tum.moodtrip_backend.core.service;
 
 import de.tum.moodtrip_backend.core.mapper.PoiRouteCoordinatesMapper;
+import de.tum.moodtrip_backend.core.model.EnrichedPoi;
+import de.tum.moodtrip_backend.core.model.PoiRouteResult;
 import de.tum.moodtrip_backend.core.port.RoutingPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import de.tum.moodtrip_backend.adapter_osm.builder.PoiDescriptionBuilder;
-import de.tum.moodtrip_backend.core.model.POI;
 import de.tum.moodtrip_backend.core.model.POICategory;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.WikipediaPort;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
 
 @Service
 public class OverpassService {
@@ -29,30 +28,42 @@ public class OverpassService {
         this.routingPort = routingPort;
     }
 
-    public Mono<List<POI>> getPois(double lat, double lon, POICategory poiCategory, int radiusMeters) {
+    public Mono<PoiRouteResult> getRoute(
+            double lat,
+            double lon,
+            POICategory poiCategory,
+            int radiusMeters
+    ) {
         return osmPort.findAmenitiesAround(lat, lon, poiCategory, radiusMeters)
                 .flatMap(poi ->
                         wikipediaPort.fetchSummaryForTag(poi.tags().get("wikipedia"))
                                 .defaultIfEmpty("")
-                                .doOnNext(summary -> {
-                                    LOGGER.info(PoiDescriptionBuilder.buildDisplayName(poi));
-                                    LOGGER.info(PoiDescriptionBuilder.buildShortDescription(poi, summary));
-                                })
-                                .then(wikipediaPort.fetchImageUrl(
+                                .zipWith(
+                                        wikipediaPort.fetchImageUrl(
                                                         poi.tags().get("image"),
                                                         poi.tags().get("wikipedia"),
                                                         poi.tags().get("wikidata"),
                                                         poi.tags().get("wikimedia_commons")
                                                 )
-                                                .doOnNext(imageUrl ->
-                                                        LOGGER.info("Image URL for {}: {}", PoiDescriptionBuilder.buildDisplayName(poi), imageUrl)
-                                                )
+                                                .defaultIfEmpty("")
                                 )
+                                .map(tuple -> {
+                                    String summary = tuple.getT1();
+                                    String imageUrl = tuple.getT2();
 
-                                .thenReturn(poi))
+                                    String displayName = PoiDescriptionBuilder.buildDisplayName(poi);
+                                    String description = PoiDescriptionBuilder.buildShortDescription(poi, summary);
+
+                                    return new EnrichedPoi(poi, displayName, description, imageUrl);
+                                })
+                )
                 .collectList()
-                .flatMap(list -> routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(list))
-                        .doOnNext(route -> LOGGER.info(route.toString()))
-                        .thenReturn(list));
+                .flatMap(enrichedPois ->
+                        routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(
+                                        enrichedPois.stream().map(EnrichedPoi::poi).toList()
+                                ))
+                                .doOnNext(route -> LOGGER.info(route.toString()))
+                                .map(route -> new PoiRouteResult(enrichedPois, route))
+                );
     }
 }

@@ -1,15 +1,14 @@
 package de.tum.moodtrip_backend.adapter_frontend.controller;
 
-import de.tum.moodtrip_backend.core.model.POI;
+import de.tum.moodtrip_backend.adapter_frontend.mapper.GeoJsonRouteMapper;
 import de.tum.moodtrip_backend.core.model.POICategory;
 import de.tum.moodtrip_backend.core.service.OverpassService;
+import org.geojson.FeatureCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
 
 @RestController
 @RequestMapping(path = "/frontend", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -23,17 +22,18 @@ public class FrontendController {
         this.overpassService = overpassService;
     }
 
-    @GetMapping(value = "/poi")
-    public Mono<List<POI>> getPois(@RequestParam("lat") double lat,
-                                   @RequestParam("lon") double lon,
-                                   @RequestParam("poiCategory") String poiCategory,
-                                   @RequestParam("radiusMeters") int radiusMeters) {
+    @GetMapping(value = "/route", produces = "application/geo+json")
+    public Mono<FeatureCollection> getPois(@RequestParam("lat") double lat,
+                                           @RequestParam("lon") double lon,
+                                           @RequestParam("poiCategory") String poiCategory,
+                                           @RequestParam("radiusMeters") int radiusMeters) {
 
-        LOGGER.info("GET /frontend/poi lat={}, lon={}, poiCategory={}, radius={}",
+        LOGGER.info("GET /frontend/route lat={}, lon={}, poiCategory={}, radius={}",
                 lat, lon, poiCategory, radiusMeters);
 
         POICategory category = POICategory.fromDisplayName(poiCategory);
         return overpassService
-                .getPois(lat, lon, category, radiusMeters);
+                .getRoute(lat, lon, category, radiusMeters)
+                .map(GeoJsonRouteMapper::toFeatureCollection);
     }
 }
