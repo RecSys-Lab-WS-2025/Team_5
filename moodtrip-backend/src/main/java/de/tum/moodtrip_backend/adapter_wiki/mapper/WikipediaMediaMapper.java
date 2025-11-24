@@ -38,15 +38,39 @@ public final class WikipediaMediaMapper {
         if (trimmed.contains("Special:FilePath/")) {
             return trimmed;
         }
-        // Only handle commons.wikimedia.org file pages here
-        int fileIndex = trimmed.indexOf("File:");
-        if (fileIndex == -1) {
+        if (trimmed.contains("//upload.wikimedia.org/")) {
             return trimmed;
         }
-        String filename = trimmed.substring(fileIndex + "File:".length());
+        int wikiIndex = trimmed.indexOf("/wiki/");
+        if (wikiIndex == -1) {
+            return trimmed;
+        }
+
+        String filename = extractFilename(trimmed, wikiIndex);
+
+        return "https://commons.wikimedia.org/wiki/Special:FilePath/" + filename;
+    }
+
+    private static String extractFilename(String trimmed, int wikiIndex) {
+        String titleSegment = trimmed.substring(wikiIndex + "/wiki/".length());
+
+        int hashIndex = titleSegment.indexOf('#');
+        if (hashIndex >= 0) {
+            titleSegment = titleSegment.substring(0, hashIndex);
+        }
+        int queryIndex = titleSegment.indexOf('?');
+        if (queryIndex >= 0) {
+            titleSegment = titleSegment.substring(0, queryIndex);
+        }
+
+        // Title can be "File:Foo.jpg", "Datei:Foo.jpg", "Fichier:Foo.jpg", etc.
+        // We only care about the part after the first ':' which is the actual filename.
+        int colonIndex = titleSegment.indexOf(':');
+        String filename = (colonIndex >= 0) ? titleSegment.substring(colonIndex + 1) : titleSegment;
+
         // Defensive cleanup
         filename = filename.replace(' ', '_');
-        return "https://commons.wikimedia.org/wiki/Special:FilePath/" + filename;
+        return filename;
     }
 
     /**
