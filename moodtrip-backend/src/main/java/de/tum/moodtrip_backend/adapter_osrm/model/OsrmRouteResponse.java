@@ -1,10 +1,12 @@
 package de.tum.moodtrip_backend.adapter_osrm.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 public record OsrmRouteResponse(
         String code,
-        List<Route> routes,
+        @JsonProperty("trips") List<Route> routes,
         List<Waypoint> waypoints
 ) {
 
