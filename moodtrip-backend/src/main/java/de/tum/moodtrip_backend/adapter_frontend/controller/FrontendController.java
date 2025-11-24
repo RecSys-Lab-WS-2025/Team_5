@@ -7,7 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @RestController
 @RequestMapping(path = "/frontend", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -22,10 +24,10 @@ public class FrontendController {
     }
 
     @GetMapping(value = "/poi")
-    public Flux<POI> getPois(@RequestParam("lat") double lat,
-                             @RequestParam("lon") double lon,
-                             @RequestParam("poiCategory") String poiCategory,
-                             @RequestParam("radiusMeters") int radiusMeters) {
+    public Mono<List<POI>> getPois(@RequestParam("lat") double lat,
+                                   @RequestParam("lon") double lon,
+                                   @RequestParam("poiCategory") String poiCategory,
+                                   @RequestParam("radiusMeters") int radiusMeters) {
 
         LOGGER.info("GET /frontend/poi lat={}, lon={}, poiCategory={}, radius={}",
                 lat, lon, poiCategory, radiusMeters);
