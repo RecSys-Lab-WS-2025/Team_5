@@ -12,6 +12,7 @@ import de.tum.moodtrip_backend.adapter_osrm.model.OsrmRouteResponse;
 import de.tum.moodtrip_backend.core.model.RouteCoordinate;
 import de.tum.moodtrip_backend.core.model.Route;
 import de.tum.moodtrip_backend.core.port.RoutingPort;
+
 @Component
 public class OsrmAdapter implements RoutingPort {
 
@@ -34,10 +35,8 @@ public class OsrmAdapter implements RoutingPort {
         return osrmWebClient
                 .get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/route/v1/walking/{coords}")
-                        .queryParam("overview", "full")
+                        .path("/trip/v1/walking/{coords}")
                         .queryParam("geometries", "geojson")
-                        .queryParam("steps", "false")
                         .build(coordinatesPath))
                 .retrieve()
                 .bodyToMono(OsrmRouteResponse.class)
