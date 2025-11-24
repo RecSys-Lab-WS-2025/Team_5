@@ -13,6 +13,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
 import reactor.core.publisher.Flux;
+import reactor.util.retry.Retry;
+
+import java.time.Duration;
 
 @Component
 public class OverpassAdapter implements OsmPort {
@@ -42,6 +45,7 @@ public class OverpassAdapter implements OsmPort {
                 .retrieve()
                 .bodyToMono(OverpassResponse.class)
                 .map(OverpassResponsePOIMapper::toPois)
-                .flatMapMany(Flux::fromIterable);
+                .flatMapMany(Flux::fromIterable)
+                .retryWhen(Retry.fixedDelay(5, Duration.ofMillis(10)));
     }
 }
