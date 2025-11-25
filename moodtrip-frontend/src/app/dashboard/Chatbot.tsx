@@ -28,7 +28,7 @@ import {
   SquareTerminal,
 } from "lucide-react";
 
-import { getUser } from "@/api/auth";
+import { BASE, authFetch, getUser } from "@/api/auth";
 
 // ---- static nav data ----
 const navData = {
@@ -112,10 +112,10 @@ const iconMap = {
   angry: Angry,
 } as const;
 
-// mock-ready fetchers
+// mock-ready fetchers, now calling backend with JWT but still falling back to mock data
 async function fetchChatList(): Promise<ChatSummary[]> {
   try {
-    const res = await fetch("/api/chats", { cache: "no-store" });
+    const res = await authFetch(`${BASE}/api/chats`, { cache: "no-store" });
     if (!res.ok) throw new Error("bad status");
     const list: { id: string; title: string; icon?: keyof typeof iconMap }[] =
       await res.json();
@@ -135,9 +135,12 @@ async function fetchChatList(): Promise<ChatSummary[]> {
 
 async function fetchChatDetail(id: string): Promise<ChatDetailDTO> {
   try {
-    const res = await fetch(`/api/chats/${encodeURIComponent(id)}`, {
-      cache: "no-store",
-    });
+    const res = await authFetch(
+      `${BASE}/api/chats/${encodeURIComponent(id)}`,
+      {
+        cache: "no-store",
+      },
+    );
     if (!res.ok) throw new Error("bad status");
     return res.json();
   } catch {
@@ -186,7 +189,7 @@ export default function Chatbot() {
   const displayUser = {
     name: storedUser?.username ?? navData.user.name,
     email: storedUser?.email ?? navData.user.email,
-    avatar: undefined,
+    avatar: undefined as string | undefined,
   };
 
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -219,7 +222,10 @@ export default function Chatbot() {
     status,
     setMessages,
   } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    transport: new DefaultChatTransport({
+      api: `${BASE}/api/chat`,
+      fetch: (input, init) => authFetch(input, init),
+    }),
     id: selectedChatId ?? undefined,
     messages: initialMessages,
     onError() {
@@ -253,6 +259,7 @@ export default function Chatbot() {
     const text = input.trim();
     if (!text) return;
 
+    // normal chat input: always goes to backend
     sendMessage({ text });
     setInput("");
   };
@@ -316,6 +323,7 @@ export default function Chatbot() {
       createSidebarChatEntry(cleanText);
     }
 
+    // send to backend; onError will automatically add a "network error" reply
     sendMessage({ text: cleanText });
   };
 
@@ -381,11 +389,13 @@ export default function Chatbot() {
       (!selectedChatId || selectedChatId === "new") && messages.length === 0;
 
     if (isStartingFresh) {
+      // pre-saved conversation: no backend, just local messages + new chat
       startNewChatWithMessages(
         [userMessage, assistantMessage],
         userText,
       );
     } else {
+      // already in a chat: just append locally, still not hitting backend
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
     }
   };

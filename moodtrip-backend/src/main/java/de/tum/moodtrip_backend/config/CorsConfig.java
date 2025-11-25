@@ -6,22 +6,26 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
+import java.util.List;
+
 @Configuration
 public class CorsConfig {
 
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        // Your frontend origins
-        config.addAllowedOrigin("http://localhost:5173");
-        config.addAllowedOrigin("http://127.0.0.1:5173");
 
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
+        config.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173"
+        ));
+
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedMethods(List.of("*"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L); // ❤️：让 preflight 缓存1小时
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // apply to all endpoints
         source.registerCorsConfiguration("/**", config);
 
         return new CorsWebFilter(source);

@@ -4,5 +4,9 @@ public record LoginResponse(
         String token,
         UserDto user
 ) {
-    public record UserDto(Long id, String username, String email) {}
+    public record UserDto(
+            Long id,
+            String username,
+            String email
+    ) {}
 }

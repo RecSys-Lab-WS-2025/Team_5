@@ -42,6 +42,11 @@ export function SignupForm({
       return;
     }
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+
     setPending(true);
     try {
       await signup({ username: fullName, email, password });
