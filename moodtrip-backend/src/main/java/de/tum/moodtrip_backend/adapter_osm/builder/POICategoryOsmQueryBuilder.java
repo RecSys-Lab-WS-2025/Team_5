@@ -136,6 +136,6 @@ public final class POICategoryOsmQueryBuilder {
         // Assemble final Overpass query
         return "[out:json][timeout:" + DEFAULT_TIMEOUT_SECONDS + "];\n"
                 + body
-                + "out center tags;";
+                + "out center tags 5;";
     }
 }

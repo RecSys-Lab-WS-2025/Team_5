@@ -5,6 +5,7 @@ import de.tum.moodtrip_backend.adapter_user.dto.LoginResponse;
 import de.tum.moodtrip_backend.core.model.UserProfile;
 import de.tum.moodtrip_backend.core.service.UserDomainService;
 import de.tum.moodtrip_backend.exception.UserNotFoundException;
+import de.tum.moodtrip_backend.security.JwtService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

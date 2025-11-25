@@ -1,9 +1,8 @@
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8080";
+export const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8080";
 
 export type LoginBody = { email: string; password: string };
 export type SignupBody = { username: string; email: string; password: string };
 
-// backend login response type
 export type AuthUser = {
   id: number;
   username: string;
@@ -19,7 +18,6 @@ export async function login(body: LoginBody) {
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await parseErr(res));
-  // expect { token?: string; user?: AuthUser }
   return res.json() as Promise<{ token?: string; user?: AuthUser }>;
 }
 
@@ -45,7 +43,6 @@ export function clearToken() {
   localStorage.removeItem("auth_token");
 }
 
-// ---- user helpers ----
 export function saveUser(user: AuthUser) {
   localStorage.setItem("auth_user", JSON.stringify(user));
 }
@@ -64,10 +61,32 @@ export function clearUser() {
   localStorage.removeItem("auth_user");
 }
 
-
 export function logout() {
   clearToken();
   clearUser();
+}
+
+// 保留来自 main 分支的认证请求封装功能
+export function authHeaders(): HeadersInit {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function authFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+): Promise<Response> {
+  const headers: HeadersInit = {
+    ...(init.headers || {}),
+    ...authHeaders(),
+  };
+
+  const res = await fetch(input, { ...init, headers });
+  if (res.status === 401) {
+    // optional: handle global unauthorized, e.g. redirect from a central place
+    // window.location.href = "/login";
+  }
+  return res;
 }
 
 async function parseErr(res: Response) {

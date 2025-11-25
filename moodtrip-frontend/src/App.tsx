@@ -1,6 +1,5 @@
 import { Routes, Route } from "react-router-dom";
 import { HomePage } from "@/app/dashboard/HomePage";
-import RoutePreview from "@/app/dashboard/RoutePreview";
 
 function App() {
   return (
