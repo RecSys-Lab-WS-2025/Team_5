@@ -49,7 +49,7 @@ public class UserDomainService {
                                         email,
                                         LocalDateTime.now(),
                                         hash,
-                                        null  
+                                        null
                                 );
                                 return userPort.save(user);
                             });
@@ -129,7 +129,7 @@ public class UserDomainService {
             String spotifyDisplayName
     ) {
         String username = generateUsernameFromSpotify(spotifyEmail, spotifyDisplayName);
-        
+
         UserProfile newUser = new UserProfile(
                 null,
                 username,
@@ -138,7 +138,7 @@ public class UserDomainService {
                 null,
                 spotifyTokenId
         );
-        
+
         return userPort.save(newUser);
     }
 
@@ -162,10 +162,10 @@ public class UserDomainService {
         return displayName.replaceAll("[^a-zA-Z0-9_-]", "_").substring(0, Math.min(50, displayName.length()));
     }
 
-    public Mono<ResponseEntity<LoginResponse>> authenticate(UserProfile user, String rawPassword) {
+    public Mono<LoginResponse> authenticate(UserProfile user, String rawPassword) {
         String hash = user.passwordHash();
         if (hash == null || !passwordEncoder.matches(rawPassword, hash)) {
-            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+            return Mono.empty();
         }
 
         String token = UUID.randomUUID().toString();
@@ -179,6 +179,6 @@ public class UserDomainService {
                 )
         );
 
-        return  Mono.just(ResponseEntity.ok(response));
+        return Mono.just(response);
     }
 }

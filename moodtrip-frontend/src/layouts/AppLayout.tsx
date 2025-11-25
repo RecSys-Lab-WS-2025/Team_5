@@ -31,7 +31,6 @@ export function AppLayout() {
             id: data.id,
             username: data.username,
             email: data.email || "",
-            
           }
         );
           alert("Hi! " + data.username + ", login is successful!");

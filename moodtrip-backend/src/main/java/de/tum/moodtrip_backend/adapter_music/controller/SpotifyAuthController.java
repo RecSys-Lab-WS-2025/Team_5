@@ -36,7 +36,7 @@ public class SpotifyAuthController {
     public Mono<ResponseEntity<String>> login() {
         String state = UUID.randomUUID().toString();
         String authorizeUrl = authService.buildAuthorizeUrl(state);
-        return Mono.just( ResponseEntity.status(HttpStatus.FOUND)
+        return Mono.just(ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(authorizeUrl))
                 .build()
         );
@@ -69,8 +69,8 @@ public class SpotifyAuthController {
                         authService.getUserBySpotifyTokenId(spotifyToken.id())
                                 .map(user ->
                                         ResponseEntity.status(HttpStatus.FOUND)
-                                            .location(URI.create(frontendUrl + "/chat?auth=success&userId=" + user.id()))
-                                            .build()
+                                                .location(URI.create(frontendUrl + "/chat?auth=success&userId=" + user.id()))
+                                                .build()
                                 )
                 )
                 .onErrorResume(e ->
@@ -85,6 +85,7 @@ public class SpotifyAuthController {
                 .location(URI.create(frontendUrl + "?auth=error&msg=" + encodedError))
                 .build());
     }
+
     /**
      * Test endpoint to check if user has valid token
      */

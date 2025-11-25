@@ -11,6 +11,7 @@ import de.tum.moodtrip_backend.exception.ResourceNotFoundException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,7 @@ import reactor.core.publisher.Mono;
 @Service
 public class ConversationDomainService {
     private static final Logger logger = LoggerFactory.getLogger(ConversationDomainService.class);
-    
+
     private final ConversationPort conversationPort;
     private final EmotionPort emotionPort;
 
@@ -57,7 +58,6 @@ public class ConversationDomainService {
         );
         return conversationPort.save(conversation);
     }
-
 
 
     public Mono<ConversationDomain> updateConversationTitle(Long conversationId, String newTitle) {

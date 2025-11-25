@@ -57,7 +57,6 @@ public class ConversationController {
     }
 
 
-
     @PostMapping("/extract-emotion")
     public Mono<EmotionResult> extractEmotion(
             @RequestParam @NotNull(message = "Conversation ID cannot be null") Long conversationId,
