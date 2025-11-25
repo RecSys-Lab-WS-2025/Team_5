@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/changes/004-create-music-recommendation.yaml
   - include:
       file: db/changelog/changes/005-create-route-recommendation.yaml
+  - include:
+      file: db/changelog/changes/006-add-user-password.yaml

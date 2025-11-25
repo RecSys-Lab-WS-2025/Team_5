@@ -45,6 +45,8 @@ dependencies {
 	testImplementation 'io.projectreactor:reactor-test'
     // GeoJson dependencies
     implementation 'de.grundid.opendatalab:geojson-jackson:1.14'
+	// password hashing
+	implementation 'org.springframework.security:spring-security-crypto'
 }
 dependencyManagement {
 	imports {

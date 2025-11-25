@@ -18,7 +18,7 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { login, saveToken, OAUTH } from "@/api/auth";
+import { login, saveToken, saveUser, OAUTH } from "@/api/auth";
 
 export function LoginForm({
   className,
@@ -34,11 +34,18 @@ export function LoginForm({
     e.preventDefault();
     setError(null);
     setPending(true);
+
     try {
-      const { token } = await login({ email, password });
+      const { token, user } = await login({ email, password });
+
       if (token) {
         saveToken(token);
       }
+
+      if (user) {
+        saveUser(user);
+      }
+
       navigate("/chat");
     } catch (err: any) {
       setError(err?.message || "Login failed");
@@ -52,7 +59,10 @@ export function LoginForm({
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = OAUTH.GOOGLE;
+    // If you don't have GOOGLE configured, you can disable this or add it to OAUTH
+    if ((OAUTH as any).GOOGLE) {
+      window.location.href = (OAUTH as any).GOOGLE;
+    }
   };
 
   return (

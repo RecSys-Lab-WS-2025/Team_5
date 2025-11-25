@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "@ai-sdk/react";
@@ -29,6 +27,8 @@ import {
   Users,
   SquareTerminal,
 } from "lucide-react";
+
+import { getUser } from "@/api/auth";
 
 // ---- static nav data ----
 const navData = {
@@ -182,6 +182,13 @@ function mapStoredToUIMessages(turns: StoredTurn[]): UIMessage[] {
 }
 
 export default function Chatbot() {
+  const storedUser = getUser();
+  const displayUser = {
+    name: storedUser?.username ?? navData.user.name,
+    email: storedUser?.email ?? navData.user.email,
+    avatar: undefined,
+  };
+
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
 
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -246,7 +253,6 @@ export default function Chatbot() {
     const text = input.trim();
     if (!text) return;
 
-    // normal chat input: always goes to backend
     sendMessage({ text });
     setInput("");
   };
@@ -310,7 +316,6 @@ export default function Chatbot() {
       createSidebarChatEntry(cleanText);
     }
 
-    // send to backend; onError will automatically add a "network error" reply
     sendMessage({ text: cleanText });
   };
 
@@ -376,13 +381,11 @@ export default function Chatbot() {
       (!selectedChatId || selectedChatId === "new") && messages.length === 0;
 
     if (isStartingFresh) {
-      // pre-saved conversation: no backend, just local messages + new chat
       startNewChatWithMessages(
         [userMessage, assistantMessage],
         userText,
       );
     } else {
-      // already in a chat: just append locally, still not hitting backend
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
     }
   };
@@ -457,7 +460,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
   return (
     <SidebarProvider>
       <AppSidebar
-        user={navData.user}
+        user={displayUser}
         navMain={navData.navMain}
         navSecondary={navData.navSecondary}
         chats={chats}
@@ -478,7 +481,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
           {showWelcome ? (
             <WelcomeScreen
               onSuggestionClick={handleSuggestionClick}
-              userName={navData.user.name}
+              userName={displayUser.name}
             />
           ) : (
             <ChatInterface

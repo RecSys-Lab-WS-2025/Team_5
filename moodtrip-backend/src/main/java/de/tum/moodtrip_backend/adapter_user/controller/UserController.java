@@ -27,7 +27,7 @@ public class UserController {
 
     @PostMapping
     public Mono<UserResponse> createUser(@Valid @RequestBody CreateUserRequest req) {
-        return userService.createUser(req.username(), req.email())
+        return userService.createUser(req.username(), req.email(), req.password())
                 .map(mapper::toResponse);
     }
 
@@ -36,12 +36,12 @@ public class UserController {
         return userService.findById(id).map(mapper::toResponse);
     }
 
-    @GetMapping(value ="/search",params = "username")
+    @GetMapping(value = "/search", params = "username")
     public Mono<UserResponse> getUserByUsername(@RequestParam @NotBlank String username) {
         return userService.findByUsername(username).map(mapper::toResponse);
     }
 
-    @GetMapping(value = "/search",params = "email")
+    @GetMapping(value = "/search", params = "email")
     public Mono<UserResponse> getUserByEmail(@RequestParam @NotBlank @Email String email) {
         return userService.findByEmail(email).map(mapper::toResponse);
     }

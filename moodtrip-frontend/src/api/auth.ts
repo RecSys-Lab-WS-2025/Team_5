@@ -3,54 +3,77 @@ const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8080";
 export type LoginBody = { email: string; password: string };
 export type SignupBody = { username: string; email: string; password: string };
 
+// backend login response type
+export type AuthUser = {
+  id: number;
+  username: string;
+  email: string;
+  createdAt?: string;
+};
+
 export async function login(body: LoginBody) {
-const res = await fetch(`${BASE}/api/auth/login`, {
-method: "POST",
-headers: { "Content-Type": "application/json" },
-credentials: "include",
-body: JSON.stringify(body),
-});
-if (!res.ok) throw new Error(await parseErr(res));
-return res.json() as Promise<{ token?: string; user?: any }>;
+  const res = await fetch(`${BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await parseErr(res));
+  // expect { token?: string; user?: AuthUser }
+  return res.json() as Promise<{ token?: string; user?: AuthUser }>;
 }
 
 export async function signup(body: SignupBody) {
-const res = await fetch(`${BASE}/api/auth/signup`, {
-method: "POST",
-headers: { "Content-Type": "application/json" },
-body: JSON.stringify(body),
-});
-if (!res.ok) throw new Error(await parseErr(res));
-return res.json();
+  const res = await fetch(`${BASE}/api/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await parseErr(res));
+  return res.json();
 }
 
 export function saveToken(token: string) {
-localStorage.setItem("auth_token", token);
+  localStorage.setItem("auth_token", token);
 }
 
 export function getToken() {
-return localStorage.getItem("auth_token");
+  return localStorage.getItem("auth_token");
 }
 
 export function clearToken() {
-localStorage.removeItem("auth_token");
+  localStorage.removeItem("auth_token");
+}
+
+// ---- user helpers ----
+export function saveUser(user: AuthUser) {
+  localStorage.setItem("auth_user", JSON.stringify(user));
+}
+
+export function getUser(): AuthUser | null {
+  const raw = localStorage.getItem("auth_user");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    return null;
+  }
+}
+
+export function clearUser() {
+  localStorage.removeItem("auth_user");
 }
 
 async function parseErr(res: Response) {
-try {
-const data = await res.json();
-return data?.message || data?.error || res.statusText;
-} catch {
-return res.statusText;
-}
+  try {
+    const data = await res.json();
+    return data?.message || data?.error || res.statusText;
+  } catch {
+    return res.statusText;
+  }
 }
 
 export const OAUTH = {
   SPOTIFY:
-  //TODO: dynamically input current UserId, now is the mock version
-    import.meta.env.VITE_SPOTIFY_AUTH_URL ??
-    `${BASE}/api/spotify/login`,
-  GOOGLE:
-    import.meta.env.VITE_GOOGLE_AUTH_URL ??
-    `${BASE}/oauth2/authorization/google`,
+    import.meta.env.VITE_SPOTIFY_AUTH_URL ?? `${BASE}/api/spotify/login`,
 };

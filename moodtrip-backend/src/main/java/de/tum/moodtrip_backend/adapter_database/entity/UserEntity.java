@@ -8,23 +8,29 @@ import org.springframework.data.relational.core.mapping.Table;
 
 @Table("user_profile")
 public class UserEntity {
+
     @Id
     private Long id;
-    
+
     private String username;
+
     private String email;
-    
+
     @Column("created_at")
     private LocalDateTime createdAt;
+
+    @Column("password_hash")
+    private String passwordHash;
 
     public UserEntity() {
     }
 
-    public UserEntity(Long id, String username, String email, LocalDateTime createdAt) {
+    public UserEntity(Long id, String username, String email, LocalDateTime createdAt, String passwordHash) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.createdAt = createdAt;
+        this.passwordHash = passwordHash;
     }
 
     public Long getId() {
@@ -57,5 +63,13 @@ public class UserEntity {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 }
