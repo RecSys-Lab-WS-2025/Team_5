@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
-import type { FeatureCollection } from "geojson";
+import type { FeatureCollection, GeoJsonObject } from "geojson";
 import L from "leaflet";
 
 type RouteMapProps = {
@@ -11,7 +11,7 @@ function FitBounds({ data }: { data: FeatureCollection }) {
   const map = useMap();
 
   useEffect(() => {
-    const layer = L.geoJSON(data as any);
+    const layer = L.geoJSON(data as GeoJsonObject);
     const bounds = layer.getBounds();
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [24, 24] });
@@ -36,7 +36,7 @@ export function RouteMap({ data }: RouteMapProps) {
         />
 
         <GeoJSON
-          data={data as any}
+          data={data as GeoJsonObject}
           style={() => ({
             color: "#2563eb",
             weight: 4,

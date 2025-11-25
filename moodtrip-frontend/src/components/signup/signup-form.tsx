@@ -51,8 +51,12 @@ export function SignupForm({
     try {
       await signup({ username: fullName, email, password });
       navigate("/login");
-    } catch (err: any) {
-      setError(err?.message || "Signup failed");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "Signup failed");
+      } else {
+        setError("Signup failed");
+      }
     } finally {
       setPending(false);
     }

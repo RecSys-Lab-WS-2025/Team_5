@@ -47,8 +47,12 @@ export function LoginForm({
       }
 
       navigate("/chat");
-    } catch (err: any) {
-      setError(err?.message || "Login failed");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "Login failed");
+      } else {
+        setError("Login failed");
+      }
     } finally {
       setPending(false);
     }
