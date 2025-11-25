@@ -5,6 +5,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +21,9 @@ import reactor.core.publisher.Mono;
 public class SpotifyAuthController {
 
     private final AuthService authService;
-    private static final String FRONTEND_URL = "http://localhost:5173";
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     public SpotifyAuthController(AuthService authService) {
         this.authService = authService;
@@ -31,7 +34,7 @@ public class SpotifyAuthController {
      */
     @GetMapping("/login")
     public Mono<ResponseEntity<String>> login() {
-        String state = UUID.randomUUID().toString(); // Random state for CSRF protection
+        String state = UUID.randomUUID().toString();
         String authorizeUrl = authService.buildAuthorizeUrl(state);
         return Mono.just( ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(authorizeUrl))
@@ -41,7 +44,7 @@ public class SpotifyAuthController {
 
     /**
      * OAuth callback endpoint - Spotify redirects here after user authorization
-     * Creates or updates SpotifyToken, returns the auto-generated userId
+     * AuthService handles both SpotifyToken and UserProfile creation/linking
      */
     @GetMapping("/callback")
     public Mono<ResponseEntity<Object>> callback(
@@ -59,15 +62,19 @@ public class SpotifyAuthController {
             return redirectWithError("missing_state");
         }
 
-
+        // 3. Exchange code for token (also creates/links UserProfile via UserDomainService)
         return authService.exchangeCodeForToken(code)
-                .map(tokenDomain ->
-                        ResponseEntity.status(HttpStatus.FOUND)
-                            .location(URI.create(FRONTEND_URL + "?spotify=success&userId=" + tokenDomain.id()))
-                            .build()
+                .flatMap(spotifyToken ->
+                        // Get the linked user profile through AuthService
+                        authService.getUserBySpotifyTokenId(spotifyToken.id())
+                                .map(user ->
+                                        ResponseEntity.status(HttpStatus.FOUND)
+                                            .location(URI.create(frontendUrl + "/chat?auth=success&userId=" + user.id()))
+                                            .build()
+                                )
                 )
                 .onErrorResume(e ->
-                        redirectWithError("token_exchange_failed")
+                        redirectWithError("login_failed: " + e.getMessage())
                 );
     }
 
@@ -75,7 +82,7 @@ public class SpotifyAuthController {
     private Mono<ResponseEntity<Object>> redirectWithError(String errorMessage) {
         String encodedError = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
         return Mono.just(ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(FRONTEND_URL + "?spotify=error&msg=" + encodedError))
+                .location(URI.create(frontendUrl + "?auth=error&msg=" + encodedError))
                 .build());
     }
     /**

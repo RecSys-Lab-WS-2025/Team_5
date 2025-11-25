@@ -46,6 +46,12 @@ public class DatabaseUserAdapter implements UserPort {
     }
 
     @Override
+    public Mono<UserProfile> findBySpotifyTokenId(Long spotifyTokenId) {
+        return userRepository.findBySpotifyTokenId(spotifyTokenId)
+                .map(userMapper::toDomain);
+    }
+
+    @Override
     public Mono<Boolean> existsByUsername(String username) {
         return userRepository.existsByUsername(username);
     }

@@ -182,12 +182,40 @@ function mapStoredToUIMessages(turns: StoredTurn[]): UIMessage[] {
 }
 
 export default function Chatbot() {
-  const storedUser = getUser();
-  const displayUser = {
-    name: storedUser?.username ?? navData.user.name,
-    email: storedUser?.email ?? navData.user.email,
-    avatar: undefined,
-  };
+  
+  const [displayUser, setDisplayUser] = useState(() => {
+    const storedUser = getUser();
+    return {
+      name: storedUser?.username ?? navData.user.name,
+      email: storedUser?.email ?? navData.user.email,
+      avatar: undefined,
+    };
+  });
+
+  
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedUser = getUser();
+      if (storedUser) {
+        setDisplayUser({
+          name: storedUser.username,
+          email: storedUser.email,
+          avatar: undefined,
+        });
+      }
+    };
+
+    
+    window.addEventListener('storage', handleStorageChange);
+
+   
+    window.addEventListener('userLogin', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userLogin', handleStorageChange);
+    };
+  }, []);
 
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
 

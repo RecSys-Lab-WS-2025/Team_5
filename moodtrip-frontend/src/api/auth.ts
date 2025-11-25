@@ -64,6 +64,12 @@ export function clearUser() {
   localStorage.removeItem("auth_user");
 }
 
+
+export function logout() {
+  clearToken();
+  clearUser();
+}
+
 async function parseErr(res: Response) {
   try {
     const data = await res.json();

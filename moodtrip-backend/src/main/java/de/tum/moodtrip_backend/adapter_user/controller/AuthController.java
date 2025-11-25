@@ -21,11 +21,9 @@ import reactor.core.publisher.Mono;
 public class AuthController {
 
     private final UserDomainService userService;
-    private final PasswordEncoder passwordEncoder;
 
-    public AuthController(UserDomainService userService, PasswordEncoder passwordEncoder) {
+    public AuthController(UserDomainService userService) {
         this.userService = userService;
-        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/login")
@@ -38,23 +36,8 @@ public class AuthController {
     }
 
     private Mono<ResponseEntity<LoginResponse>> authenticate(UserProfile user, String rawPassword) {
-        String hash = user.passwordHash();
-        if (hash == null || !passwordEncoder.matches(rawPassword, hash)) {
-            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
-        }
+       return userService.authenticate(user, rawPassword);
 
-        String token = UUID.randomUUID().toString();
-
-        LoginResponse response = new LoginResponse(
-                token,
-                new LoginResponse.UserDto(
-                        user.id(),
-                        user.username(),
-                        user.email()
-                )
-        );
-
-        return Mono.just(ResponseEntity.ok(response));
 }
 
 }

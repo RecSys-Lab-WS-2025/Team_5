@@ -4,6 +4,7 @@ package de.tum.moodtrip_backend.adapter_music.service;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import de.tum.moodtrip_backend.core.service.UserDomainService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +16,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import de.tum.moodtrip_backend.core.model.SpotifyTokenDomain;
+import de.tum.moodtrip_backend.core.model.UserProfile;
 import de.tum.moodtrip_backend.core.port.SpotifyTokenPort;
+import de.tum.moodtrip_backend.core.port.UserPort;
 import reactor.core.publisher.Mono;
 
 
@@ -47,11 +50,15 @@ public class AuthService {
 
     private final WebClient webClientAuth;
     private final SpotifyTokenPort spotifyTokenPort;
+    private final UserPort userPort;
+    private final UserDomainService userDomainService;
 
 
-    public AuthService(WebClient.Builder webClientBuilder, SpotifyTokenPort spotifyTokenPort) {
+    public AuthService(WebClient.Builder webClientBuilder, SpotifyTokenPort spotifyTokenPort, UserPort userPort, UserDomainService userDomainService) {
         this.webClientAuth = webClientBuilder.baseUrl("https://accounts.spotify.com").build();
         this.spotifyTokenPort = spotifyTokenPort;
+        this.userPort = userPort;
+        this.userDomainService = userDomainService;
     }
 
     /**
@@ -71,34 +78,13 @@ public class AuthService {
 
                     return Mono.just(spotifyToken.accessToken());
                 })
-                .switchIfEmpty(Mono.defer(() -> {
-                    // Fallback to env token if no user token found (for backward compatibility)
-                    if (token != null && !token.isBlank()) {
-                        logger.warn("Using fallback env token for user {}", userId);
-                        return Mono.just(token);
-                    }
-                    return Mono.error(new IllegalStateException(
+                .switchIfEmpty(Mono.defer(() ->
+                     Mono.error(new IllegalStateException(
                             "No access token found for user " + userId + ". Please authorize via OAuth."
-                    ));
-                }));
+                    ))
+                ));
     }
 
-    /**
-     * Get access token without user context (uses env token or first available user token)
-     */
-    public Mono<String> getAccessToken() {
-        if (token != null && !token.isBlank()) {
-            return Mono.just(token);
-        }
-
-        // Try to get any available user token
-        return spotifyTokenPort.findAll()
-                .next()
-                .flatMap(spotifyToken -> getAccessToken(spotifyToken.id()))
-                .switchIfEmpty(Mono.error(new IllegalStateException(
-                        "No access token configured. Please authorize via OAuth."
-                )));
-    }
 
 
     /**
@@ -154,6 +140,7 @@ public class AuthService {
 
     /**
      * Exchange authorization code for tokens and save to database
+     * Also creates or links UserProfile
      * Returns SpotifyTokenDomain where id is the userId
      */
     public Mono<SpotifyTokenDomain> exchangeCodeForToken(String code) {
@@ -173,14 +160,13 @@ public class AuthService {
                     long expiresIn = tokenJson.path("expires_in").asLong();
                     long fetchedAt = System.currentTimeMillis() / 1000;
 
-                    // Get Spotify user profile to obtain spotifyUserId
+                
                     return getCurrentUserProfile(accessToken)
                             .flatMap(profileJson -> {
                                 String spotifyUserId = profileJson.path("id").asText();
                                 String spotifyEmail = profileJson.path("email").asText();
                                 String spotifyDisplayName = profileJson.path("display_name").asText();
 
-                                // Check if user already exists by spotifyUserId
                                 return spotifyTokenPort.findBySpotifyUserId(spotifyUserId)
                                         .flatMap(existingToken -> {
                                             // Update existing token
@@ -194,7 +180,15 @@ public class AuthService {
                                                     spotifyEmail,
                                                     spotifyDisplayName
                                             );
-                                            return spotifyTokenPort.save(updated);
+                                            return spotifyTokenPort.save(updated)
+                                                    .flatMap(savedToken -> 
+                                                 
+                                                        userDomainService.createOrLinkSpotifyUser(
+                                                                savedToken.id(),
+                                                                savedToken.spotifyEmail(),
+                                                                savedToken.spotifyDisplayName()
+                                                        ).thenReturn(savedToken)
+                                                    );
                                         })
                                         .switchIfEmpty(Mono.defer(() -> {
                                             // Create new token (id will be auto-generated)
@@ -208,10 +202,26 @@ public class AuthService {
                                                     spotifyEmail,
                                                     spotifyDisplayName
                                             );
-                                            return spotifyTokenPort.save(newToken);
+                                            return spotifyTokenPort.save(newToken)
+                                                    .flatMap(savedToken -> 
+                                                        
+                                                        userDomainService.createOrLinkSpotifyUser(
+                                                                savedToken.id(),
+                                                                savedToken.spotifyEmail(),
+                                                                savedToken.spotifyDisplayName()
+                                                        ).thenReturn(savedToken)
+                                                    );
                                         }));
                             });
                 });
+    }
+
+    /**
+     * Get user profile by Spotify token ID
+     * This allows Controller to get user without directly accessing UserPort
+     */
+    public Mono<UserProfile> getUserBySpotifyTokenId(Long spotifyTokenId) {
+        return userPort.findBySpotifyTokenId(spotifyTokenId);
     }
 
     public String buildAuthorizeUrl(String state) {
