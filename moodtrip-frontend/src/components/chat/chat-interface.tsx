@@ -47,7 +47,7 @@ export function ChatInterface({
     if (lastAssistantMessage.id !== typingMessageId) {
       const fullText = lastAssistantMessage.parts
         .filter((p) => p.type === "text")
-        .map((p: any) => p.text as string)
+        .map((p) => (p.type === "text" ? p.text : ""))
         .join("");
 
       if (!fullText.length) {
@@ -66,7 +66,7 @@ export function ChatInterface({
 
     const fullText = lastAssistantMessage.parts
       .filter((p) => p.type === "text")
-      .map((p: any) => p.text as string)
+      .map((p) => (p.type === "text" ? p.text : ""))
       .join("");
 
     if (!fullText.length) return;
@@ -98,7 +98,7 @@ export function ChatInterface({
 
     return message.parts.map((part, idx) => {
       if (part.type === "text") {
-        const text = (part as any).text as string;
+        const text = part.text;
 
         // not the one currently playing typing animation
         if (!isTypingMessage || !typingMessageId) {
@@ -137,7 +137,7 @@ export function ChatInterface({
             key={idx}
             className="whitespace-pre-wrap text-xs text-muted-foreground"
           >
-            {(part as any).text}
+            {part.text}
           </pre>
         );
       }

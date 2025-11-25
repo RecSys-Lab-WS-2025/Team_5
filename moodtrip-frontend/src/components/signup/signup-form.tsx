@@ -42,12 +42,21 @@ export function SignupForm({
       return;
     }
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+
     setPending(true);
     try {
       await signup({ username: fullName, email, password });
       navigate("/login");
-    } catch (err: any) {
-      setError(err?.message || "Signup failed");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "Signup failed");
+      } else {
+        setError("Signup failed");
+      }
     } finally {
       setPending(false);
     }

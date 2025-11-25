@@ -18,7 +18,8 @@ public class UserMapper {
             entity.getId(),
             entity.getUsername(),
             entity.getEmail(),
-            entity.getCreatedAt()
+            entity.getCreatedAt(),
+            entity.getPasswordHash()
         );
     }
     
@@ -30,7 +31,8 @@ public class UserMapper {
             domain.id(),
             domain.username(),
             domain.email(),
-            domain.createdAt() != null ? domain.createdAt() : LocalDateTime.now()
+            domain.createdAt() != null ? domain.createdAt() : LocalDateTime.now(),
+            domain.passwordHash()
         );
     }
 }
