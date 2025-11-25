@@ -23,10 +23,13 @@ export type ChatSummary = {
   preview?: string;
 };
 
+type NavMainProps = React.ComponentProps<typeof NavMain>;
+type NavSecondaryProps = React.ComponentProps<typeof NavSecondary>;
+
 type Props = React.ComponentProps<typeof Sidebar> & {
   user: { name: string; email: string; avatar?: string };
-  navMain: any[];
-  navSecondary: any[];
+  navMain: NavMainProps["items"];
+  navSecondary: NavSecondaryProps["items"];
   chats: ChatSummary[];
   selectedChatId: string | null;
   onNewChat: () => void;
