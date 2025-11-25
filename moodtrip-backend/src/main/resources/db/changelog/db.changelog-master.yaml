@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/changelog/changes/005-create-route-recommendation.yaml
   - include:
       file: db/changelog/changes/006-add-user-password.yaml
+  - include:
+      file: db/changelog/changes/007-link-user-to-spotify.yaml

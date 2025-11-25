@@ -19,7 +19,8 @@ public class UserMapper {
             entity.getUsername(),
             entity.getEmail(),
             entity.getCreatedAt(),
-            entity.getPasswordHash()
+            entity.getPasswordHash(),
+            entity.getSpotifyTokenId()
         );
     }
     
@@ -32,7 +33,8 @@ public class UserMapper {
             domain.username(),
             domain.email(),
             domain.createdAt() != null ? domain.createdAt() : LocalDateTime.now(),
-            domain.passwordHash()
+            domain.passwordHash(),
+            domain.spotifyTokenId()
         );
     }
 }

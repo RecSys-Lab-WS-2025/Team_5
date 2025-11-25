@@ -15,6 +15,9 @@ public interface R2dbcUserRepository extends ReactiveCrudRepository<UserEntity, 
     @Query("SELECT * FROM user_profile WHERE email = :email")
     Mono<UserEntity> findByEmail(String email);
     
+    @Query("SELECT * FROM user_profile WHERE spotify_token_id = :spotifyTokenId")
+    Mono<UserEntity> findBySpotifyTokenId(Long spotifyTokenId);
+    
     @Query("SELECT EXISTS(SELECT 1 FROM user_profile WHERE username = :username)")
     Mono<Boolean> existsByUsername(String username);
     
