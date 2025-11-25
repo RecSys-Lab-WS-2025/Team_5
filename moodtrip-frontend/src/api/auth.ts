@@ -66,7 +66,6 @@ export function logout() {
   clearUser();
 }
 
-// 保留来自 main 分支的认证请求封装功能
 export function authHeaders(): HeadersInit {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};

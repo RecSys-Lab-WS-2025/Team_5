@@ -11,21 +11,20 @@ export function AppLayout() {
     if (hasProcessedAuth.current) return;
     const params = new URLSearchParams(window.location.search);
     const flag = params.get("auth");
-    const token = params.get("token");  
+    const token = params.get("token");
     const userId = params.get("userId");
-    const username = params.get("username");  
-    const email = params.get("email"); 
+    const username = params.get("username");
+    const email = params.get("email");
 
     if (!flag) return;
 
     hasProcessedAuth.current = true;
 
     if (flag === "success" && token && userId && username) {
-
       saveToken(token);
-      
+
       saveUser({
-        id: parseInt(userId),
+        id: parseInt(userId, 10),
         username: decodeURIComponent(username),
         email: email ? decodeURIComponent(email) : "",
       });
@@ -37,7 +36,7 @@ export function AppLayout() {
         document.title,
         window.location.pathname
       );
-      
+
       alert("Hi! " + decodeURIComponent(username) + ", login is successful!");
       navigate("/chat");
     } else if (flag === "error") {
@@ -48,7 +47,7 @@ export function AppLayout() {
       window.history.replaceState(null, document.title, "/login");
       navigate("/login", { replace: true });
     }
-  }, [navigate]);
+  }, []);
 
   // Hide Navbar on /chat
   const hideNavbar =

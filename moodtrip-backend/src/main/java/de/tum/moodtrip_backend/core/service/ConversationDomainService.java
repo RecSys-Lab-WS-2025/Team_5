@@ -4,17 +4,16 @@ import de.tum.moodtrip_backend.core.model.ConversationDomain;
 import de.tum.moodtrip_backend.core.model.Emotion;
 import de.tum.moodtrip_backend.core.model.EmotionResult;
 import de.tum.moodtrip_backend.core.model.MessageDomain;
-import de.tum.moodtrip_backend.core.model.Sender;
 import de.tum.moodtrip_backend.core.port.ConversationPort;
 import de.tum.moodtrip_backend.core.port.EmotionPort;
 import de.tum.moodtrip_backend.exception.ResourceNotFoundException;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 

@@ -79,12 +79,11 @@ public class AuthService {
                     return Mono.just(spotifyToken.accessToken());
                 })
                 .switchIfEmpty(Mono.defer(() ->
-                     Mono.error(new IllegalStateException(
-                            "No access token found for user " + userId + ". Please authorize via OAuth."
-                    ))
+                        Mono.error(new IllegalStateException(
+                                "No access token found for user " + userId + ". Please authorize via OAuth."
+                        ))
                 ));
     }
-
 
 
     /**
@@ -158,8 +157,6 @@ public class AuthService {
                     String refreshToken = tokenJson.path("refresh_token").asText();
                     long expiresIn = tokenJson.path("expires_in").asLong();
                     long fetchedAt = System.currentTimeMillis() / 1000;
-
-                
                     return getCurrentUserProfile(accessToken)
                             .flatMap(profileJson -> {
                                 String spotifyUserId = profileJson.path("id").asText();
@@ -180,13 +177,12 @@ public class AuthService {
                                                     spotifyDisplayName
                                             );
                                             return spotifyTokenPort.save(updated)
-                                                    .flatMap(savedToken -> 
-                                                 
-                                                        userDomainService.createOrLinkSpotifyUser(
-                                                                savedToken.id(),
-                                                                savedToken.spotifyEmail(),
-                                                                savedToken.spotifyDisplayName()
-                                                        ).thenReturn(savedToken)
+                                                    .flatMap(savedToken ->
+                                                            userDomainService.createOrLinkSpotifyUser(
+                                                                    savedToken.id(),
+                                                                    savedToken.spotifyEmail(),
+                                                                    savedToken.spotifyDisplayName()
+                                                            ).thenReturn(savedToken)
                                                     );
                                         })
                                         .switchIfEmpty(Mono.defer(() -> {
@@ -202,13 +198,12 @@ public class AuthService {
                                                     spotifyDisplayName
                                             );
                                             return spotifyTokenPort.save(newToken)
-                                                    .flatMap(savedToken -> 
-                                                        
-                                                        userDomainService.createOrLinkSpotifyUser(
-                                                                savedToken.id(),
-                                                                savedToken.spotifyEmail(),
-                                                                savedToken.spotifyDisplayName()
-                                                        ).thenReturn(savedToken)
+                                                    .flatMap(savedToken ->
+                                                            userDomainService.createOrLinkSpotifyUser(
+                                                                    savedToken.id(),
+                                                                    savedToken.spotifyEmail(),
+                                                                    savedToken.spotifyDisplayName()
+                                                            ).thenReturn(savedToken)
                                                     );
                                         }));
                             });
