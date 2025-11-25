@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import de.tum.moodtrip_backend.adapter_music.service.AuthService;
+import de.tum.moodtrip_backend.security.JwtService;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -21,12 +22,14 @@ import reactor.core.publisher.Mono;
 public class SpotifyAuthController {
 
     private final AuthService authService;
+    private final JwtService jwtService;
 
     @Value("${frontend.url}")
     private String frontendUrl;
 
-    public SpotifyAuthController(AuthService authService) {
+    public SpotifyAuthController(AuthService authService, JwtService jwtService) {
         this.authService = authService;
+        this.jwtService = jwtService;
     }
 
     /**
@@ -36,7 +39,7 @@ public class SpotifyAuthController {
     public Mono<ResponseEntity<String>> login() {
         String state = UUID.randomUUID().toString();
         String authorizeUrl = authService.buildAuthorizeUrl(state);
-        return Mono.just(ResponseEntity.status(HttpStatus.FOUND)
+        return Mono.just( ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(authorizeUrl))
                 .build()
         );
@@ -57,21 +60,31 @@ public class SpotifyAuthController {
             return redirectWithError("spotify_error: " + error);
         }
 
-        // 2. Validate state parameter
+        // 2. Validate state parameter for CSRF protection
         if (state == null || state.isEmpty()) {
             return redirectWithError("missing_state");
         }
+        
 
-        // 3. Exchange code for token (also creates/links UserProfile via UserDomainService)
         return authService.exchangeCodeForToken(code)
                 .flatMap(spotifyToken ->
                         // Get the linked user profile through AuthService
                         authService.getUserBySpotifyTokenId(spotifyToken.id())
-                                .map(user ->
-                                        ResponseEntity.status(HttpStatus.FOUND)
-                                                .location(URI.create(frontendUrl + "/chat?auth=success&userId=" + user.id()))
-                                                .build()
-                                )
+                                .map(user -> {
+                                    String jwtToken = jwtService.generateToken(user);
+
+                                    String encodedUsername = URLEncoder.encode(user.username(), StandardCharsets.UTF_8);
+                                    String encodedEmail = URLEncoder.encode(user.email() != null ? user.email() : "", StandardCharsets.UTF_8);
+
+                                    String redirectUrl = String.format(
+                                        "%s/chat?auth=success&token=%s&userId=%d&username=%s&email=%s",
+                                        frontendUrl, jwtToken, user.id(), encodedUsername, encodedEmail
+                                    );
+                                    
+                                    return ResponseEntity.status(HttpStatus.FOUND)
+                                            .location(URI.create(redirectUrl))
+                                            .build();
+                                })
                 )
                 .onErrorResume(e ->
                         redirectWithError("login_failed: " + e.getMessage())

@@ -1,11 +1,9 @@
 package de.tum.moodtrip_backend.core.service;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 import de.tum.moodtrip_backend.adapter_user.dto.LoginResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import de.tum.moodtrip_backend.security.JwtService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +17,13 @@ public class UserDomainService {
 
     private final UserPort userPort;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-    public UserDomainService(UserPort userPort, PasswordEncoder passwordEncoder) {
+
+    public UserDomainService(UserPort userPort, PasswordEncoder passwordEncoder, JwtService jwtService) {
         this.userPort = userPort;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     public Mono<UserProfile> createUser(String username, String email) {
@@ -79,9 +80,6 @@ public class UserDomainService {
 
     /**
      * Create or link user profile from Spotify OAuth
-     * 1. Check if already linked by spotifyTokenId
-     * 2. Try to link to existing user by email
-     * 3. Create new user from Spotify information
      */
     public Mono<UserProfile> createOrLinkSpotifyUser(
             Long spotifyTokenId,
@@ -168,7 +166,7 @@ public class UserDomainService {
             return Mono.empty();
         }
 
-        String token = UUID.randomUUID().toString();
+        String token = jwtService.generateToken(user);
 
         LoginResponse response = new LoginResponse(
                 token,

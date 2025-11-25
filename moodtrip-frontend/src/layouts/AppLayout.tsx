@@ -1,9 +1,7 @@
 import { Navbar } from "@/components/layout/navbar";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef } from "react";
-import { saveUser } from "@/api/auth";
-
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8080";
+import { saveUser, saveToken } from "@/api/auth";
 
 export function AppLayout() {
   const location = useLocation();
@@ -13,43 +11,35 @@ export function AppLayout() {
     if (hasProcessedAuth.current) return;
     const params = new URLSearchParams(window.location.search);
     const flag = params.get("auth");
+    const token = params.get("token");  
     const userId = params.get("userId");
+    const username = params.get("username");  
+    const email = params.get("email"); 
 
     if (!flag) return;
 
     hasProcessedAuth.current = true;
 
-    if (flag === "success" && userId) {
-      console.log("Processing Spotify auth success with userId:", userId);
-      fetch(`${BASE}/api/users/${userId}`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch user");
-          return res.json();
-        })
-        .then((data) => {
-         saveUser({
-            id: data.id,
-            username: data.username,
-            email: data.email || "",
-          }
-        );
-          alert("Hi! " + data.username + ", login is successful!");
-          navigate("/chat");
+    if (flag === "success" && token && userId && username) {
 
-          window.dispatchEvent(new Event("userLogin"));
+      saveToken(token);
+      
+      saveUser({
+        id: parseInt(userId),
+        username: decodeURIComponent(username),
+        email: email ? decodeURIComponent(email) : "",
+      });
 
-          window.history.replaceState(
-            null,
-            document.title,
-            window.location.pathname
-          );
-        })
-        .catch((err) => {
-          console.error("Failed to fetch user info:", err);
-          alert("Login successful but failed to load user info");
-          window.history.replaceState(null, document.title, "/login");
-          navigate("/login", { replace: true });
-        });
+      window.dispatchEvent(new Event("userLogin"));
+
+      window.history.replaceState(
+        null,
+        document.title,
+        window.location.pathname
+      );
+      
+      alert("Hi! " + decodeURIComponent(username) + ", login is successful!");
+      navigate("/chat");
     } else if (flag === "error") {
       const raw = params.get("msg") || "Spotify Authorization failed";
       const msg = decodeURIComponent(raw);

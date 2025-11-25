@@ -44,7 +44,6 @@ export function LoginForm({
 
       if (user) {
         saveUser(user);
-        
         window.dispatchEvent(new Event('userLogin'));
       }
       alert(`Hi! ${user?.username}, login is successful!`);

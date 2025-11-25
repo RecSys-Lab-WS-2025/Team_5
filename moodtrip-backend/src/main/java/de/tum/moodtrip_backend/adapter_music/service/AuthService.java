@@ -141,7 +141,6 @@ public class AuthService {
     /**
      * Exchange authorization code for tokens and save to database
      * Also creates or links UserProfile
-     * Returns SpotifyTokenDomain where id is the userId
      */
     public Mono<SpotifyTokenDomain> exchangeCodeForToken(String code) {
         logger.info("Exchanging code for token, code: {}", code);
@@ -218,7 +217,6 @@ public class AuthService {
 
     /**
      * Get user profile by Spotify token ID
-     * This allows Controller to get user without directly accessing UserPort
      */
     public Mono<UserProfile> getUserBySpotifyTokenId(Long spotifyTokenId) {
         return userPort.findBySpotifyTokenId(spotifyTokenId);
