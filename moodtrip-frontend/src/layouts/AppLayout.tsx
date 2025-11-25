@@ -47,7 +47,7 @@ export function AppLayout() {
       window.history.replaceState(null, document.title, "/login");
       navigate("/login", { replace: true });
     }
-  }, []);
+  }, [navigate]);
 
   // Hide Navbar on /chat
   const hideNavbar =
