@@ -27,7 +27,7 @@ public class JwtServerAuthenticationConverter implements ServerAuthenticationCon
         return Mono.justOrEmpty(exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION))
                 .filter(header -> header.startsWith(BEARER_PREFIX))
                 .map(header -> header.substring(BEARER_PREFIX.length()))
-                .<Authentication>flatMap(token -> Mono.defer(() -> Mono.just(createAuthentication(token))))
+                .<Authentication>flatMap(token -> Mono.fromCallable(() -> createAuthentication(token)))
                 .onErrorResume(JwtException.class, e -> Mono.empty());
     }
 
