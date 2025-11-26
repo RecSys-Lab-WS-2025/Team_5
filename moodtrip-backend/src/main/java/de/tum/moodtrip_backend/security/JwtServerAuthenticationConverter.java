@@ -1,6 +1,9 @@
 package de.tum.moodtrip_backend.security;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -26,7 +29,16 @@ public class JwtServerAuthenticationConverter implements ServerAuthenticationCon
         return Mono.justOrEmpty(exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION))
                 .filter(header -> header.startsWith(BEARER_PREFIX))
                 .map(header -> header.substring(BEARER_PREFIX.length()))
-                .map(this::createAuthentication);
+                .map(this::createAuthentication)
+                .onErrorMap(
+                        ExpiredJwtException.class,
+                        ex -> new BadCredentialsException("JWT expired", ex)
+                )
+                .onErrorMap(
+                        JwtException.class,
+                        ex -> new BadCredentialsException("Invalid JWT token", ex)
+                )
+                .cast(Authentication.class);
     }
 
     private JwtToken createAuthentication(String token) {
