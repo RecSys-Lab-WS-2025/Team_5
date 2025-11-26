@@ -61,6 +61,11 @@ export function clearUser() {
   localStorage.removeItem("auth_user");
 }
 
+export function logout() {
+  clearToken();
+  clearUser();
+}
+
 export function authHeaders(): HeadersInit {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -78,6 +83,7 @@ export async function authFetch(
   const res = await fetch(input, { ...init, headers });
   if (res.status === 401) {
     // optional: handle global unauthorized, e.g. redirect from a central place
+    // window.location.href = "/login";
   }
   return res;
 }

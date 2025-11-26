@@ -1,5 +1,6 @@
 package de.tum.moodtrip_backend.security;
 
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,7 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
                 .filter(jwt -> jwtService.isTokenValid(jwt.getToken()))
                 .map(jwt -> jwt.withAuthenticated(true))
                 .cast(Authentication.class)
-                .switchIfEmpty(Mono.error(new RuntimeException("Invalid JWT token")));
+                .switchIfEmpty(Mono.error(new BadCredentialsException("Invalid JWT token")));
+
     }
 }

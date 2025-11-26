@@ -56,16 +56,6 @@ public class ConversationController {
         return conversationService.getMessagesByConversationId(conversationId);
     }
 
-    @PostMapping("/{conversationId}/messages")
-    public Mono<MessageDomain> addMessage(
-            @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
-            @RequestParam @NotBlank(message = "Sender cannot be blank") String sender,
-            @RequestBody @NotBlank(message = "Content cannot be blank") String content) {
-        return Mono.fromCallable(() -> Sender.fromString(sender))
-                .onErrorMap(IllegalArgumentException.class, e ->
-                        new IllegalArgumentException("Invalid sender: " + sender + ". Must be USER or BOT."))
-                .flatMap(senderEnum -> conversationService.addMessage(conversationId, senderEnum, content));
-    }
 
     @PostMapping("/extract-emotion")
     public Mono<EmotionResult> extractEmotion(

@@ -8,6 +8,7 @@ public interface UserPort {
     Mono<UserProfile> findById(Long id);
     Mono<UserProfile> findByUsername(String username);
     Mono<UserProfile> findByEmail(String email);
+    Mono<UserProfile> findBySpotifyTokenId(Long spotifyTokenId);
     Mono<Boolean> existsByUsername(String username);
     Mono<Boolean> existsByEmail(String email);
     Mono<Void> deleteById(Long id);

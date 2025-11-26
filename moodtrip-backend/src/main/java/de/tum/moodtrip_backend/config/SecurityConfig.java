@@ -41,7 +41,8 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers(HttpMethod.POST, "/api/users").permitAll()
                         .pathMatchers("/api/auth/login").permitAll()
-                        .pathMatchers("/api/spotify/**").permitAll()
+                        .pathMatchers("/api/spotify/login").permitAll()
+                        .pathMatchers("/api/spotify/callback").permitAll()
                         .pathMatchers("/actuator/**").permitAll()
                         .anyExchange().authenticated()
                 )
