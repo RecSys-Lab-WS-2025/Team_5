@@ -1,5 +1,6 @@
 package de.tum.moodtrip_backend.security;
 
+import io.jsonwebtoken.Claims;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
@@ -30,14 +31,16 @@ public class JwtServerAuthenticationConverter implements ServerAuthenticationCon
     }
 
     private JwtToken createAuthentication(String token) {
-        Long userId = jwtService.extractUserId(token);
-        String username = jwtService.extractUsername(token);
+        // Parse the token only once and reuse the claims
+        Claims claims = jwtService.parseToken(token);
+        Long userId = jwtService.extractUserId(claims);
+        String username = jwtService.extractUsername(claims);
 
         UserDetails userDetails = User.withUsername(username)
                 .password("") // not used
                 .authorities(Collections.emptyList()) // no roles yet
                 .build();
 
-        return new JwtToken(token, userId, userDetails);
+        return new JwtToken(token, userId, userDetails, claims);
     }
 }

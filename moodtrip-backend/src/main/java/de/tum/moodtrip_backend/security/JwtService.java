@@ -53,8 +53,9 @@ public class JwtService {
 
     /**
      * Parse and validate the JWT. Throws JwtException if invalid.
+     * This is the only method that actually parses the token.
      */
-    private Claims parseToken(String token) throws JwtException {
+    public Claims parseToken(String token) throws JwtException {
         Jws<Claims> jws = Jwts.parserBuilder()
                 .setSigningKey(signingKey)
                 .build()
@@ -65,9 +66,16 @@ public class JwtService {
 
     /**
      * Extract the user ID (subject) from the token.
+     * Note: Consider using extractUserId(Claims) with pre-parsed claims for better performance.
      */
     public Long extractUserId(String token) {
-        Claims claims = parseToken(token);
+        return extractUserId(parseToken(token));
+    }
+
+    /**
+     * Extract the user ID (subject) from pre-parsed claims.
+     */
+    public Long extractUserId(Claims claims) {
         try {
             return Long.valueOf(claims.getSubject());
         } catch (NumberFormatException e) {
@@ -77,30 +85,51 @@ public class JwtService {
 
     /**
      * Extract the username claim.
+     * Note: Consider using extractUsername(Claims) with pre-parsed claims for better performance.
      */
     public String extractUsername(String token) {
-        Claims claims = parseToken(token);
+        return extractUsername(parseToken(token));
+    }
+
+    /**
+     * Extract the username from pre-parsed claims.
+     */
+    public String extractUsername(Claims claims) {
         return claims.get("username", String.class);
     }
 
     /**
      * Extract the email claim.
+     * Note: Consider using extractEmail(Claims) with pre-parsed claims for better performance.
      */
     public String extractEmail(String token) {
-        Claims claims = parseToken(token);
+        return extractEmail(parseToken(token));
+    }
+
+    /**
+     * Extract the email from pre-parsed claims.
+     */
+    public String extractEmail(Claims claims) {
         return claims.get("email", String.class);
     }
 
     /**
      * Validate token (signature + expiry).
+     * Note: Consider using isTokenValid(Claims) with pre-parsed claims for better performance.
      */
     public boolean isTokenValid(String token) {
         try {
-            Claims claims = parseToken(token);
-            Date exp = claims.getExpiration();
-            return exp != null && exp.after(new Date());
+            return isTokenValid(parseToken(token));
         } catch (JwtException e) {
             return false;
         }
+    }
+
+    /**
+     * Validate pre-parsed claims (checks expiry).
+     */
+    public boolean isTokenValid(Claims claims) {
+        Date exp = claims.getExpiration();
+        return exp != null && exp.after(new Date());
     }
 }

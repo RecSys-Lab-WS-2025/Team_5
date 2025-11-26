@@ -18,7 +18,7 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
     public Mono<Authentication> authenticate(Authentication authentication) {
         return Mono.just(authentication)
                 .cast(JwtToken.class)
-                .filter(jwt -> jwtService.isTokenValid(jwt.getToken()))
+                .filter(jwt -> jwtService.isTokenValid(jwt.getClaims()))
                 .map(jwt -> jwt.withAuthenticated(true))
                 .cast(Authentication.class)
                 .switchIfEmpty(Mono.error(new RuntimeException("Invalid JWT token")));
