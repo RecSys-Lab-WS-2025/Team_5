@@ -1,5 +1,6 @@
 package de.tum.moodtrip_backend.security;
 
+import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
@@ -26,7 +27,8 @@ public class JwtServerAuthenticationConverter implements ServerAuthenticationCon
         return Mono.justOrEmpty(exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION))
                 .filter(header -> header.startsWith(BEARER_PREFIX))
                 .map(header -> header.substring(BEARER_PREFIX.length()))
-                .map(this::createAuthentication);
+                .<Authentication>flatMap(token -> Mono.defer(() -> Mono.just(createAuthentication(token))))
+                .onErrorResume(JwtException.class, e -> Mono.empty());
     }
 
     private JwtToken createAuthentication(String token) {
