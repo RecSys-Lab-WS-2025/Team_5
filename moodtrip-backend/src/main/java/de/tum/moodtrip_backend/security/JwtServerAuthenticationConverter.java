@@ -1,6 +1,7 @@
 package de.tum.moodtrip_backend.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
@@ -27,20 +28,25 @@ public class JwtServerAuthenticationConverter implements ServerAuthenticationCon
         return Mono.justOrEmpty(exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION))
                 .filter(header -> header.startsWith(BEARER_PREFIX))
                 .map(header -> header.substring(BEARER_PREFIX.length()))
-                .map(this::createAuthentication);
+                .flatMap(this::createAuthentication);
     }
 
-    private JwtToken createAuthentication(String token) {
-        // Parse the token only once and reuse the claims
-        Claims claims = jwtService.parseToken(token);
-        Long userId = jwtService.extractUserId(claims);
-        String username = jwtService.extractUsername(claims);
+    private Mono<Authentication> createAuthentication(String token) {
+        try {
+            // Parse the token only once and reuse the claims
+            Claims claims = jwtService.parseToken(token);
+            Long userId = jwtService.extractUserId(claims);
+            String username = jwtService.extractUsername(claims);
 
-        UserDetails userDetails = User.withUsername(username)
-                .password("") // not used
-                .authorities(Collections.emptyList()) // no roles yet
-                .build();
+            UserDetails userDetails = User.withUsername(username)
+                    .password("") // not used
+                    .authorities(Collections.emptyList()) // no roles yet
+                    .build();
 
-        return new JwtToken(token, userId, userDetails, claims);
+            return Mono.just(new JwtToken(token, userId, userDetails, claims));
+        } catch (JwtException e) {
+            // Return empty to indicate authentication conversion failed gracefully
+            return Mono.empty();
+        }
     }
 }
