@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0007-link-user-to-spotify
+      author: moodtrip
+      changes:
+        - addColumn:
+            tableName: user_profile
+            columns:
+              - column:
+                  name: spotify_token_id
+                  type: BIGINT
+                  constraints:
+                    nullable: true
+                    foreignKeyName: fk_user_spotify_token
+                    references: spotify_tokens(id)
+
+        - createIndex:
+            tableName: user_profile
+            indexName: idx_user_profile_spotify_token_id
+            columns:
+              - column:
+                  name: spotify_token_id
+
+        - createIndex:
+            tableName: user_profile
+            indexName: idx_user_profile_email
+            unique: true
+            columns:
+              - column:
+                  name: email

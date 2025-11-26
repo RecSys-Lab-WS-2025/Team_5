@@ -22,15 +22,19 @@ public class UserEntity {
     @Column("password_hash")
     private String passwordHash;
 
+    @Column("spotify_token_id")
+    private Long spotifyTokenId;
+
     public UserEntity() {
     }
 
-    public UserEntity(Long id, String username, String email, LocalDateTime createdAt, String passwordHash) {
+    public UserEntity(Long id, String username, String email, LocalDateTime createdAt, String passwordHash, Long spotifyTokenId) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.createdAt = createdAt;
         this.passwordHash = passwordHash;
+        this.spotifyTokenId = spotifyTokenId;
     }
 
     public Long getId() {
@@ -71,5 +75,13 @@ public class UserEntity {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public Long getSpotifyTokenId() {
+        return spotifyTokenId;
+    }
+
+    public void setSpotifyTokenId(Long spotifyTokenId) {
+        this.spotifyTokenId = spotifyTokenId;
     }
 }

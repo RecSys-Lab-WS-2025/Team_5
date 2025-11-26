@@ -23,5 +23,6 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
                 .map(jwt -> jwt.withAuthenticated(true))
                 .cast(Authentication.class)
                 .switchIfEmpty(Mono.error(new BadCredentialsException("Invalid JWT token")));
+
     }
 }

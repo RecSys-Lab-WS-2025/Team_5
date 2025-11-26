@@ -1,28 +1,52 @@
 import { Navbar } from "@/components/layout/navbar";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { saveUser, saveToken } from "@/api/auth";
 
 export function AppLayout() {
   const location = useLocation();
-
   const navigate = useNavigate();
-
+  const hasProcessedAuth = useRef(false);
   useEffect(() => {
+    if (hasProcessedAuth.current) return;
     const params = new URLSearchParams(window.location.search);
-    const flag = params.get("spotify");
+    const flag = params.get("auth");
+    const token = params.get("token");
+    const userId = params.get("userId");
+    const username = params.get("username");
+    const email = params.get("email");
+
     if (!flag) return;
 
-    if (flag === "success") {
-      alert("Spotify Authorization successful");
+    hasProcessedAuth.current = true;
+
+    if (flag === "success" && token && userId && username) {
+      saveToken(token);
+
+      saveUser({
+        id: parseInt(userId, 10),
+        username: decodeURIComponent(username),
+        email: email ? decodeURIComponent(email) : "",
+      });
+
+      window.dispatchEvent(new Event("userLogin"));
+
+      window.history.replaceState(
+        null,
+        document.title,
+        window.location.pathname
+      );
+
+      alert("Hi! " + decodeURIComponent(username) + ", login is successful!");
+      navigate("/chat");
     } else if (flag === "error") {
       const raw = params.get("msg") || "Spotify Authorization failed";
       const msg = decodeURIComponent(raw);
-      alert(`Spotify Authorization failed：${msg}`);
+      alert(`Spotify Authorization failed: ${msg}`);
+
+      window.history.replaceState(null, document.title, "/login");
+      navigate("/login", { replace: true });
     }
-
-    window.history.replaceState(null, document.title, window.location.pathname);
-
-    navigate("/", { replace: true });
   }, [navigate]);
 
   // Hide Navbar on /chat
