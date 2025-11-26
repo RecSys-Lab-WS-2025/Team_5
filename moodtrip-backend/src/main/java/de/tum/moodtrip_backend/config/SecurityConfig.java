@@ -42,7 +42,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST, "/api/users").permitAll()
                         .pathMatchers("/api/auth/login").permitAll()
                         .pathMatchers("/api/spotify/**").permitAll()
-                        .pathMatchers("/actuator/health").permitAll()
+                        .pathMatchers("/actuator/**").permitAll()
                         .anyExchange().authenticated()
                 )
                 .addFilterAt(authWebFilter, SecurityWebFiltersOrder.AUTHENTICATION)
