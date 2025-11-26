@@ -77,18 +77,28 @@ public class JwtService {
 
     /**
      * Extract the username claim.
+     * @throws JwtException if the username claim is missing
      */
     public String extractUsername(String token) {
         Claims claims = parseToken(token);
-        return claims.get("username", String.class);
+        String username = claims.get("username", String.class);
+        if (username == null) {
+            throw new JwtException("Missing required 'username' claim in JWT token");
+        }
+        return username;
     }
 
     /**
      * Extract the email claim.
+     * @throws JwtException if the email claim is missing
      */
     public String extractEmail(String token) {
         Claims claims = parseToken(token);
-        return claims.get("email", String.class);
+        String email = claims.get("email", String.class);
+        if (email == null) {
+            throw new JwtException("Missing required 'email' claim in JWT token");
+        }
+        return email;
     }
 
     /**
