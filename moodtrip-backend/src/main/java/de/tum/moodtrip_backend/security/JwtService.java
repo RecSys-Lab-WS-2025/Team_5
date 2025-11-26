@@ -2,8 +2,8 @@ package de.tum.moodtrip_backend.security;
 
 import de.tum.moodtrip_backend.core.model.UserProfile;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -33,6 +33,9 @@ public class JwtService {
         this.issuer = issuer;
     }
 
+    /**
+     * Generate a JWT for a logged-in user.
+     */
     public String generateToken(UserProfile user) {
         Instant now = Instant.now();
         Instant exp = now.plus(expirationMinutes, ChronoUnit.MINUTES);
@@ -48,21 +51,66 @@ public class JwtService {
                 .compact();
     }
 
-    public Claims parseToken(String token) throws JwtException {
+    /**
+     * Parse and validate the JWT. Throws JwtException if invalid.
+     */
+    private Claims parseToken(String token) throws JwtException {
         Jws<Claims> jws = Jwts.parserBuilder()
                 .setSigningKey(signingKey)
                 .build()
                 .parseClaimsJws(token);
+
         return jws.getBody();
     }
 
-    public Long extractUserId(String token) throws JwtException {
+    /**
+     * Extract the user ID (subject) from the token.
+     */
+    public Long extractUserId(String token) {
         Claims claims = parseToken(token);
-        String subject = claims.getSubject();
         try {
-            return Long.parseLong(subject);
+            return Long.valueOf(claims.getSubject());
         } catch (NumberFormatException e) {
-            throw new JwtException("Invalid subject in token", e);
+            throw new JwtException("Invalid userId (subject) in JWT token", e);
+        }
+    }
+
+    /**
+     * Extract the username claim.
+     * @throws JwtException if the username claim is missing or empty
+     */
+    public String extractUsername(String token) {
+        Claims claims = parseToken(token);
+        String username = claims.get("username", String.class);
+        if (username == null || username.isEmpty()) {
+            throw new JwtException("Missing or empty 'username' claim in JWT token");
+        }
+        return username;
+    }
+
+    /**
+     * Extract the email claim.
+     * @throws JwtException if the email claim is missing or empty
+     */
+    public String extractEmail(String token) {
+        Claims claims = parseToken(token);
+        String email = claims.get("email", String.class);
+        if (email == null || email.isEmpty()) {
+            throw new JwtException("Missing or empty 'email' claim in JWT token");
+        }
+        return email;
+    }
+
+    /**
+     * Validate token (signature + expiry).
+     */
+    public boolean isTokenValid(String token) {
+        try {
+            Claims claims = parseToken(token);
+            Date exp = claims.getExpiration();
+            return exp != null && exp.after(new Date());
+        } catch (JwtException e) {
+            return false;
         }
     }
 }
