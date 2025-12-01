@@ -8,6 +8,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -79,20 +80,21 @@ public class JwtService {
      * Extract the user ID from Authentication object.
      * Convenience method for controllers.
      */
-    public Long extractUserId(org.springframework.security.core.Authentication authentication) {
+    public Long extractUserId(Authentication authentication) {
         if (authentication == null) {
             throw new JwtException("Authentication is null");
         }
-        
+
         if (!(authentication instanceof JwtToken jwtToken)) {
             throw new JwtException("Authentication is not a JwtToken instance");
         }
-        
+
         return jwtToken.getUserId();
     }
 
     /**
      * Extract the username claim.
+     *
      * @throws JwtException if the username claim is missing or empty
      */
     public String extractUsername(String token) {
@@ -106,6 +108,7 @@ public class JwtService {
 
     /**
      * Extract the email claim.
+     *
      * @throws JwtException if the email claim is missing or empty
      */
     public String extractEmail(String token) {
