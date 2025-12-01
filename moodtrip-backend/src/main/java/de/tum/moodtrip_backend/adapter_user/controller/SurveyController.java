@@ -1,5 +1,6 @@
 package de.tum.moodtrip_backend.adapter_user.controller;
 
+import de.tum.moodtrip_backend.core.service.ConversationDomainService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
@@ -33,11 +34,13 @@ public class SurveyController {
     private final SurveyPort surveyPort;
     private final SurveyDtoMapper mapper;
     private final JwtService jwtService;
+    private final ConversationDomainService conversationDomainService;
     
-    public SurveyController(final SurveyPort surveyPort, final SurveyDtoMapper mapper, final JwtService jwtService) {
+    public SurveyController(final SurveyPort surveyPort, final SurveyDtoMapper mapper, final JwtService jwtService, final ConversationDomainService conversationDomainService) {
         this.surveyPort = surveyPort;
         this.mapper = mapper;
         this.jwtService = jwtService;
+        this.conversationDomainService = conversationDomainService;
     }
     
 
@@ -49,20 +52,28 @@ public class SurveyController {
             Authentication authentication) {
         
         Long userId = jwtService.extractUserId(authentication);
-        
-        return Mono.just(request)
-                .map(req -> mapper.requestToDomain(req, conversationId, userId))
-                .flatMap(surveyPort::save)
-                .map(mapper::domainToResponse)
-                .onErrorResume(org.springframework.dao.DataIntegrityViolationException.class, ex -> {
-                    // Handle unique constraint violation for conversation_id
-                    if (ex.getMessage() != null && ex.getMessage().contains("conversation_id")) {
+
+        return conversationDomainService.getConversationById(conversationId)
+                .flatMap(conversation -> {
+                    if (!conversation.userId().equals(userId)) {
                         return Mono.error(new ResponseStatusException(
-                            HttpStatus.CONFLICT,
-                            "Survey already exists for this conversation"
+                                HttpStatus.FORBIDDEN,
+                                "Access denied: This conversation does not belong to you"
                         ));
                     }
-                    return Mono.error(ex);
+                    return Mono.just(request)
+                            .map(req -> mapper.requestToDomain(req, conversationId, userId))
+                            .flatMap(surveyPort::save)
+                            .map(mapper::domainToResponse)
+                            .onErrorResume(org.springframework.dao.DataIntegrityViolationException.class, ex -> {
+                                if (ex.getMessage() != null && ex.getMessage().contains("conversation_id")) {
+                                    return Mono.error(new ResponseStatusException(
+                                            HttpStatus.CONFLICT,
+                                            "Survey already exists for this conversation"
+                                    ));
+                                }
+                                return Mono.error(ex);
+                            });
                 });
     }
 
@@ -134,19 +145,21 @@ public class SurveyController {
         Long authenticatedUserId = jwtService.extractUserId(authentication);
         
         return surveyPort.findByUserId(userId)
-                .next()
-                .switchIfEmpty(Mono.error(new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "No survey found for this user"
-                )))
-                .flatMapMany(survey -> {
-                    if (!survey.userId().equals(authenticatedUserId)) {
+                .collectList()
+                .flatMapMany(surveys -> {
+                    if (surveys.isEmpty()) {
                         return Flux.error(new ResponseStatusException(
-                            HttpStatus.FORBIDDEN,
-                            "Access denied: You can only view your own surveys"
+                                HttpStatus.NOT_FOUND,
+                                "No survey found for this user"
                         ));
                     }
-                    return surveyPort.findByUserId(userId)
+                    if (!surveys.get(0).userId().equals(authenticatedUserId)) {
+                        return Flux.error(new ResponseStatusException(
+                                HttpStatus.FORBIDDEN,
+                                "Access denied: You can only view your own surveys"
+                        ));
+                    }
+                    return Flux.fromIterable(surveys)
                             .map(mapper::domainToResponse);
                 });
     }

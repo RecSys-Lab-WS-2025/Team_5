@@ -19,13 +19,14 @@ import reactor.core.publisher.Mono;
 
 
 @RestController
+
 @RequestMapping("/api/token")
 public class SpotifyTokenController {
-    private final SpotifyTokenPort SpotifyTokenPort;
+    private final SpotifyTokenPort spotifyTokenPort;
     private final JwtService jwtService;
 
     public SpotifyTokenController(SpotifyTokenPort spotifyTokenPort, JwtService jwtService) {
-        this.SpotifyTokenPort = spotifyTokenPort;
+        this.spotifyTokenPort = spotifyTokenPort;
         this.jwtService = jwtService;
     }
 
@@ -54,7 +55,7 @@ public class SpotifyTokenController {
                 request.spotifyEmail,
                 request.spotifyDisplayName
         );
-        return SpotifyTokenPort.save(domain);
+        return spotifyTokenPort.save(domain);
     }
 
     @GetMapping("/{id}")
@@ -65,7 +66,7 @@ public class SpotifyTokenController {
         
         jwtService.extractUserId(authentication);
         
-        return SpotifyTokenPort.findById(id)
+        return spotifyTokenPort.findById(id)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Spotify token not found for id: " + id
@@ -80,7 +81,7 @@ public class SpotifyTokenController {
         
         jwtService.extractUserId(authentication);
         
-        return SpotifyTokenPort.findBySpotifyUserId(spotifyUserId)
+        return spotifyTokenPort.findBySpotifyUserId(spotifyUserId)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Spotify token not found for spotifyUserId: " + spotifyUserId
@@ -95,7 +96,7 @@ public class SpotifyTokenController {
         
         jwtService.extractUserId(authentication);
         
-        return SpotifyTokenPort.deleteById(id);
+        return spotifyTokenPort.deleteById(id);
     }
 
 
