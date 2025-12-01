@@ -1,8 +1,10 @@
 package de.tum.moodtrip_backend.core.service;
 
 import de.tum.moodtrip_backend.core.mapper.PoiRouteCoordinatesMapper;
+import de.tum.moodtrip_backend.core.mapper.PoiRouteResultRouteRecommendationMapper;
 import de.tum.moodtrip_backend.core.model.EnrichedPoi;
 import de.tum.moodtrip_backend.core.model.PoiRouteResult;
+import de.tum.moodtrip_backend.core.port.RouteRecommendationPort;
 import de.tum.moodtrip_backend.core.port.RoutingPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,14 +23,17 @@ public class OverpassService {
     private final OsmPort osmPort;
     private final WikipediaPort wikipediaPort;
     private final RoutingPort routingPort;
+    private final RouteRecommendationPort routeRecommendationPort;
 
-    public OverpassService(OsmPort osmPort, WikipediaPort wikipediaPort, RoutingPort routingPort) {
+    public OverpassService(OsmPort osmPort, WikipediaPort wikipediaPort, RoutingPort routingPort, RouteRecommendationPort routeRecommendationPort) {
         this.osmPort = osmPort;
         this.wikipediaPort = wikipediaPort;
         this.routingPort = routingPort;
+        this.routeRecommendationPort = routeRecommendationPort;
     }
 
     public Mono<PoiRouteResult> getRoute(
+            long conversationId,
             double lat,
             double lon,
             POICategory poiCategory,
@@ -64,6 +69,9 @@ public class OverpassService {
                                 ))
                                 .doOnNext(route -> LOGGER.info(route.toString()))
                                 .map(route -> new PoiRouteResult(enrichedPois, route))
+                )
+                .flatMap(route ->
+                    routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(route, conversationId)).thenReturn(route)
                 );
     }
 }
