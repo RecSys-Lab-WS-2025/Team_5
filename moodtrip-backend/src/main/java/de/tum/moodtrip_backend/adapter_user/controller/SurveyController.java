@@ -18,11 +18,12 @@ import de.tum.moodtrip_backend.adapter_user.dto.SurveyRequest;
 import de.tum.moodtrip_backend.adapter_user.dto.SurveyResponse;
 import de.tum.moodtrip_backend.adapter_user.mapper.SurveyDtoMapper;
 import de.tum.moodtrip_backend.core.port.SurveyPort;
-import de.tum.moodtrip_backend.security.JwtToken;
+import de.tum.moodtrip_backend.security.JwtService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
 
 @RestController
 @RequestMapping("/api/surveys")
@@ -31,10 +32,12 @@ public class SurveyController {
     
     private final SurveyPort surveyPort;
     private final SurveyDtoMapper mapper;
+    private final JwtService jwtService;
     
-    public SurveyController(final SurveyPort surveyPort, final SurveyDtoMapper mapper) {
+    public SurveyController(final SurveyPort surveyPort, final SurveyDtoMapper mapper, final JwtService jwtService) {
         this.surveyPort = surveyPort;
         this.mapper = mapper;
+        this.jwtService = jwtService;
     }
     
 
@@ -45,7 +48,7 @@ public class SurveyController {
             @RequestParam @NotNull(message = "Conversation ID cannot be null") Long conversationId,
             Authentication authentication) {
         
-        Long userId = extractUserId(authentication);
+        Long userId = jwtService.extractUserId(authentication);
         
         return Mono.just(request)
                 .map(req -> mapper.requestToDomain(req, conversationId, userId))
@@ -68,15 +71,25 @@ public class SurveyController {
             @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
             Authentication authentication) {
         
-        Long userId = extractUserId(authentication);
+        Long userId = jwtService.extractUserId(authentication);
         
         return surveyPort.findByConversationId(conversationId)
-                .filter(survey -> survey.userId().equals(userId))
-                .switchIfEmpty(Flux.error(new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Access denied: This conversation does not belong to you"
+                .next()
+                .switchIfEmpty(Mono.error(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No survey found for this conversation"
                 )))
-                .map(mapper::domainToResponse);
+                .flatMapMany(survey -> {
+                    if (!survey.userId().equals(userId)) {
+                        return Flux.error(new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Access denied: This conversation does not belong to you"
+                        ));
+                    }
+                    return surveyPort.findByConversationId(conversationId)
+                            .map(mapper::domainToResponse);
+                }
+                );
     }
     
     @GetMapping("/conversation/{conversationId}/latest")
@@ -84,21 +97,30 @@ public class SurveyController {
             @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
             Authentication authentication) {
         
-        Long userId = extractUserId(authentication);
+        Long userId = jwtService.extractUserId(authentication);
         
         return surveyPort.findByConversationId(conversationId)
                 .next()
-                .filter(survey -> survey.userId().equals(userId))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Access denied: This conversation does not belong to you"
+                    HttpStatus.NOT_FOUND,
+                    "No survey found for this conversation"
                 )))
-                .map(mapper::domainToResponse);
-    }
+                .flatMap(survey -> {
+                    if (!survey.userId().equals(userId)) {
+                        return Mono.error(new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Access denied: This conversation does not belong to you"
+                        ));
+                    }
+                    return Mono.just(mapper.domainToResponse(survey));
+                }
+        );
+                
+        }
     
     @GetMapping("/user/me")
     public Flux<SurveyResponse> getMyUserSurveys(Authentication authentication) {
-        Long userId = extractUserId(authentication);
+        Long userId = jwtService.extractUserId(authentication);
         return surveyPort.findByUserId(userId)
                 .map(mapper::domainToResponse);
     }
@@ -109,24 +131,34 @@ public class SurveyController {
             @PathVariable @NotNull(message = "User ID cannot be null") Long userId,
             Authentication authentication) {
         
-        Long authenticatedUserId = extractUserId(authentication);
-        
-        // Only allow users to access their own surveys
-        if (!userId.equals(authenticatedUserId)) {
-            return Flux.error(new ResponseStatusException(
-                HttpStatus.FORBIDDEN,
-                "Access denied: You can only view your own surveys"
-            ));
-        }
+        Long authenticatedUserId = jwtService.extractUserId(authentication);
         
         return surveyPort.findByUserId(userId)
-                .map(mapper::domainToResponse);
+                .next()
+                .switchIfEmpty(Mono.error(new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No survey found for this user"
+                )))
+                .flatMapMany(survey -> {
+                    if (!survey.userId().equals(authenticatedUserId)) {
+                        return Flux.error(new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Access denied: You can only view your own surveys"
+                        ));
+                    }
+                    return surveyPort.findByUserId(userId)
+                            .map(mapper::domainToResponse);
+                });
     }
     
     @GetMapping("/user/me/latest")
     public Mono<SurveyResponse> getMyLatestSurvey(Authentication authentication) {
-        Long userId = extractUserId(authentication);
+        Long userId = jwtService.extractUserId(authentication);
         return surveyPort.findLatestByUserId(userId)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No survey found for this user"
+                )))
                 .map(mapper::domainToResponse);
     }
     
@@ -135,17 +167,22 @@ public class SurveyController {
             @PathVariable @NotNull(message = "User ID cannot be null") Long userId,
             Authentication authentication) {
         
-        Long authenticatedUserId = extractUserId(authentication);
-        
-        if (!userId.equals(authenticatedUserId)) {
-            return Mono.error(new ResponseStatusException(
-                HttpStatus.FORBIDDEN,
-                "Access denied: You can only view your own surveys"
-            ));
-        }
+        Long authenticatedUserId = jwtService.extractUserId(authentication);
         
         return surveyPort.findLatestByUserId(userId)
-                .map(mapper::domainToResponse);
+                .switchIfEmpty(Mono.error(new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No survey found for this user"
+                )))
+                .flatMap(survey -> {
+                    if (!survey.userId().equals(authenticatedUserId)) {
+                        return Mono.error(new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Access denied: You can only view your own surveys"
+                        ));
+                    }
+                    return Mono.just(mapper.domainToResponse(survey));
+                });
     }
     
 
@@ -154,15 +191,22 @@ public class SurveyController {
             @PathVariable @NotNull(message = "Survey ID cannot be null") Long id,
             Authentication authentication) {
         
-        Long userId = extractUserId(authentication);
+        Long userId = jwtService.extractUserId(authentication);
         
         return surveyPort.findById(id)
-                .filter(survey -> survey.userId().equals(userId))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Access denied: This survey does not belong to you"
+                    HttpStatus.NOT_FOUND,
+                    "Survey not found"
                 )))
-                .map(mapper::domainToResponse);
+                .flatMap(survey -> {
+                    if (!survey.userId().equals(userId)) {
+                        return Mono.error(new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Access denied: This survey does not belong to you"
+                        ));
+                    }
+                    return Mono.just(mapper.domainToResponse(survey));
+                });
     }
 
     @DeleteMapping("/{id}")
@@ -171,33 +215,23 @@ public class SurveyController {
             @PathVariable @NotNull(message = "Survey ID cannot be null") Long id,
             Authentication authentication) {
         
-        Long userId = extractUserId(authentication);
+        Long userId = jwtService.extractUserId(authentication);
         
-        // Verify ownership before deletion
         return surveyPort.findById(id)
-                .filter(survey -> survey.userId().equals(userId))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Access denied: You can only delete your own surveys"
+                    HttpStatus.NOT_FOUND,
+                    "Survey not found"
                 )))
-                .flatMap(survey -> surveyPort.deleteById(id));
+                .flatMap(survey -> {
+                    if (!survey.userId().equals(userId)) {
+                        return Mono.error(new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Access denied: You can only delete your own surveys"
+                        ));
+                    }
+                    return surveyPort.deleteById(id);
+                });
     }
 
-    private Long extractUserId(Authentication authentication) {
-        if (authentication == null) {
-            throw new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED,
-                "Authentication required"
-            );
-        }
-        
-        if (!(authentication instanceof JwtToken jwtToken)) {
-            throw new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED,
-                "Invalid authentication type"
-            );
-        }
-        
-        return jwtToken.getUserId();
-    }
+
 }

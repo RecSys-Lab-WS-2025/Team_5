@@ -40,4 +40,5 @@ public class JwtToken extends AbstractAuthenticationToken {
         authenticatedToken.setAuthenticated(authenticated);
         return authenticatedToken;
     }
+
 }

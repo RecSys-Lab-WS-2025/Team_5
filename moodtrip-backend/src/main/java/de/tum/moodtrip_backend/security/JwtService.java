@@ -76,6 +76,22 @@ public class JwtService {
     }
 
     /**
+     * Extract the user ID from Authentication object.
+     * Convenience method for controllers.
+     */
+    public Long extractUserId(org.springframework.security.core.Authentication authentication) {
+        if (authentication == null) {
+            throw new JwtException("Authentication is null");
+        }
+        
+        if (!(authentication instanceof JwtToken jwtToken)) {
+            throw new JwtException("Authentication is not a JwtToken instance");
+        }
+        
+        return jwtToken.getUserId();
+    }
+
+    /**
      * Extract the username claim.
      * @throws JwtException if the username claim is missing or empty
      */

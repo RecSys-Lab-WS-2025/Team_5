@@ -1,15 +1,16 @@
 package de.tum.moodtrip_backend.adapter_database.mapper;
 
-import de.tum.moodtrip_backend.adapter_database.entity.SurveyEntity;
-import de.tum.moodtrip_backend.core.model.SurveyDomain;
-import de.tum.moodtrip_backend.core.model.SurveyPreference;
-import org.springframework.stereotype.Component;
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Component;
+
+import de.tum.moodtrip_backend.adapter_database.entity.SurveyEntity;
+import de.tum.moodtrip_backend.core.model.SurveyDomain;
+import de.tum.moodtrip_backend.core.model.SurveyPreference;
 
 
 @Component
