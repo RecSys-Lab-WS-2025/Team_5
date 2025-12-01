@@ -1,0 +1,77 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-create-surveys-table
+      author: system
+      changes:
+        - createTable:
+            tableName: surveys
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: conversation_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: location
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: range_meters
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: preferences
+                  type: TEXT
+                  constraints:
+                    nullable: true
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: surveys
+            baseColumnNames: user_id
+            constraintName: fk_surveys_userprofile
+            referencedTableName: user_profile
+            referencedColumnNames: id
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: surveys
+            baseColumnNames: conversation_id
+            constraintName: fk_surveys_conversation
+            referencedTableName: conversation
+            referencedColumnNames: id
+            onDelete: CASCADE
+        - createIndex:
+            tableName: surveys
+            indexName: idx_surveys_conversation_id
+            columns:
+              - column:
+                  name: conversation_id

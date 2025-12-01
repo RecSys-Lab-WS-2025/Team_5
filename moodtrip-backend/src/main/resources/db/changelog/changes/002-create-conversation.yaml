@@ -27,13 +27,6 @@ databaseChangeLog:
                   name: created_at
                   type: TIMESTAMPTZ
                   defaultValueComputed: now()
-        - addForeignKeyConstraint:
-            baseTableName: conversation
-            baseColumnNames: user_id
-            referencedTableName: spotify_tokens
-            referencedColumnNames: id
-            onDelete: CASCADE
-            constraintName: fk_conversation_user
         - createIndex:
             tableName: conversation
             indexName: idx_conversation_user_id
