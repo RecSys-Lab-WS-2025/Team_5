@@ -23,17 +23,18 @@ public class FrontendController {
     }
 
     @GetMapping(value = "/route", produces = "application/geo+json")
-    public Mono<FeatureCollection> getPois(@RequestParam("lat") double lat,
-                                           @RequestParam("lon") double lon,
-                                           @RequestParam("poiCategory") String poiCategory,
-                                           @RequestParam("radiusMeters") int radiusMeters) {
+    public Mono<FeatureCollection> getRoute(@RequestParam("conversationId") long conversationId,
+                                            @RequestParam("lat") double lat,
+                                            @RequestParam("lon") double lon,
+                                            @RequestParam("poiCategory") String poiCategory,
+                                            @RequestParam("radiusMeters") int radiusMeters) {
 
         LOGGER.info("GET /frontend/route lat={}, lon={}, poiCategory={}, radius={}",
                 lat, lon, poiCategory, radiusMeters);
 
         POICategory category = POICategory.fromDisplayName(poiCategory);
         return overpassService
-                .getRoute(lat, lon, category, radiusMeters)
+                .getRoute(conversationId, lat, lon, category, radiusMeters)
                 .map(GeoJsonRouteMapper::toFeatureCollection);
     }
 }

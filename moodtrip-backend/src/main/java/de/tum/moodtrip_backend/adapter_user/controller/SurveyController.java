@@ -1,6 +1,6 @@
 package de.tum.moodtrip_backend.adapter_user.controller;
 
-import de.tum.moodtrip_backend.core.service.ConversationDomainService;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
@@ -19,6 +19,7 @@ import de.tum.moodtrip_backend.adapter_user.dto.SurveyRequest;
 import de.tum.moodtrip_backend.adapter_user.dto.SurveyResponse;
 import de.tum.moodtrip_backend.adapter_user.mapper.SurveyDtoMapper;
 import de.tum.moodtrip_backend.core.port.SurveyPort;
+import de.tum.moodtrip_backend.core.service.ConversationDomainService;
 import de.tum.moodtrip_backend.security.JwtService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
