@@ -17,12 +17,18 @@ import org.springframework.web.server.ResponseStatusException;
 import de.tum.moodtrip_backend.core.model.SpotifyTokenDomain;
 import de.tum.moodtrip_backend.core.port.SpotifyTokenPort;
 import de.tum.moodtrip_backend.security.JwtService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import reactor.core.publisher.Mono;
 
 
 @RestController
-
 @RequestMapping("/api/token")
+@Tag(name = "Spotify Token Management", description = "APIs for managing Spotify access and refresh tokens")
 public class SpotifyTokenController {
     private final SpotifyTokenPort spotifyTokenPort;
     private final JwtService jwtService;
@@ -34,6 +40,17 @@ public class SpotifyTokenController {
         this.userDomainService = userDomainService;
     }
 
+    @Operation(
+        summary = "Create Spotify token",
+        description = "Stores a new Spotify access token and refresh token for a user",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Spotify token created successfully"
+        )
+    })
     @PostMapping
     public Mono<SpotifyTokenDomain> create(
             @RequestBody CreateSpotifyTokenRequest request,
@@ -62,9 +79,20 @@ public class SpotifyTokenController {
         return spotifyTokenPort.save(domain);
     }
 
+    @Operation(
+        summary = "Get Spotify token by ID",
+        description = "Retrieves a Spotify token by its database ID",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Spotify token found"
+        )
+    })
     @GetMapping("/{id}")
     public Mono<SpotifyTokenDomain> getById(
-            @PathVariable Long id,
+            @Parameter(description = "Token ID", required = true) @PathVariable Long id,
             Authentication authentication) {
 
 
@@ -77,9 +105,20 @@ public class SpotifyTokenController {
                 )));
     }
 
+    @Operation(
+        summary = "Get Spotify token by Spotify user ID",
+        description = "Retrieves a Spotify token using the Spotify user ID",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Spotify token found"
+        )
+    })
     @GetMapping("/spotify-user/{spotifyUserId}")
     public Mono<SpotifyTokenDomain> getBySpotifyUserId(
-            @PathVariable String spotifyUserId,
+            @Parameter(description = "Spotify user ID", required = true) @PathVariable String spotifyUserId,
             Authentication authentication) {
 
 
@@ -92,9 +131,20 @@ public class SpotifyTokenController {
                 )));
     }
 
+    @Operation(
+        summary = "Delete Spotify token",
+        description = "Deletes a Spotify token. Users can only delete tokens linked to their account.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Spotify token deleted successfully"
+        )
+    })
     @DeleteMapping("/{id}")
     public Mono<Void> deleteById(
-            @PathVariable Long id,
+            @Parameter(description = "Token ID", required = true) @PathVariable Long id,
             Authentication authentication) {
         long userId = jwtService.extractUserId(authentication);
 

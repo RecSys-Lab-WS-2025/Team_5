@@ -15,10 +15,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import de.tum.moodtrip_backend.adapter_music.service.AuthService;
 import de.tum.moodtrip_backend.security.JwtService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/spotify")
+@Tag(name = "Spotify Authentication", description = "OAuth authentication endpoints for Spotify integration")
 public class SpotifyAuthController {
 
     private final AuthService authService;
@@ -32,9 +38,16 @@ public class SpotifyAuthController {
         this.jwtService = jwtService;
     }
 
-    /**
-     * Redirect user to Spotify authorization page
-     */
+    @Operation(
+        summary = "Initiate Spotify OAuth login",
+        description = "Redirects user to Spotify authorization page to grant access permissions"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "302",
+            description = "Redirect to Spotify authorization page"
+        )
+    })
     @GetMapping("/login")
     public Mono<ResponseEntity<String>> login() {
         String state = UUID.randomUUID().toString();
@@ -45,15 +58,21 @@ public class SpotifyAuthController {
         );
     }
 
-    /**
-     * OAuth callback endpoint - Spotify redirects here after user authorization
-     * AuthService handles both SpotifyToken and UserProfile creation/linking
-     */
+    @Operation(
+        summary = "OAuth callback endpoint",
+        description = "Handles the OAuth callback from Spotify, exchanges authorization code for access token, and creates/links user account"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "302",
+            description = "Redirect to frontend with authentication result"
+        )
+    })
     @GetMapping("/callback")
     public Mono<ResponseEntity<Object>> callback(
-            @RequestParam String code,
-            @RequestParam(required = false) String state,
-            @RequestParam(required = false) String error
+            @Parameter(description = "Authorization code from Spotify", required = true) @RequestParam String code,
+            @Parameter(description = "State parameter for CSRF protection") @RequestParam(required = false) String state,
+            @Parameter(description = "Error message from Spotify") @RequestParam(required = false) String error
     ) {
         // 1. Handle errors returned by Spotify
         if (error != null) {
@@ -99,11 +118,19 @@ public class SpotifyAuthController {
                 .build());
     }
 
-    /**
-     * Test endpoint to check if user has valid token
-     */
+    @Operation(
+        summary = "Check Spotify token status",
+        description = "Test endpoint to verify if a user has a valid Spotify access token"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Valid token found, returns user's Spotify profile information"
+        )
+    })
     @GetMapping("/status")
-    public Mono<ResponseEntity<String>> checkStatus(@RequestParam Long userId) {
+    public Mono<ResponseEntity<String>> checkStatus(
+            @Parameter(description = "User ID to check", required = true) @RequestParam Long userId) {
         return authService.getAccessToken(userId)
                 .flatMap(token ->
                         authService.getCurrentUserProfile(token)

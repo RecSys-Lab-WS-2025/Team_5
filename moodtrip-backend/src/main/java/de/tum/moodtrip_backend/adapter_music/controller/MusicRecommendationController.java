@@ -18,11 +18,18 @@ import de.tum.moodtrip_backend.core.model.MusicRecommendationDomain;
 import de.tum.moodtrip_backend.core.port.MusicRecommendationPort;
 import de.tum.moodtrip_backend.core.service.ConversationDomainService;
 import de.tum.moodtrip_backend.security.JwtService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/music")
+@Tag(name = "Music Recommendations", description = "APIs for generating emotion-based music recommendations and Spotify playlists")
 public class MusicRecommendationController {
 
     private final MusicRecommendationService recommendationService;
@@ -44,10 +51,21 @@ public class MusicRecommendationController {
         this.conversationService = conversationService;
     }
 
+    @Operation(
+        summary = "Get music recommendations based on emotion",
+        description = "Generates Spotify playlist recommendations based on detected user emotion and creates a shareable playlist",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Playlist created successfully, returns Spotify playlist URL"
+        )
+    })
     @GetMapping("/recommend")
     public Mono<String> recommend(
-            @RequestParam String emotion, 
-            @RequestParam Long convId,
+            @Parameter(description = "User's current emotion", required = true) @RequestParam String emotion, 
+            @Parameter(description = "Conversation ID", required = true) @RequestParam Long convId,
             Authentication authentication) {
         
         Long userId = jwtService.extractUserId(authentication);
@@ -64,9 +82,20 @@ public class MusicRecommendationController {
                 });
     }
 
+    @Operation(
+        summary = "Get music recommendation history",
+        description = "Retrieves all previously generated music playlists for a specific conversation",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Music recommendation history retrieved successfully"
+        )
+    })
     @GetMapping("/{conversationId}")
     public Flux<MusicRecommendationDomain> getHistory(
-            @PathVariable Long conversationId,
+            @Parameter(description = "Conversation ID", required = true) @PathVariable Long conversationId,
             Authentication authentication) {
         Long userId = jwtService.extractUserId(authentication);
 

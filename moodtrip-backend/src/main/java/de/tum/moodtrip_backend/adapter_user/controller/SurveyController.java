@@ -21,6 +21,14 @@ import de.tum.moodtrip_backend.adapter_user.mapper.SurveyDtoMapper;
 import de.tum.moodtrip_backend.core.port.SurveyPort;
 import de.tum.moodtrip_backend.core.service.ConversationDomainService;
 import de.tum.moodtrip_backend.security.JwtService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import reactor.core.publisher.Flux;
@@ -30,6 +38,7 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/surveys")
 @Validated
+@Tag(name = "Survey Management", description = "APIs for managing user surveys and emotional assessments")
 public class SurveyController {
     
     private final SurveyPort surveyPort;
@@ -45,11 +54,23 @@ public class SurveyController {
     }
     
 
+    @Operation(
+        summary = "Submit a new survey",
+        description = "Creates a new survey for a specific conversation with emotional and personal assessments",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "201",
+            description = "Survey created successfully",
+            content = @Content(schema = @Schema(implementation = SurveyResponse.class))
+        )
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<SurveyResponse> submitSurvey(
             @Valid @RequestBody SurveyRequest request,
-            @RequestParam @NotNull(message = "Conversation ID cannot be null") Long conversationId,
+            @Parameter(description = "Conversation ID", required = true) @RequestParam @NotNull(message = "Conversation ID cannot be null") Long conversationId,
             Authentication authentication) {
         
         Long userId = jwtService.extractUserId(authentication);
@@ -78,9 +99,21 @@ public class SurveyController {
                 });
     }
 
+    @Operation(
+        summary = "Get surveys for a conversation",
+        description = "Retrieves all surveys associated with a specific conversation. Users can only access surveys for their own conversations.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Surveys retrieved successfully",
+            content = @Content(schema = @Schema(implementation = SurveyResponse.class))
+        )
+    })
     @GetMapping("/conversation/{conversationId}")
     public Flux<SurveyResponse> getConversationSurveys(
-            @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
+            @Parameter(description = "Conversation ID", required = true) @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
             Authentication authentication) {
         
         Long userId = jwtService.extractUserId(authentication);
@@ -104,9 +137,21 @@ public class SurveyController {
                 );
     }
     
+    @Operation(
+        summary = "Get latest survey for a conversation",
+        description = "Retrieves the most recent survey for a specific conversation. Users can only access surveys for their own conversations.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Latest survey retrieved successfully",
+            content = @Content(schema = @Schema(implementation = SurveyResponse.class))
+        )
+    })
     @GetMapping("/conversation/{conversationId}/latest")
     public Mono<SurveyResponse> getConversationLatestSurvey(
-            @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
+            @Parameter(description = "Conversation ID", required = true) @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
             Authentication authentication) {
         
         Long userId = jwtService.extractUserId(authentication);
@@ -130,6 +175,18 @@ public class SurveyController {
                 
         }
     
+    @Operation(
+        summary = "Get current user's surveys",
+        description = "Retrieves all surveys belonging to the authenticated user",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Surveys retrieved successfully",
+            content = @Content(schema = @Schema(implementation = SurveyResponse.class))
+        )
+    })
     @GetMapping("/user/me")
     public Flux<SurveyResponse> getMyUserSurveys(Authentication authentication) {
         Long userId = jwtService.extractUserId(authentication);
@@ -138,9 +195,21 @@ public class SurveyController {
     }
     
 
+    @Operation(
+        summary = "Get surveys for a specific user",
+        description = "Retrieves all surveys for a specific user. Users can only access their own surveys.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Surveys retrieved successfully",
+            content = @Content(schema = @Schema(implementation = SurveyResponse.class))
+        )
+    })
     @GetMapping("/user/{userId}")
     public Flux<SurveyResponse> getUserSurveys(
-            @PathVariable @NotNull(message = "User ID cannot be null") Long userId,
+            @Parameter(description = "User ID", required = true) @PathVariable @NotNull(message = "User ID cannot be null") Long userId,
             Authentication authentication) {
         
         Long authenticatedUserId = jwtService.extractUserId(authentication);
@@ -165,6 +234,18 @@ public class SurveyController {
                 });
     }
     
+    @Operation(
+        summary = "Get current user's latest survey",
+        description = "Retrieves the most recent survey submitted by the authenticated user",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Latest survey retrieved successfully",
+            content = @Content(schema = @Schema(implementation = SurveyResponse.class))
+        )
+    })
     @GetMapping("/user/me/latest")
     public Mono<SurveyResponse> getMyLatestSurvey(Authentication authentication) {
         Long userId = jwtService.extractUserId(authentication);
@@ -176,9 +257,21 @@ public class SurveyController {
                 .map(mapper::domainToResponse);
     }
     
+    @Operation(
+        summary = "Get a specific user's latest survey",
+        description = "Retrieves the most recent survey for a specific user. Users can only access their own surveys.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Latest survey retrieved successfully",
+            content = @Content(schema = @Schema(implementation = SurveyResponse.class))
+        )
+    })
     @GetMapping("/user/{userId}/latest")
     public Mono<SurveyResponse> getUserLatestSurvey(
-            @PathVariable @NotNull(message = "User ID cannot be null") Long userId,
+            @Parameter(description = "User ID", required = true) @PathVariable @NotNull(message = "User ID cannot be null") Long userId,
             Authentication authentication) {
         
         Long authenticatedUserId = jwtService.extractUserId(authentication);
@@ -200,9 +293,21 @@ public class SurveyController {
     }
     
 
+    @Operation(
+        summary = "Get survey by ID",
+        description = "Retrieves a specific survey by its ID. Users can only access their own surveys.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Survey retrieved successfully",
+            content = @Content(schema = @Schema(implementation = SurveyResponse.class))
+        )
+    })
     @GetMapping("/{id}")
     public Mono<SurveyResponse> getSurveyById(
-            @PathVariable @NotNull(message = "Survey ID cannot be null") Long id,
+            @Parameter(description = "Survey ID", required = true) @PathVariable @NotNull(message = "Survey ID cannot be null") Long id,
             Authentication authentication) {
         
         Long userId = jwtService.extractUserId(authentication);
@@ -223,10 +328,21 @@ public class SurveyController {
                 });
     }
 
+    @Operation(
+        summary = "Delete a survey",
+        description = "Deletes a survey by its ID. Users can only delete their own surveys.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "204",
+            description = "Survey deleted successfully"
+        )
+    })
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> deleteSurvey(
-            @PathVariable @NotNull(message = "Survey ID cannot be null") Long id,
+            @Parameter(description = "Survey ID", required = true) @PathVariable @NotNull(message = "Survey ID cannot be null") Long id,
             Authentication authentication) {
         
         Long userId = jwtService.extractUserId(authentication);

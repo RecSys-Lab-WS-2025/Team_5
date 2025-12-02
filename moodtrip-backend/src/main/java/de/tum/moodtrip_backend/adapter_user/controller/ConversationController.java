@@ -20,6 +20,14 @@ import de.tum.moodtrip_backend.core.model.ConversationDomain;
 import de.tum.moodtrip_backend.core.model.MessageDomain;
 import de.tum.moodtrip_backend.core.model.Sender;
 import de.tum.moodtrip_backend.core.service.ConversationDomainService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import reactor.core.publisher.Flux;
@@ -31,6 +39,7 @@ import java.time.format.DateTimeFormatter;
 @RestController
 @RequestMapping("/api/conversations")
 @Validated
+@Tag(name = "Conversation Management", description = "APIs for managing chat conversations and messages")
 public class ConversationController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConversationController.class);
@@ -44,21 +53,57 @@ public class ConversationController {
     }
 
 
+    @Operation(
+        summary = "Start a new conversation",
+        description = "Creates a new conversation for the authenticated user with a timestamped title",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Conversation started successfully",
+            content = @Content(schema = @Schema(implementation = ConversationDomain.class))
+        )
+    })
     @PostMapping("/start")
     public Mono<ConversationDomain> startConversation(Authentication authentication) {
         Long userId = jwtService.extractUserId(authentication);
         return conversationService.startConversation(userId, "New Conversation-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
     }
 
+    @Operation(
+        summary = "Get current user's conversations",
+        description = "Retrieves all conversations belonging to the authenticated user",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Conversations retrieved successfully",
+            content = @Content(schema = @Schema(implementation = ConversationDomain.class))
+        )
+    })
     @GetMapping("/me")
     public Flux<ConversationDomain> getMyConversations(Authentication authentication) {
         Long userId = jwtService.extractUserId(authentication);
         return conversationService.getConversationsByUserId(userId);
     }
 
+    @Operation(
+        summary = "Get conversations by user ID",
+        description = "Retrieves all conversations for a specific user. Users can only access their own conversations.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Conversations retrieved successfully",
+            content = @Content(schema = @Schema(implementation = ConversationDomain.class))
+        )
+    })
     @GetMapping("/{userId}")
     public Flux<ConversationDomain> getConversations(
-            @PathVariable @NotNull(message = "User ID cannot be null") Long userId,
+            @Parameter(description = "User ID", required = true) @PathVariable @NotNull(message = "User ID cannot be null") Long userId,
             Authentication authentication) {
         
         Long authenticatedUserId = jwtService.extractUserId(authentication);
@@ -73,9 +118,21 @@ public class ConversationController {
         return conversationService.getConversationsByUserId(userId);
     }
 
+    @Operation(
+        summary = "Get messages in a conversation",
+        description = "Retrieves all messages from a specific conversation. Users can only access messages from their own conversations.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Messages retrieved successfully",
+            content = @Content(schema = @Schema(implementation = MessageDomain.class))
+        )
+    })
     @GetMapping("/{conversationId}/messages")
     public Flux<MessageDomain> getMessages(
-            @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
+            @Parameter(description = "Conversation ID", required = true) @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
             Authentication authentication) {
         
         Long userId = jwtService.extractUserId(authentication);
@@ -91,10 +148,22 @@ public class ConversationController {
     }
 
 
+    @Operation(
+        summary = "Extract emotion from user message",
+        description = "Analyzes a user message to extract emotional content and sentiment using AI",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Emotion extracted successfully",
+            content = @Content(schema = @Schema(implementation = EmotionResult.class))
+        )
+    })
     @PostMapping("/extract-emotion")
     public Mono<EmotionResult> extractEmotion(
-            @RequestParam @NotNull(message = "Conversation ID cannot be null") Long conversationId,
-            @RequestParam @NotBlank(message = "Message cannot be blank") String message,
+            @Parameter(description = "Conversation ID", required = true) @RequestParam @NotNull(message = "Conversation ID cannot be null") Long conversationId,
+            @Parameter(description = "User message text", required = true) @RequestParam @NotBlank(message = "Message cannot be blank") String message,
             Authentication authentication) {
         
         Long userId = jwtService.extractUserId(authentication);

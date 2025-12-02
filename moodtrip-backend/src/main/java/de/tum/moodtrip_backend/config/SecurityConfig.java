@@ -46,6 +46,8 @@ public class SecurityConfig {
                         .pathMatchers("/api/spotify/login").permitAll()
                         .pathMatchers("/api/spotify/callback").permitAll()
                         .pathMatchers("/actuator/**").permitAll()
+                        // API docs (Swagger UI + Knife4j) allow anonymous
+                        .pathMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**", "/webjars/**", "/doc.html", "/swagger-resources/**", "/favicon.ico").permitAll()
                         .anyExchange().authenticated()
                 )
                 .addFilterAt(authWebFilter, SecurityWebFiltersOrder.AUTHENTICATION)
