@@ -13,10 +13,10 @@ public record SurveyDomain(
         Integer rangeMeters,
         LocalDate startDate,
         LocalDate endDate,
-        List<SurveyPreference> preferences,
+        List<PoiCategory> poiCategories,
         LocalDateTime createdAt
 ) {
     public SurveyDomain {
-        preferences = preferences == null ? Collections.emptyList() : Collections.unmodifiableList(preferences);
+        poiCategories = poiCategories == null ? Collections.emptyList() : Collections.unmodifiableList(poiCategories);
     }
 }

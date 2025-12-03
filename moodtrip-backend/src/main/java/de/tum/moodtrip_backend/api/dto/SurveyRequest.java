@@ -22,10 +22,10 @@ public record SurveyRequest(
         @NotNull(message = "End date cannot be null")
         LocalDate endDate,
         
-        List<String> preferences
+        List<String> poiCategories
 ) {
     public SurveyRequest {
-        preferences = preferences == null ? Collections.emptyList() : Collections.unmodifiableList(preferences);
+        poiCategories = poiCategories == null ? Collections.emptyList() : Collections.unmodifiableList(poiCategories);
         
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new IllegalArgumentException("Start date must be before or equal to end date");

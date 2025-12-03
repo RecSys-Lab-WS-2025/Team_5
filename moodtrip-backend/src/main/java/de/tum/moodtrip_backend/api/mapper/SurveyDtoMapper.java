@@ -2,8 +2,8 @@ package de.tum.moodtrip_backend.api.mapper;
 
 import de.tum.moodtrip_backend.api.dto.SurveyRequest;
 import de.tum.moodtrip_backend.api.dto.SurveyResponse;
+import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.model.SurveyDomain;
-import de.tum.moodtrip_backend.core.model.SurveyPreference;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -20,7 +20,7 @@ public class SurveyDtoMapper {
             return null;
         }
         
-        List<SurveyPreference> preferences = parsePreferences(request.preferences());
+        List<PoiCategory> poiCategories = parsePoiCategories(request.poiCategories());
         
         return new SurveyDomain(
                 null,
@@ -30,7 +30,7 @@ public class SurveyDtoMapper {
                 request.rangeMeters(),
                 request.startDate(),
                 request.endDate(),
-                preferences,
+                poiCategories,
                 LocalDateTime.now()
         );
     }
@@ -41,7 +41,7 @@ public class SurveyDtoMapper {
             return null;
         }
         
-        List<String> preferences = domain.preferences().stream()
+        List<String> poiCategories = domain.poiCategories().stream()
                 .map(Enum::name)
                 .collect(Collectors.toList());
         
@@ -53,18 +53,18 @@ public class SurveyDtoMapper {
                 domain.rangeMeters(),
                 domain.startDate(),
                 domain.endDate(),
-                preferences,
+                poiCategories,
                 domain.createdAt()
         );
     }
     
-    private List<SurveyPreference> parsePreferences(List<String> preferences) {
-        if (preferences == null || preferences.isEmpty()) {
+    private List<PoiCategory> parsePoiCategories(List<String> poiCategories) {
+        if (poiCategories == null || poiCategories.isEmpty()) {
             return Collections.emptyList();
         }
         
-        return preferences.stream()
-                .map(SurveyPreference::fromString)
+        return poiCategories.stream()
+                .map(PoiCategory::fromDisplayName)
                 .collect(Collectors.toList());
     }
 }

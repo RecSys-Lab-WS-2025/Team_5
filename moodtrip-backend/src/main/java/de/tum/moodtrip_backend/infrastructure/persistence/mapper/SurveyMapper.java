@@ -6,11 +6,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import de.tum.moodtrip_backend.core.model.PoiCategory;
 import org.springframework.stereotype.Component;
 
 import de.tum.moodtrip_backend.infrastructure.persistence.entity.SurveyEntity;
 import de.tum.moodtrip_backend.core.model.SurveyDomain;
-import de.tum.moodtrip_backend.core.model.SurveyPreference;
 
 
 @Component
@@ -21,7 +21,7 @@ public class SurveyMapper {
             return null;
         }
         
-        List<SurveyPreference> preferences = parsePreferences(entity.getPreferences());
+        List<PoiCategory> poiCategories = parsPoiCategories(entity.getPreferences());
         
         return new SurveyDomain(
                 entity.getId(),
@@ -31,7 +31,7 @@ public class SurveyMapper {
                 entity.getRangeMeters(),
                 entity.getStartDate(),
                 entity.getEndDate(),
-                preferences,
+                poiCategories,
                 entity.getCreatedAt()
         );
     }
@@ -41,7 +41,7 @@ public class SurveyMapper {
             return null;
         }
         
-        String preferencesStr = serializePreferences(domain.preferences());
+        String poiCategoriesStr = serializePoiCategories(domain.poiCategories());
         LocalDateTime createdAt = domain.createdAt() != null ? domain.createdAt() : LocalDateTime.now();
         
         return new SurveyEntity(
@@ -52,29 +52,29 @@ public class SurveyMapper {
                 domain.rangeMeters(),
                 domain.startDate(),
                 domain.endDate(),
-                preferencesStr,
+                poiCategoriesStr,
                 createdAt
         );
     }
 
-    private List<SurveyPreference> parsePreferences(String preferencesStr) {
-        if (preferencesStr == null || preferencesStr.trim().isEmpty()) {
+    private List<PoiCategory> parsPoiCategories(String poiCategoriesStr) {
+        if (poiCategoriesStr == null || poiCategoriesStr.trim().isEmpty()) {
             return Collections.emptyList();
         }
         
-        return Arrays.stream(preferencesStr.split(","))
+        return Arrays.stream(poiCategoriesStr.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
-                .map(SurveyPreference::fromString)
+                .map(PoiCategory::fromDisplayName)
                 .collect(Collectors.toList());
     }
 
-    private String serializePreferences(List<SurveyPreference> preferences) {
-        if (preferences == null || preferences.isEmpty()) {
+    private String serializePoiCategories(List<PoiCategory> poiCategories) {
+        if (poiCategories == null || poiCategories.isEmpty()) {
             return "";
         }
         
-        return preferences.stream()
+        return poiCategories.stream()
                 .map(Enum::name)
                 .collect(Collectors.joining(","));
     }
