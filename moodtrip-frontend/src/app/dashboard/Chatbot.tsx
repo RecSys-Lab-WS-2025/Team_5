@@ -1,10 +1,11 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import type { UIMessage } from "@ai-sdk/react";
 
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import type { ChatSummary } from "@/components/sidebar/app-sidebar";
 import { WelcomeScreen } from "@/components/chat/welcome-screen";
 import { ChatInterface } from "@/components/chat/chat-interface";
+import type { SurveyData } from "@/components/chat/survey-form";
 
 import {
   SidebarInset,
@@ -141,7 +142,7 @@ export default function Chatbot() {
     if (content.startsWith("EmotionResult[")) {
       // Regex to extract content between "content=" and ", success="
       // Using [\s\S]* to match any character including newlines
-      const match = content.match(/content=([\s\S]*?),\s*success=(true|false)/);
+      const match: RegExpMatchArray | null = content.match(/content=([\s\S]*?),\s*success=(true|false)/);
       if (match && match[1]) {
         return match[1];
       }
@@ -189,12 +190,7 @@ export default function Chatbot() {
     }
   };
 
-  // Load chats on mount
-  useEffect(() => {
-    loadChats();
-  }, []);
-
-  async function loadChats() {
+  const loadChats = useCallback(async () => {
     try {
       const data = await getMyConversations();
       // Sort by ID descending (newest first)
@@ -208,24 +204,14 @@ export default function Chatbot() {
     } catch (e) {
       console.error("Failed to load chats", e);
     }
-  }
+  }, []);
 
-  // Load messages when chat selected
+  // Load chats on mount
   useEffect(() => {
-    if (!selectedChatId) {
-      setMessages([]);
-      return;
-    }
+    loadChats();
+  }, [loadChats]);
 
-    if (skipLoadRef.current) {
-      skipLoadRef.current = false;
-      return;
-    }
-
-    loadMessages(selectedChatId);
-  }, [selectedChatId]);
-
-  async function loadMessages(chatId: string) {
+  const loadMessages = useCallback(async (chatId: string) => {
     setIsLoading(true);
     try {
       const msgs = await getConversationMessages(Number(chatId));
@@ -244,7 +230,22 @@ export default function Chatbot() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
+
+  // Load messages when chat selected
+  useEffect(() => {
+    if (!selectedChatId) {
+      setMessages([]);
+      return;
+    }
+
+    if (skipLoadRef.current) {
+      skipLoadRef.current = false;
+      return;
+    }
+
+    loadMessages(selectedChatId);
+  }, [selectedChatId, loadMessages]);
 
   const handleNewChat = async () => {
     try {
@@ -449,7 +450,7 @@ export default function Chatbot() {
               handleInputChange={handleInputChange}
               handleSubmit={handleSubmit}
               isLoading={isLoading}
-              onSurveySubmit={async (data) => {
+              onSurveySubmit={async (data: SurveyData) => {
                 if (!selectedChatId) return;
                 try {
                   const res = await submitSurvey(Number(selectedChatId), data);

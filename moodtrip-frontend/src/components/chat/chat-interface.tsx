@@ -9,7 +9,7 @@ import { Send } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 import { useSidebar } from "@/components/ui/sidebar";
 
-import { SurveyForm } from "./survey-form";
+import { SurveyForm, type SurveyData } from "./survey-form";
 
 // ... inside ChatInterfaceProps
 interface ChatInterfaceProps {
@@ -18,7 +18,7 @@ interface ChatInterfaceProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
-  onSurveySubmit?: (data: any) => void;
+  onSurveySubmit?: (data: SurveyData) => void;
 }
 
 // ... inside ChatInterface component

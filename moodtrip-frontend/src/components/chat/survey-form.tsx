@@ -40,14 +40,23 @@ const RANGE_OPTIONS = [
     { label: "10 km", value: 10000 },
 ];
 
+export interface SurveyData {
+    latitude: number;
+    longitude: number;
+    rangeMeters: number;
+    startDate: string;
+    endDate: string;
+    poiCategories: string[];
+}
+
 export function SurveyForm({
     onSubmit,
     readOnly = false,
     initialData,
 }: {
-    onSubmit?: (data: any) => void;
+    onSubmit?: (data: SurveyData) => void;
     readOnly?: boolean;
-    initialData?: any;
+    initialData?: SurveyData;
 }) {
     // Helper to get date string YYYY-MM-DD
     const getTodayString = () => new Date().toISOString().split('T')[0];
