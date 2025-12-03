@@ -189,13 +189,7 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort {
      * Update the conversation's stored title based on the LLM's result.
      */
     private Mono<Void> updateConversationTitle(ConversationDomain conversation, String title) {
-        ConversationDomain updated = new ConversationDomain(
-                conversation.id(),
-                conversation.userId(),
-                title,
-                conversation.emotion(),
-                conversation.createdAt()
-        );
+        ConversationDomain updated = conversation.withTitle(title);
         return conversationPort.save(updated).then();
     }
 
