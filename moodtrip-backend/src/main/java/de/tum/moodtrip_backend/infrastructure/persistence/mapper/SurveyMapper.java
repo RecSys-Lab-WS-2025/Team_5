@@ -21,7 +21,7 @@ public class SurveyMapper {
             return null;
         }
         
-        List<PoiCategory> poiCategories = parsPoiCategories(entity.getPreferences());
+        List<PoiCategory> poiCategories = parsePoiCategories(entity.getPoiCategories());
         
         return new SurveyDomain(
                 entity.getId(),
@@ -57,7 +57,7 @@ public class SurveyMapper {
         );
     }
 
-    private List<PoiCategory> parsPoiCategories(String poiCategoriesStr) {
+    private List<PoiCategory> parsePoiCategories(String poiCategoriesStr) {
         if (poiCategoriesStr == null || poiCategoriesStr.trim().isEmpty()) {
             return Collections.emptyList();
         }
@@ -75,7 +75,7 @@ public class SurveyMapper {
         }
         
         return poiCategories.stream()
-                .map(Enum::name)
+                .map(PoiCategory::getDisplayName)
                 .collect(Collectors.joining(","));
     }
 }
