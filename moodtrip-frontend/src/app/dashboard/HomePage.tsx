@@ -26,7 +26,7 @@ export function HomePage() {
           onClick={() => {
             const user = getUser();
             if (!user) {
-              alert("You have to first login");
+              alert("You must log in first");
             } else {
               navigate("/chat");
             }
