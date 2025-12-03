@@ -104,4 +104,14 @@ public class ConversationController {
                 .doOnSuccess(e -> LOGGER.info("Successfully extracted user emotions"))
                 .doOnError(err -> LOGGER.error("Error while extracting emotions", err));
     }
+
+    @PostMapping("/{conversationId}/title")
+    public Mono<String> updateConversationTitle(
+            @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
+            Authentication authentication) {
+
+        Long userId = jwtService.extractUserId(authentication);
+
+        return conversationService.generateConversationTitle(conversationId, userId);
+    }
 }
