@@ -10,18 +10,20 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import de.tum.moodtrip_backend.api.dto.CreateUserRequest;
-import de.tum.moodtrip_backend.api.dto.UserResponse;
-import de.tum.moodtrip_backend.api.mapper.UserDtoMapper;
-import de.tum.moodtrip_backend.core.service.UserDomainService;
-import de.tum.moodtrip_backend.api.security.JwtService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import reactor.core.publisher.Mono;
+
+import de.tum.moodtrip_backend.api.dto.CreateUserRequest;
+import de.tum.moodtrip_backend.api.dto.UserResponse;
+import de.tum.moodtrip_backend.api.mapper.UserDtoMapper;
+import de.tum.moodtrip_backend.api.security.JwtService;
+import de.tum.moodtrip_backend.core.service.UserDomainService;
 
 @RestController
 @RequestMapping("/api/users")
@@ -39,6 +41,7 @@ public class UserController {
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Mono<UserResponse> createUser(@Valid @RequestBody CreateUserRequest req) {
         return userService.createUser(req.username(), req.email(), req.password())
                 .map(mapper::toResponse);
@@ -113,7 +116,8 @@ public class UserController {
                 )));
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> deleteUser(
             @PathVariable Long id,
             Authentication authentication) {

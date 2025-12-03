@@ -1,7 +1,8 @@
 package de.tum.moodtrip_backend.api.controller;
 
-import de.tum.moodtrip_backend.core.model.EmotionResult;
-import de.tum.moodtrip_backend.api.security.JwtService;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -12,19 +13,19 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import de.tum.moodtrip_backend.api.security.JwtService;
 import de.tum.moodtrip_backend.core.model.ConversationDomain;
+import de.tum.moodtrip_backend.core.model.EmotionResult;
 import de.tum.moodtrip_backend.core.model.MessageDomain;
 import de.tum.moodtrip_backend.core.service.ConversationDomainService;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @RestController
 @RequestMapping("/api/conversations")
@@ -43,6 +44,7 @@ public class ConversationController {
 
 
     @PostMapping("/start")
+    @ResponseStatus(HttpStatus.CREATED)
     public Mono<ConversationDomain> startConversation(Authentication authentication) {
         Long userId = jwtService.extractUserId(authentication);
         return conversationService.startConversation(userId, "New Conversation-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
