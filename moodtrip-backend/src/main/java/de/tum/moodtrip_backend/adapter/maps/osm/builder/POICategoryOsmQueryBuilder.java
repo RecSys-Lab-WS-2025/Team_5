@@ -89,27 +89,6 @@ public final class POICategoryOsmQueryBuilder {
     }
 
     /**
-     * Builds a full Overpass query for a single category using an (around:radius,lat,lon) filter.
-     * <p>
-     * Example output:
-     * <p>
-     * [out:json][timeout:60];
-     * (
-     * nwr["natural"~"beach|coastline|bay|dune"](around:1000,48.137400,11.575500);
-     * ...
-     * );
-     * out center tags;
-     */
-    public static String buildAroundQuery(
-            PoiCategory category,
-            double latitude,
-            double longitude,
-            int radiusMeters
-    ) {
-        return buildAroundQuery(List.of(category), latitude, longitude, radiusMeters);
-    }
-
-    /**
      * Builds a full Overpass query for multiple categories combined in one union.
      */
     public static String buildAroundQuery(
@@ -136,6 +115,6 @@ public final class POICategoryOsmQueryBuilder {
         // Assemble final Overpass query
         return "[out:json][timeout:" + DEFAULT_TIMEOUT_SECONDS + "];\n"
                 + body
-                + "out center tags 5;";
+                + "out center tags;";
     }
 }

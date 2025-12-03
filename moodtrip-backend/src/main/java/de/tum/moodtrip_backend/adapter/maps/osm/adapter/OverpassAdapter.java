@@ -12,7 +12,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
-import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
@@ -36,7 +36,7 @@ public class OverpassAdapter implements OsmPort {
     }
 
     @Override
-    public Flux<Poi> findAmenitiesAround(double lat, double lon, List<PoiCategory> poiCategories, int radiusMeters) {
+    public Mono<List<Poi>> findAmenitiesAround(double lat, double lon, List<PoiCategory> poiCategories, int radiusMeters) {
         String query = POICategoryOsmQueryBuilder.buildAroundQuery(poiCategories, lat, lon, radiusMeters);
         return webClient.post()
                 .uri("/api/interpreter")
@@ -46,7 +46,6 @@ public class OverpassAdapter implements OsmPort {
                 .retrieve()
                 .bodyToMono(OverpassResponse.class)
                 .map(OverpassResponsePOIMapper::toPois)
-                .flatMapMany(Flux::fromIterable)
                 .retryWhen(Retry.fixedDelay(5, Duration.ofMillis(10)));
     }
 }

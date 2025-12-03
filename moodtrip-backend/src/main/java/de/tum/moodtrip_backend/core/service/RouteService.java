@@ -14,6 +14,7 @@ import de.tum.moodtrip_backend.adapter.maps.osm.builder.PoiDescriptionBuilder;
 import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.WikipediaPort;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -26,12 +27,14 @@ public class RouteService {
     private final WikipediaPort wikipediaPort;
     private final RoutingPort routingPort;
     private final RouteRecommendationPort routeRecommendationPort;
+    private final RecommendationService recommendationService;
 
-    public RouteService(OsmPort osmPort, WikipediaPort wikipediaPort, RoutingPort routingPort, RouteRecommendationPort routeRecommendationPort) {
+    public RouteService(OsmPort osmPort, WikipediaPort wikipediaPort, RoutingPort routingPort, RouteRecommendationPort routeRecommendationPort, RecommendationService recommendationService) {
         this.osmPort = osmPort;
         this.wikipediaPort = wikipediaPort;
         this.routingPort = routingPort;
         this.routeRecommendationPort = routeRecommendationPort;
+        this.recommendationService = recommendationService;
     }
 
     public Mono<PoiRouteResult> getRoute(
@@ -42,6 +45,8 @@ public class RouteService {
             int radiusMeters
     ) {
         return osmPort.findAmenitiesAround(lat, lon, poiCategories, radiusMeters)
+                .map(recommendationService::recommendPois)
+                .flatMapMany(Flux::fromIterable)
                 .flatMap(poi ->
                         wikipediaPort.fetchSummaryForTag(poi.tags().get("wikipedia"))
                                 .defaultIfEmpty("")
