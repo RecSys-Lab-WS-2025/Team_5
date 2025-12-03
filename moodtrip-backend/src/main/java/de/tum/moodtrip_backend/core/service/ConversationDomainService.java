@@ -2,6 +2,7 @@ package de.tum.moodtrip_backend.core.service;
 
 import java.time.LocalDateTime;
 
+import de.tum.moodtrip_backend.core.port.ConversationTitlePort;
 import org.springframework.stereotype.Service;
 
 import de.tum.moodtrip_backend.core.model.ConversationDomain;
@@ -19,11 +20,13 @@ public class ConversationDomainService {
 
     private final ConversationPort conversationPort;
     private final EmotionPort emotionPort;
+    private final ConversationTitlePort conversationTitlePort;
 
     public ConversationDomainService(ConversationPort conversationPort,
-                                     EmotionPort emotionPort) {
+                                     EmotionPort emotionPort, ConversationTitlePort conversationTitlePort) {
         this.conversationPort = conversationPort;
         this.emotionPort = emotionPort;
+        this.conversationTitlePort = conversationTitlePort;
     }
 
     public Flux<ConversationDomain> getConversationsByUserId(Long userId) {
@@ -78,5 +81,9 @@ public class ConversationDomainService {
 
     public Mono<EmotionResult> extractEmotion(Long conversationId, Long userId, String message) {
         return emotionPort.extractEmotion(conversationId, userId, message);
+    }
+
+    public Mono<String> generateConversationTitle(Long conversationId, Long userId) {
+        return conversationTitlePort.generateConversationTitle(conversationId, userId);
     }
 }
