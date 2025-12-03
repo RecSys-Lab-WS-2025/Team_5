@@ -14,15 +14,16 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import de.tum.moodtrip_backend.api.dto.CreateUserRequest;
-import de.tum.moodtrip_backend.api.dto.UserResponse;
-import de.tum.moodtrip_backend.api.mapper.UserDtoMapper;
-import de.tum.moodtrip_backend.core.service.UserDomainService;
-import de.tum.moodtrip_backend.api.security.JwtService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import reactor.core.publisher.Mono;
+
+import de.tum.moodtrip_backend.api.dto.CreateUserRequest;
+import de.tum.moodtrip_backend.api.dto.UserResponse;
+import de.tum.moodtrip_backend.api.mapper.UserDtoMapper;
+import de.tum.moodtrip_backend.api.security.JwtService;
+import de.tum.moodtrip_backend.core.service.UserDomainService;
 
 @RestController
 @RequestMapping("/api/users")

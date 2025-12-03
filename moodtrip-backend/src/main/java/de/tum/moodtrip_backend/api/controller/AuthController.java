@@ -1,10 +1,6 @@
 package de.tum.moodtrip_backend.api.controller;
 
-import jakarta.validation.Valid;
-
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,8 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 import de.tum.moodtrip_backend.api.dto.LoginRequest;
 import de.tum.moodtrip_backend.api.dto.LoginResponse;
 import de.tum.moodtrip_backend.core.service.UserDomainService;
-import de.tum.moodtrip_backend.exception.UserNotFoundException;
-
+import jakarta.validation.Valid;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -31,13 +26,10 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @ResponseStatus(HttpStatus.OK)
     public Mono<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
         return userService.findByEmail(req.email())
                 .flatMap(user -> userService.authenticate(user, req.password()))
-                .onErrorResume(UserNotFoundException.class, e ->
-                        Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"))
-                );
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials")));
     }
 
 }

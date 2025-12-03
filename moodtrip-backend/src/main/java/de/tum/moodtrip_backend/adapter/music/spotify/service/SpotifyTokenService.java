@@ -1,14 +1,17 @@
 package de.tum.moodtrip_backend.adapter.music.spotify.service;
 
-import de.tum.moodtrip_backend.core.model.SpotifyTokenDomain;
-import de.tum.moodtrip_backend.core.port.SpotifyTokenPort;
-import de.tum.moodtrip_backend.core.service.UserDomainService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
 import reactor.core.publisher.Mono;
+
+import de.tum.moodtrip_backend.core.model.SpotifyTokenDomain;
+import de.tum.moodtrip_backend.core.port.SpotifyTokenPort;
+import de.tum.moodtrip_backend.core.service.UserDomainService;
 
 @Service
 public class SpotifyTokenService {

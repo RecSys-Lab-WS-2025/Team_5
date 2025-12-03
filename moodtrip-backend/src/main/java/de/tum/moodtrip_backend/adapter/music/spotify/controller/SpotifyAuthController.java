@@ -5,6 +5,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/api/spotify")
 public class SpotifyAuthController {
 
+    private static final Logger log = LoggerFactory.getLogger(SpotifyAuthController.class);
     private final AuthService authService;
     private final JwtService jwtService;
 
@@ -75,6 +78,7 @@ public class SpotifyAuthController {
 
                                     String encodedUsername = URLEncoder.encode(user.username(), StandardCharsets.UTF_8);
                                     String encodedEmail = URLEncoder.encode(user.email() != null ? user.email() : "", StandardCharsets.UTF_8);
+                                    log.info("jwt Token {}", jwtToken);
 
                                     String redirectUrl = String.format(
                                         "%s/chat?auth=success&token=%s&userId=%d&username=%s&email=%s",

@@ -1,8 +1,6 @@
 package de.tum.moodtrip_backend.adapter.music.spotify.controller;
 
 
-import de.tum.moodtrip_backend.adapter.music.spotify.service.SpotifyTokenService;
-import de.tum.moodtrip_backend.core.service.UserDomainService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,9 +13,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import de.tum.moodtrip_backend.core.model.SpotifyTokenDomain;
-import de.tum.moodtrip_backend.core.port.SpotifyTokenPort;
+import de.tum.moodtrip_backend.adapter.music.spotify.service.SpotifyTokenService;
 import de.tum.moodtrip_backend.api.security.JwtService;
+import de.tum.moodtrip_backend.core.model.SpotifyTokenDomain;
 import reactor.core.publisher.Mono;
 
 
