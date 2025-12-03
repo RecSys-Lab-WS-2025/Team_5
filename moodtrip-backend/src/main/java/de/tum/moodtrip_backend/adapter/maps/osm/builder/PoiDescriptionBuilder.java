@@ -1,6 +1,6 @@
 package de.tum.moodtrip_backend.adapter.maps.osm.builder;
 
-import de.tum.moodtrip_backend.core.model.POI;
+import de.tum.moodtrip_backend.core.model.Poi;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
@@ -15,7 +15,7 @@ public final class PoiDescriptionBuilder {
      * If OSM name is null, derives something from tags (e.g. "Table tennis table", "Basketball court", "Sports shop",
      * "Guidepost", "Viewpoint", "Beach", "Memorial", etc.).
      */
-    public static String buildDisplayName(POI poi) {
+    public static String buildDisplayName(Poi poi) {
         if (poi.name() != null && !poi.name().isBlank()) {
             return poi.name();
         }
@@ -106,7 +106,7 @@ public final class PoiDescriptionBuilder {
      * @param poi              the POI
      * @param wikipediaSummary optional short summary text from Wikipedia (already fetched)
      */
-    public static String buildShortDescription(POI poi, String wikipediaSummary) {
+    public static String buildShortDescription(Poi poi, String wikipediaSummary) {
         if (StringUtils.isNotBlank(wikipediaSummary)) {
             // Combine display name and short Wikipedia extract, truncated to a reasonable length
             return buildDisplayName(poi) + ". " + wikipediaSummary.trim();
@@ -118,7 +118,7 @@ public final class PoiDescriptionBuilder {
      * Builds a short, one-line description based purely on OSM tags.
      * Example: "Table tennis table at Alte Schönhauser Straße 55 (Berlin). Public and free. Outdoor. Wheelchair accessible."
      */
-    public static String buildShortDescription(POI poi) {
+    public static String buildShortDescription(Poi poi) {
         Map<String, String> t = poi.tags();
 
         StringBuilder sb = new StringBuilder();

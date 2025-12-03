@@ -1,7 +1,7 @@
 package de.tum.moodtrip_backend.api.controller;
 
 import de.tum.moodtrip_backend.api.mapper.GeoJsonRouteMapper;
-import de.tum.moodtrip_backend.core.model.POICategory;
+import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.service.OverpassService;
 import org.geojson.FeatureCollection;
 import org.slf4j.Logger;
@@ -32,7 +32,7 @@ public class FrontendController {
         LOGGER.info("GET /frontend/route lat={}, lon={}, poiCategory={}, radius={}",
                 lat, lon, poiCategory, radiusMeters);
 
-        POICategory category = POICategory.fromDisplayName(poiCategory);
+        PoiCategory category = PoiCategory.fromDisplayName(poiCategory);
         return overpassService
                 .getRoute(conversationId, lat, lon, category, radiusMeters)
                 .map(GeoJsonRouteMapper::toFeatureCollection);

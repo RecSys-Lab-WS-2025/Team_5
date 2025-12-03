@@ -1,9 +1,9 @@
 package de.tum.moodtrip_backend.core.port;
 
-import de.tum.moodtrip_backend.core.model.POI;
-import de.tum.moodtrip_backend.core.model.POICategory;
+import de.tum.moodtrip_backend.core.model.Poi;
+import de.tum.moodtrip_backend.core.model.PoiCategory;
 import reactor.core.publisher.Flux;
 
 public interface OsmPort {
-    Flux<POI> findAmenitiesAround(double lat, double lon, POICategory poiCategory, int radiusMeters);
+    Flux<Poi> findAmenitiesAround(double lat, double lon, PoiCategory poiCategory, int radiusMeters);
 }

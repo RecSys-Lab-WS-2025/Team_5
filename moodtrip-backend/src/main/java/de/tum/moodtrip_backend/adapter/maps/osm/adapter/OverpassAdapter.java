@@ -3,8 +3,8 @@ package de.tum.moodtrip_backend.adapter.maps.osm.adapter;
 import de.tum.moodtrip_backend.adapter.maps.osm.mapper.OverpassResponsePOIMapper;
 import de.tum.moodtrip_backend.adapter.maps.osm.builder.POICategoryOsmQueryBuilder;
 import de.tum.moodtrip_backend.adapter.maps.osm.model.OverpassResponse;
-import de.tum.moodtrip_backend.core.model.POI;
-import de.tum.moodtrip_backend.core.model.POICategory;
+import de.tum.moodtrip_backend.core.model.Poi;
+import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -35,7 +35,7 @@ public class OverpassAdapter implements OsmPort {
     }
 
     @Override
-    public Flux<POI> findAmenitiesAround(double lat, double lon, POICategory poiCategory, int radiusMeters) {
+    public Flux<Poi> findAmenitiesAround(double lat, double lon, PoiCategory poiCategory, int radiusMeters) {
         String query = POICategoryOsmQueryBuilder.buildAroundQuery(poiCategory, lat, lon, radiusMeters);
         return webClient.post()
                 .uri("/api/interpreter")

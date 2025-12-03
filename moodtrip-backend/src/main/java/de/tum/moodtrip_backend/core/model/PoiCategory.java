@@ -1,6 +1,6 @@
 package de.tum.moodtrip_backend.core.model;
 
-public enum POICategory {
+public enum PoiCategory {
 
     NATURE("Nature"),
     HISTORY_AND_CULTURE("History & Culture"),
@@ -15,11 +15,11 @@ public enum POICategory {
 
     private final String displayName;
 
-    public static POICategory fromDisplayName(String displayName) {
+    public static PoiCategory fromDisplayName(String displayName) {
         if (displayName == null) {
             throw new IllegalArgumentException("displayName must not be null");
         }
-        for (POICategory c : POICategory.values()) {
+        for (PoiCategory c : PoiCategory.values()) {
             if (c.displayName.equalsIgnoreCase(displayName)) {
                 return c;
             }
@@ -27,7 +27,7 @@ public enum POICategory {
         throw new IllegalArgumentException("Unknown POI category display name: " + displayName);
     }
 
-    POICategory(String displayName) {
+    PoiCategory(String displayName) {
         this.displayName = displayName;
     }
 
