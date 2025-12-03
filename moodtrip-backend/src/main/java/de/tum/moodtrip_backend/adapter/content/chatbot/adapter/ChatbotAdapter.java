@@ -37,7 +37,7 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort {
 
     @Override
     public Mono<EmotionResult> extractEmotion(Long conversationId, Long userId, String message) {
-        return getConversation(conversationId, userId)
+        return getConversation(conversationId)
                 .flatMap(conversation ->
                         {
                             if (!conversation.userId().equals(userId)) {
@@ -58,7 +58,7 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort {
 
     @Override
     public Mono<String> generateConversationTitle(Long conversationId, Long userId) {
-        return getConversation(conversationId, userId)
+        return getConversation(conversationId)
                 .flatMap(conversation -> {
                     if (!conversation.userId().equals(userId)) {
                         return Mono.error(new ResponseStatusException(
@@ -114,20 +114,8 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort {
 
     /**
      * Ensure a conversation row exists for the given conversationId and return it.
-     * If no such conversation exists yet, create a new one for the user.
      */
-    private Mono<ConversationDomain> getConversation(Long conversationId, Long userId) {
-        if (conversationId == null) {
-            ConversationDomain newConversation = new ConversationDomain(
-                    null,
-                    userId,
-                    "New Conversation",
-                    Emotion.NEUTRAL,
-                    LocalDateTime.now()
-            );
-            return conversationPort.save(newConversation);
-        }
-
+    private Mono<ConversationDomain> getConversation(Long conversationId) {
         return conversationPort.findById(conversationId)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Unknown Conversation ID")));
     }
