@@ -11,7 +11,9 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.deepseek.DeepSeekChatModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
@@ -37,11 +39,19 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort {
     public Mono<EmotionResult> extractEmotion(Long conversationId, Long userId, String message) {
         return getConversation(conversationId, userId)
                 .flatMap(conversation ->
-                        buildConversationHistory(conversation.id(), message)
-                                .flatMap(historyAndNewMessage ->
-                                        saveUserMessage(conversation.id(), message)
-                                                .then(analyzeEmotionAndSaveBotReply(conversation, historyAndNewMessage))
-                                )
+                        {
+                            if (!conversation.userId().equals(userId)) {
+                                return Mono.error(new ResponseStatusException(
+                                        HttpStatus.FORBIDDEN,
+                                        "Access denied: This conversation does not belong to you"
+                                ));
+                            }
+                            return buildConversationHistory(conversation.id(), message)
+                                    .flatMap(historyAndNewMessage ->
+                                            saveUserMessage(conversation.id(), message)
+                                                    .then(analyzeEmotionAndSaveBotReply(conversation, historyAndNewMessage))
+                                    );
+                        }
                 );
     }
 
@@ -49,16 +59,21 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort {
     @Override
     public Mono<String> generateConversationTitle(Long conversationId, Long userId) {
         return getConversation(conversationId, userId)
-                .flatMap(conversation ->
-                        buildConversationTranscriptForTitle(conversation.id())
-                                .flatMap(transcript ->
-                                        generateTitleFromTranscript(transcript)
-                                                .flatMap(title ->
-                                                        updateConversationTitle(conversation, title)
-                                                                .thenReturn(title)
-                                                )
-                                )
-                );
+                .flatMap(conversation -> {
+                    if (!conversation.userId().equals(userId)) {
+                        return Mono.error(new ResponseStatusException(
+                                HttpStatus.FORBIDDEN,
+                                "Access denied: This conversation does not belong to you"
+                        ));
+                    }
+                    return buildConversationTranscriptForTitle(conversation.id()).flatMap(transcript ->
+                            generateTitleFromTranscript(transcript)
+                                    .flatMap(title ->
+                                            updateConversationTitle(conversation, title)
+                                                    .thenReturn(title)
+                                    )
+                    );
+                });
     }
 
     /**
@@ -69,7 +84,12 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort {
         return conversationPort.findMessagesByConversationId(conversationId)
                 .map(msg -> msg.sender().name() + ": " + msg.content())
                 .collectList()
-                .map(lines -> String.join("\n", lines));
+                .map(lines -> String.join("\n", lines))
+                .filter(transcript -> !transcript.isBlank())
+                .switchIfEmpty(Mono.error(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Cannot generate title for conversation with no messages"
+                )));
     }
 
     /**
