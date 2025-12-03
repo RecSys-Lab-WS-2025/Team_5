@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import de.tum.moodtrip_backend.adapter.maps.osm.builder.PoiDescriptionBuilder;
-import de.tum.moodtrip_backend.core.model.POICategory;
+import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.WikipediaPort;
 import reactor.core.publisher.Mono;
@@ -36,7 +36,7 @@ public class OverpassService {
             long conversationId,
             double lat,
             double lon,
-            POICategory poiCategory,
+            PoiCategory poiCategory,
             int radiusMeters
     ) {
         return osmPort.findAmenitiesAround(lat, lon, poiCategory, radiusMeters)

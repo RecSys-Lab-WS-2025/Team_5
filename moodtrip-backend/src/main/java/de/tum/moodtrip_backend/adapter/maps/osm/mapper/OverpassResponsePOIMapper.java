@@ -1,7 +1,7 @@
 package de.tum.moodtrip_backend.adapter.maps.osm.mapper;
 
 import de.tum.moodtrip_backend.adapter.maps.osm.model.OverpassResponse;
-import de.tum.moodtrip_backend.core.model.POI;
+import de.tum.moodtrip_backend.core.model.Poi;
 
 import java.util.Collections;
 import java.util.List;
@@ -13,7 +13,7 @@ public final class OverpassResponsePOIMapper {
     private OverpassResponsePOIMapper() {
     }
 
-    public static List<POI> toPois(OverpassResponse response) {
+    public static List<Poi> toPois(OverpassResponse response) {
         if (response == null || response.elements() == null) {
             return List.of();
         }
@@ -24,7 +24,7 @@ public final class OverpassResponsePOIMapper {
                 .toList();
     }
 
-    private static Optional<POI> toPoi(OverpassResponse.Element element) {
+    private static Optional<Poi> toPoi(OverpassResponse.Element element) {
         if (element == null) {
             return Optional.empty();
         }
@@ -48,14 +48,14 @@ public final class OverpassResponsePOIMapper {
 
         String name = tags.get("name");
 
-        POI.OsmType osmType;
+        Poi.OsmType osmType;
         try {
-            osmType = POI.OsmType.valueOf(element.type().toUpperCase());
+            osmType = Poi.OsmType.valueOf(element.type().toUpperCase());
         } catch (IllegalArgumentException | NullPointerException e) {
             return Optional.empty();
         }
 
-        POI poi = new POI(
+        Poi poi = new Poi(
                 element.id(),
                 osmType,
                 lat,

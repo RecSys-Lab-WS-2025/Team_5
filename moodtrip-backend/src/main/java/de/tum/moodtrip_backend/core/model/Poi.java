@@ -2,7 +2,7 @@ package de.tum.moodtrip_backend.core.model;
 
 import java.util.Map;
 
-public record POI(
+public record Poi(
         long osmId,
         OsmType osmType,
         double latitude,

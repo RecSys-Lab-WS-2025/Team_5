@@ -1,6 +1,6 @@
 package de.tum.moodtrip_backend.adapter.maps.osm.builder;
 
-import de.tum.moodtrip_backend.core.model.POICategory;
+import de.tum.moodtrip_backend.core.model.PoiCategory;
 
 import java.util.List;
 import java.util.Locale;
@@ -11,16 +11,16 @@ public final class POICategoryOsmQueryBuilder {
 
     private static final int DEFAULT_TIMEOUT_SECONDS = 60;
 
-    private static final Map<POICategory, List<String>> CATEGORY_TO_FRAGMENTS =
+    private static final Map<PoiCategory, List<String>> CATEGORY_TO_FRAGMENTS =
             Map.of(
-                    POICategory.NATURE, List.of(
+                    PoiCategory.NATURE, List.of(
                             "nwr[\"leisure\"~\"park|garden|nature_reserve\"]",
                             "nwr[\"boundary\"=\"protected_area\"]",
                             "nwr[\"natural\"~\"wood|forest|wetland|heath|scrub|grassland|meadow|water|lake|fell|moor|peak|valley\"]",
                             "nwr[\"tourism\"~\"picnic_site\"]"
                     ),
 
-                    POICategory.HISTORY_AND_CULTURE, List.of(
+                    PoiCategory.HISTORY_AND_CULTURE, List.of(
                             "nwr[\"historic\"]",
                             "nwr[\"heritage\"]",
                             "nwr[\"memorial\"]",
@@ -28,48 +28,48 @@ public final class POICategoryOsmQueryBuilder {
                             "nwr[\"amenity\"=\"place_of_worship\"]"
                     ),
 
-                    POICategory.ADVENTURE, List.of(
+                    PoiCategory.ADVENTURE, List.of(
                             "nwr[\"leisure\"~\"sports_centre|pitch|stadium|water_park|adventure_park\"]",
                             "nwr[\"tourism\"=\"theme_park\"]",
                             "nwr[\"sport\"~\"climbing|skiing|snowboard|surfing|diving|canoe|kayak|rafting|skateboard|mtb|paragliding\"]"
                     ),
 
-                    POICategory.RELAXATION, List.of(
+                    PoiCategory.RELAXATION, List.of(
                             "nwr[\"leisure\"~\"park|garden|spa\"]",
                             "nwr[\"amenity\"~\"spa|sauna\"]",
                             "nwr[\"tourism\"~\"hotel|guest_house|resort\"]"
                     ),
 
-                    POICategory.FOOD_AND_CULINARY, List.of(
+                    PoiCategory.FOOD_AND_CULINARY, List.of(
                             "nwr[\"amenity\"~\"restaurant|cafe|fast_food|biergarten|pub|bar|food_court|ice_cream|brewery\"]",
                             "nwr[\"craft\"~\"winery|brewery\"]",
                             "nwr[\"shop\"~\"bakery|confectionery|deli|butcher\"]"
                     ),
 
-                    POICategory.NIGHTLIFE, List.of(
+                    PoiCategory.NIGHTLIFE, List.of(
                             "nwr[\"amenity\"~\"bar|pub|biergarten|nightclub|casino|music_venue\"]"
                     ),
 
-                    POICategory.ART_AND_MUSEUMS, List.of(
+                    PoiCategory.ART_AND_MUSEUMS, List.of(
                             "nwr[\"tourism\"~\"museum|gallery|artwork\"]",
                             "nwr[\"amenity\"~\"arts_centre|theatre|cinema\"]",
                             "nwr[\"historic\"=\"artwork\"]"
                     ),
 
-                    POICategory.SHOPPING, List.of(
+                    PoiCategory.SHOPPING, List.of(
                             "nwr[\"shop\"~\"mall|department_store|supermarket|clothes|shoes|electronics|books|gift|boutique\"]",
                             "nwr[\"amenity\"=\"marketplace\"]",
                             "nwr[\"landuse\"=\"retail\"]"
                     ),
 
-                    POICategory.BEACH_AND_COAST, List.of(
+                    PoiCategory.BEACH_AND_COAST, List.of(
                             "nwr[\"natural\"~\"beach|coastline|bay|dune\"]",
                             "nwr[\"tourism\"=\"beach_resort\"]",
                             "nwr[\"leisure\"=\"beach_resort\"]",
                             "nwr[\"place\"~\"island|islet\"]"
                     ),
 
-                    POICategory.CITY_EXPLORATION, List.of(
+                    PoiCategory.CITY_EXPLORATION, List.of(
                             "nwr[\"tourism\"~\"attraction|information|viewpoint\"]",
                             "nwr[\"place\"=\"square\"]",
                             "way[\"highway\"=\"pedestrian\"]",
@@ -84,7 +84,7 @@ public final class POICategoryOsmQueryBuilder {
     /**
      * Returns the pure tag fragments (without any range or around clause).
      */
-    public static List<String> getTagFragments(POICategory category) {
+    public static List<String> getTagFragments(PoiCategory category) {
         return CATEGORY_TO_FRAGMENTS.getOrDefault(category, List.of());
     }
 
@@ -101,7 +101,7 @@ public final class POICategoryOsmQueryBuilder {
      * out center tags;
      */
     public static String buildAroundQuery(
-            POICategory category,
+            PoiCategory category,
             double latitude,
             double longitude,
             int radiusMeters
@@ -113,7 +113,7 @@ public final class POICategoryOsmQueryBuilder {
      * Builds a full Overpass query for multiple categories combined in one union.
      */
     public static String buildAroundQuery(
-            List<POICategory> categories,
+            List<PoiCategory> categories,
             double latitude,
             double longitude,
             int radiusMeters

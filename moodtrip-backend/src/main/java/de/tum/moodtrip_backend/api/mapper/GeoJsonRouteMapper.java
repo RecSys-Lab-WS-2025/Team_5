@@ -2,7 +2,7 @@ package de.tum.moodtrip_backend.api.mapper;
 
 import de.tum.moodtrip_backend.core.model.EnrichedPoi;
 import de.tum.moodtrip_backend.core.model.PoiRouteResult;
-import de.tum.moodtrip_backend.core.model.POI;
+import de.tum.moodtrip_backend.core.model.Poi;
 import de.tum.moodtrip_backend.core.model.Route;
 import de.tum.moodtrip_backend.core.model.RouteCoordinate;
 import org.geojson.Feature;
@@ -30,7 +30,7 @@ public final class GeoJsonRouteMapper {
         // POI features
         if (poiRouteResult.pois() != null) {
             for (EnrichedPoi enrichedPoi : poiRouteResult.pois()) {
-                POI poi = enrichedPoi.poi();
+                Poi poi = enrichedPoi.poi();
                 Feature poiFeature = new Feature();
 
                 // GeoJSON uses (lon, lat) order
