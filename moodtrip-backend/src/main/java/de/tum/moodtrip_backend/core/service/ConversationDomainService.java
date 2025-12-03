@@ -2,7 +2,11 @@ package de.tum.moodtrip_backend.core.service;
 
 import java.time.LocalDateTime;
 
-import de.tum.moodtrip_backend.core.model.*;
+import de.tum.moodtrip_backend.core.model.ConversationDomain;
+import de.tum.moodtrip_backend.core.model.MessageDomain;
+import de.tum.moodtrip_backend.core.model.Emotion;
+import de.tum.moodtrip_backend.core.model.Sender;
+import de.tum.moodtrip_backend.core.model.EmotionResult;
 import de.tum.moodtrip_backend.core.port.ConversationTitlePort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
