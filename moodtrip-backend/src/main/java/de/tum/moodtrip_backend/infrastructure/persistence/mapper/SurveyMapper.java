@@ -20,14 +20,15 @@ public class SurveyMapper {
         if (entity == null) {
             return null;
         }
-        
+
         List<PoiCategory> poiCategories = parsePoiCategories(entity.getPoiCategories());
-        
+
         return new SurveyDomain(
                 entity.getId(),
                 entity.getUserId(),
                 entity.getConversationId(),
-                entity.getLocation(),
+                entity.getLatitude(),
+                entity.getLongitude(),
                 entity.getRangeMeters(),
                 entity.getStartDate(),
                 entity.getEndDate(),
@@ -40,15 +41,16 @@ public class SurveyMapper {
         if (domain == null) {
             return null;
         }
-        
+
         String poiCategoriesStr = serializePoiCategories(domain.poiCategories());
         LocalDateTime createdAt = domain.createdAt() != null ? domain.createdAt() : LocalDateTime.now();
-        
+
         return new SurveyEntity(
                 domain.id(),
                 domain.userId(),
                 domain.conversationId(),
-                domain.location(),
+                domain.latitude(),
+                domain.longitude(),
                 domain.rangeMeters(),
                 domain.startDate(),
                 domain.endDate(),
@@ -61,7 +63,7 @@ public class SurveyMapper {
         if (poiCategoriesStr == null || poiCategoriesStr.trim().isEmpty()) {
             return Collections.emptyList();
         }
-        
+
         return Arrays.stream(poiCategoriesStr.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
@@ -73,7 +75,7 @@ public class SurveyMapper {
         if (poiCategories == null || poiCategories.isEmpty()) {
             return "";
         }
-        
+
         return poiCategories.stream()
                 .map(PoiCategory::getDisplayName)
                 .collect(Collectors.joining(","));

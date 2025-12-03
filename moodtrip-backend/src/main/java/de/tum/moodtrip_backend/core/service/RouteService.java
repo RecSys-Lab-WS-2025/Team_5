@@ -16,16 +16,18 @@ import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.WikipediaPort;
 import reactor.core.publisher.Mono;
 
-@Service
-public class OverpassService {
+import java.util.List;
 
-    public static final Logger LOGGER = LoggerFactory.getLogger(OverpassService.class);
+@Service
+public class RouteService {
+
+    public static final Logger LOGGER = LoggerFactory.getLogger(RouteService.class);
     private final OsmPort osmPort;
     private final WikipediaPort wikipediaPort;
     private final RoutingPort routingPort;
     private final RouteRecommendationPort routeRecommendationPort;
 
-    public OverpassService(OsmPort osmPort, WikipediaPort wikipediaPort, RoutingPort routingPort, RouteRecommendationPort routeRecommendationPort) {
+    public RouteService(OsmPort osmPort, WikipediaPort wikipediaPort, RoutingPort routingPort, RouteRecommendationPort routeRecommendationPort) {
         this.osmPort = osmPort;
         this.wikipediaPort = wikipediaPort;
         this.routingPort = routingPort;
@@ -36,10 +38,10 @@ public class OverpassService {
             long conversationId,
             double lat,
             double lon,
-            PoiCategory poiCategory,
+            List<PoiCategory> poiCategories,
             int radiusMeters
     ) {
-        return osmPort.findAmenitiesAround(lat, lon, poiCategory, radiusMeters)
+        return osmPort.findAmenitiesAround(lat, lon, poiCategories, radiusMeters)
                 .flatMap(poi ->
                         wikipediaPort.fetchSummaryForTag(poi.tags().get("wikipedia"))
                                 .defaultIfEmpty("")

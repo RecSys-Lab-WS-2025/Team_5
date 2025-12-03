@@ -10,9 +10,11 @@ import org.geojson.FeatureCollection;
 import org.geojson.LineString;
 import org.geojson.LngLatAlt;
 import org.geojson.Point;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+@Component
 public final class GeoJsonRouteMapper {
     /**
      * Build a GeoJSON FeatureCollection from enriched POIs and an optional route.
@@ -20,7 +22,7 @@ public final class GeoJsonRouteMapper {
      * @param poiRouteResult domain object containing enriched POIs and the route
      * @return GeoJSON FeatureCollection
      */
-    public static FeatureCollection toFeatureCollection(PoiRouteResult poiRouteResult) {
+    public FeatureCollection toFeatureCollection(PoiRouteResult poiRouteResult) {
         FeatureCollection featureCollection = new FeatureCollection();
 
         if (poiRouteResult == null) {

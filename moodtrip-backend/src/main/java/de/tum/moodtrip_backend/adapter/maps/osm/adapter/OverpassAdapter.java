@@ -16,6 +16,7 @@ import reactor.core.publisher.Flux;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.util.List;
 
 @Component
 public class OverpassAdapter implements OsmPort {
@@ -35,8 +36,8 @@ public class OverpassAdapter implements OsmPort {
     }
 
     @Override
-    public Flux<Poi> findAmenitiesAround(double lat, double lon, PoiCategory poiCategory, int radiusMeters) {
-        String query = POICategoryOsmQueryBuilder.buildAroundQuery(poiCategory, lat, lon, radiusMeters);
+    public Flux<Poi> findAmenitiesAround(double lat, double lon, List<PoiCategory> poiCategories, int radiusMeters) {
+        String query = POICategoryOsmQueryBuilder.buildAroundQuery(poiCategories, lat, lon, radiusMeters);
         return webClient.post()
                 .uri("/api/interpreter")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)

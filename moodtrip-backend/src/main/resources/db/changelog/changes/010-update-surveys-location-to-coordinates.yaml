@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-update-surveys-location-to-coordinates
+      author: xu
+      changes:
+        - addColumn:
+            tableName: surveys
+            columns:
+              - column:
+                  name: latitude
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+              - column:
+                  name: longitude
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+
+        - dropColumn:
+            tableName: surveys
+            columnName: location

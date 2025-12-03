@@ -17,3 +17,5 @@ databaseChangeLog:
       file: db/changelog/changes/008-create-surveys-table.yaml
   - include:
       file: db/changelog/changes/009-rename-preferences-to-poiCategories.yaml
+  - include:
+      file: db/changelog/changes/010-update-surveys-location-to-coordinates.yaml

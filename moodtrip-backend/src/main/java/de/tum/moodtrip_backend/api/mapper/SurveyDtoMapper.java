@@ -1,7 +1,6 @@
 package de.tum.moodtrip_backend.api.mapper;
 
 import de.tum.moodtrip_backend.api.dto.SurveyRequest;
-import de.tum.moodtrip_backend.api.dto.SurveyResponse;
 import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.model.SurveyDomain;
 import org.springframework.stereotype.Component;
@@ -26,35 +25,13 @@ public class SurveyDtoMapper {
                 null,
                 userId,
                 conversationId,
-                request.location(),
+                request.latitude(),
+                request.longitude(),
                 request.rangeMeters(),
                 request.startDate(),
                 request.endDate(),
                 poiCategories,
                 LocalDateTime.now()
-        );
-    }
-    
-
-    public SurveyResponse domainToResponse(SurveyDomain domain) {
-        if (domain == null) {
-            return null;
-        }
-        
-        List<String> poiCategories = domain.poiCategories().stream()
-                .map(Enum::name)
-                .collect(Collectors.toList());
-        
-        return new SurveyResponse(
-                domain.id(),
-                domain.userId(),
-                domain.conversationId(),
-                domain.location(),
-                domain.rangeMeters(),
-                domain.startDate(),
-                domain.endDate(),
-                poiCategories,
-                domain.createdAt()
         );
     }
     
