@@ -33,6 +33,7 @@ import {
   getConversationMessages,
   sendMessage as apiSendMessage,
   extractEmotion as apiExtractEmotion,
+  submitSurvey,
 } from "@/api/conversation";
 
 // ---- static nav data ----
@@ -293,6 +294,7 @@ export default function Chatbot() {
       if (!emotionExtracted) {
         // Attempt to extract emotion
         const res = await apiExtractEmotion(Number(selectedChatId), text);
+        console.log("Extract Emotion Result:", res);
 
         if (res.success) {
           setEmotionExtracted(true);
@@ -316,7 +318,7 @@ export default function Chatbot() {
           const surveyMsg: UIMessage = {
             id: (Date.now() + 2).toString(),
             role: "assistant",
-            parts: [{ type: "text", text: "**[SURVEY]**\n\nSince I've understood your mood, could you please answer a few quick questions to help me tailor the trip?\n\n1. How much time do you have?\n2. What is your budget?" }],
+            parts: [{ type: "text", text: "[SURVEY_FORM_TRIGGER]" }],
           };
           setMessages((prev) => [...prev, surveyMsg]);
         }
@@ -370,6 +372,7 @@ export default function Chatbot() {
 
     try {
       const res = await apiExtractEmotion(Number(chatId), text);
+      console.log("Suggestion Click - Extract Emotion Result:", res);
       if (res.success) {
         setEmotionExtracted(true);
       } else {
@@ -389,7 +392,7 @@ export default function Chatbot() {
         const surveyMsg: UIMessage = {
           id: (Date.now() + 2).toString(),
           role: "assistant",
-          parts: [{ type: "text", text: "**[SURVEY]**\n\nSince I've understood your mood, could you please answer a few quick questions to help me tailor the trip?\n\n1. How much time do you have?\n2. What is your budget?" }],
+          parts: [{ type: "text", text: "[SURVEY_FORM_TRIGGER]" }],
         };
         setMessages((prev) => [...prev, surveyMsg]);
       }
@@ -446,6 +449,42 @@ export default function Chatbot() {
               handleInputChange={handleInputChange}
               handleSubmit={handleSubmit}
               isLoading={isLoading}
+              onSurveySubmit={async (data) => {
+                if (!selectedChatId) return;
+                try {
+                  const res = await submitSurvey(Number(selectedChatId), data);
+
+                  // Persist survey as a user message
+                  const surveyContent = `[SURVEY_DATA] ${JSON.stringify(data)}`;
+                  await apiSendMessage(Number(selectedChatId), surveyContent, true);
+
+                  // Update local state to show the persisted survey immediately
+                  const persistedSurveyMsg: UIMessage = {
+                    id: Date.now().toString(),
+                    role: "user",
+                    parts: [{ type: "text", text: surveyContent }],
+                  };
+                  setMessages((prev) => [...prev, persistedSurveyMsg]);
+
+                  // Optional: Add a success message from bot
+                  let botText = "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
+                  if (res.spotifyPlaylistLink) {
+                    botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: ${res.spotifyPlaylistLink}`;
+                  }
+
+                  // Persist bot message
+                  await apiSendMessage(Number(selectedChatId), botText, false);
+
+                  const successMsg: UIMessage = {
+                    id: (Date.now() + 1).toString(),
+                    role: "assistant",
+                    parts: [{ type: "text", text: botText }],
+                  };
+                  setMessages((prev) => [...prev, successMsg]);
+                } catch (e) {
+                  console.error("Failed to submit survey", e);
+                }
+              }}
             />
           )}
         </div>

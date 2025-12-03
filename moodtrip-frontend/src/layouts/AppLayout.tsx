@@ -38,7 +38,7 @@ export function AppLayout() {
       );
 
       alert("Hi! " + decodeURIComponent(username) + ", login is successful!");
-      navigate("/chat");
+      navigate("/");
     } else if (flag === "error") {
       const raw = params.get("msg") || "Spotify Authorization failed";
       const msg = decodeURIComponent(raw);

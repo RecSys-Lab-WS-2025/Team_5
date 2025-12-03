@@ -81,7 +81,7 @@ public class SpotifyAuthController {
                                     log.info("jwt Token {}", jwtToken);
 
                                     String redirectUrl = String.format(
-                                        "%s/chat?auth=success&token=%s&userId=%d&username=%s&email=%s",
+                                        "%s/?auth=success&token=%s&userId=%d&username=%s&email=%s",
                                         frontendUrl, jwtToken, user.id(), encodedUsername, encodedEmail
                                     );
                                     

@@ -138,3 +138,27 @@ export async function extractEmotion(
   return res.json();
 }
 
+/**
+ * 提交问卷
+ */
+export interface SurveyResponse {
+  route: any;
+  spotifyPlaylistLink: string | null;
+}
+
+export async function submitSurvey(conversationId: number, data: any): Promise<SurveyResponse> {
+  const res = await authFetch(`${BASE}/api/surveys?conversationId=${conversationId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to submit survey: ${res.status} ${res.statusText}`);
+  }
+
+  return res.json();
+}
+

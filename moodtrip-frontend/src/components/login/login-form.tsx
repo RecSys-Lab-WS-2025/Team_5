@@ -47,7 +47,7 @@ export function LoginForm({
         window.dispatchEvent(new Event('userLogin'));
       }
       alert(`Hi! ${user?.username}, login is successful!`);
-      navigate("/chat");
+      navigate("/");
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message || "Login failed");
