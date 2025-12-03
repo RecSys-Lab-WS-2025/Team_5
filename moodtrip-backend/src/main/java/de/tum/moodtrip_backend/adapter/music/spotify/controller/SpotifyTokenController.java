@@ -1,6 +1,7 @@
 package de.tum.moodtrip_backend.adapter.music.spotify.controller;
 
 
+import de.tum.moodtrip_backend.adapter.music.spotify.service.SpotifyTokenService;
 import de.tum.moodtrip_backend.core.service.UserDomainService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,17 +25,17 @@ import reactor.core.publisher.Mono;
 
 @RequestMapping("/api/token")
 public class SpotifyTokenController {
-    private final SpotifyTokenPort spotifyTokenPort;
-    private final JwtService jwtService;
-    private final UserDomainService userDomainService;
 
-    public SpotifyTokenController(SpotifyTokenPort spotifyTokenPort, JwtService jwtService, UserDomainService userDomainService) {
-        this.spotifyTokenPort = spotifyTokenPort;
+    private final JwtService jwtService;
+    private final SpotifyTokenService spotifyTokenService;
+
+    public SpotifyTokenController(JwtService jwtService, SpotifyTokenService spotifyTokenService) {
         this.jwtService = jwtService;
-        this.userDomainService = userDomainService;
+        this.spotifyTokenService = spotifyTokenService;
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Mono<SpotifyTokenDomain> create(
             @RequestBody CreateSpotifyTokenRequest request,
             Authentication authentication) {
@@ -58,7 +60,7 @@ public class SpotifyTokenController {
                 request.spotifyEmail,
                 request.spotifyDisplayName
         );
-        return spotifyTokenPort.save(domain);
+        return spotifyTokenService.create(domain);
     }
 
     @GetMapping("/{id}")
@@ -69,11 +71,7 @@ public class SpotifyTokenController {
 
         jwtService.extractUserId(authentication);
 
-        return spotifyTokenPort.findById(id)
-                .switchIfEmpty(Mono.error(new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Spotify token not found for id: " + id
-                )));
+        return spotifyTokenService.getById(id);
     }
 
     @GetMapping("/spotify-user/{spotifyUserId}")
@@ -84,37 +82,17 @@ public class SpotifyTokenController {
 
         jwtService.extractUserId(authentication);
 
-        return spotifyTokenPort.findBySpotifyUserId(spotifyUserId)
-                .switchIfEmpty(Mono.error(new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Spotify token not found for spotifyUserId: " + spotifyUserId
-                )));
+        return spotifyTokenService.getBySpotifyUserId(spotifyUserId);
     }
 
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> deleteById(
             @PathVariable Long id,
             Authentication authentication) {
-        long userId = jwtService.extractUserId(authentication);
+        long authUserId = jwtService.extractUserId(authentication);
 
-        return spotifyTokenPort.findById(id)
-                .switchIfEmpty(Mono.error(new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Spotify token not found for id: " + id
-                )))
-                .flatMap(token ->
-                        userDomainService.findById(userId)
-                                .flatMap(user -> {
-                                    if (user.spotifyTokenId() == null ||
-                                            !user.spotifyTokenId().equals(id)) {
-                                        return Mono.error(new ResponseStatusException(
-                                                HttpStatus.FORBIDDEN,
-                                                "You are not authorized to delete this Spotify token"
-                                        ));
-                                    }
-                                    return spotifyTokenPort.deleteById(id);
-                                })
-                );
+        return spotifyTokenService.deleteById(id, authUserId);
     }
 
 

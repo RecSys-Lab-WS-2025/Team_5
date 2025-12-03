@@ -6,8 +6,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -28,23 +30,20 @@ public class MusicRecommendationController {
     private final MusicRecommendationService recommendationService;
     private final EmotionToFeatureMapper mapper;
     private static final Logger LOGGER = LoggerFactory.getLogger(MusicRecommendationController.class);
-    private final MusicRecommendationPort musicRecommendationPort;
     private final JwtService jwtService;
     private final ConversationDomainService conversationService;
 
     public MusicRecommendationController(MusicRecommendationService recommendationService,
-                                         EmotionToFeatureMapper mapper, 
-                                         MusicRecommendationPort musicRecommendationPort,
+                                         EmotionToFeatureMapper mapper,
                                          JwtService jwtService,
                                          ConversationDomainService conversationService) {
         this.recommendationService = recommendationService;
         this.mapper = mapper;
-        this.musicRecommendationPort = musicRecommendationPort;
         this.jwtService = jwtService;
         this.conversationService = conversationService;
     }
 
-    @GetMapping("/recommend")
+    @PostMapping("/recommend")
     public Mono<String> recommend(
             @RequestParam String emotion, 
             @RequestParam Long convId,
