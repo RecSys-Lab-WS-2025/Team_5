@@ -13,6 +13,11 @@ import {
 } from "@/components/ui/sidebar";
 
 import {
+  Laugh,
+  Smile,
+  Meh,
+  Annoyed,
+  Angry,
   LifeBuoy,
   Send,
   Heart,
@@ -91,12 +96,35 @@ const navData = {
 };
 
 export default function Chatbot() {
-  const storedUser = getUser();
-  const displayUser = {
-    name: storedUser?.username ?? navData.user.name,
-    email: storedUser?.email ?? navData.user.email,
-    avatar: undefined,
-  };
+  const [displayUser, setDisplayUser] = useState(() => {
+    const storedUser = getUser();
+    return {
+      name: storedUser?.username ?? navData.user.name,
+      email: storedUser?.email ?? navData.user.email,
+      avatar: undefined,
+    };
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedUser = getUser();
+      if (storedUser) {
+        setDisplayUser({
+          name: storedUser.username,
+          email: storedUser.email,
+          avatar: undefined,
+        });
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('userLogin', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userLogin', handleStorageChange);
+    };
+  }, []);
 
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -110,16 +138,54 @@ export default function Chatbot() {
   // Helper to parse backend message content
   const parseMessageContent = (content: string) => {
     if (content.startsWith("EmotionResult[")) {
-      // Try to extract content field
-      // Format: EmotionResult[..., content=Actual text, success=...]
-      // We use a regex that looks for content= and ends before , success=
-      // Note: This is a best-effort parser for the Java record toString
-      const match = content.match(/content=(.*), success=(true|false)\]$/);
+      // Regex to extract content between "content=" and ", success="
+      // Using [\s\S]* to match any character including newlines
+      const match = content.match(/content=([\s\S]*?),\s*success=(true|false)/);
       if (match && match[1]) {
         return match[1];
       }
     }
     return content;
+  };
+
+  const getEmotionIcon = (emotion?: string) => {
+    if (!emotion) return undefined;
+    const e = emotion.toUpperCase();
+    switch (e) {
+      case "JOYFUL":
+      case "EXCITED":
+      case "ENERGIZED":
+        return Laugh;
+      case "CONTENT":
+      case "CALM":
+      case "RELAXED":
+      case "GRATEFUL":
+      case "HOPEFUL":
+      case "TRUSTING":
+        return Smile;
+      case "NEUTRAL":
+      case "BORED":
+      case "TIRED":
+      case "CURIOUS":
+      case "ANTICIPATING":
+      case "SAD":
+      case "LONELY":
+      case "NOSTALGIC":
+      case "CONFUSED":
+        return Meh;
+      case "ANGRY":
+      case "FRUSTRATED":
+      case "DISGUSTED":
+        return Angry;
+      case "STRESSED":
+      case "ANXIOUS":
+      case "OVERWHELMED":
+      case "FEARFUL":
+      case "ANNOYED":
+        return Annoyed;
+      default:
+        return undefined;
+    }
   };
 
   // Load chats on mount
@@ -130,12 +196,14 @@ export default function Chatbot() {
   async function loadChats() {
     try {
       const data = await getMyConversations();
-      const mapped: ChatSummary[] = data.map((c) => ({
+      // Sort by ID descending (newest first)
+      const sorted = data.sort((a, b) => b.id - a.id);
+      const mapped: ChatSummary[] = sorted.map((c) => ({
         id: c.id.toString(),
         title: c.title,
-        icon: undefined, // Could map emotion to icon here
+        icon: getEmotionIcon(c.emotion),
       }));
-      setChats(mapped.reverse());
+      setChats(mapped);
     } catch (e) {
       console.error("Failed to load chats", e);
     }
@@ -183,7 +251,7 @@ export default function Chatbot() {
       const newChatSummary: ChatSummary = {
         id: newChat.id.toString(),
         title: newChat.title,
-        icon: undefined,
+        icon: getEmotionIcon(newChat.emotion),
       };
       setChats((prev) => [newChatSummary, ...prev]);
       // Do NOT select it immediately. Keep showing Welcome Screen.
@@ -195,8 +263,6 @@ export default function Chatbot() {
       console.error("Failed to create new chat", e);
     }
   };
-
-
 
   const handleSelectChat = (chatId: string) => {
     setSelectedChatId(chatId);
@@ -244,6 +310,16 @@ export default function Chatbot() {
           };
           setMessages((prev) => [...prev, botMsg]);
         }
+
+        // Mock Survey on success
+        if (res.success) {
+          const surveyMsg: UIMessage = {
+            id: (Date.now() + 2).toString(),
+            role: "assistant",
+            parts: [{ type: "text", text: "**[SURVEY]**\n\nSince I've understood your mood, could you please answer a few quick questions to help me tailor the trip?\n\n1. How much time do you have?\n2. What is your budget?" }],
+          };
+          setMessages((prev) => [...prev, surveyMsg]);
+        }
       } else {
         // Already extracted, just store message
         await apiSendMessage(Number(selectedChatId), text, true);
@@ -266,7 +342,7 @@ export default function Chatbot() {
         const newChatSummary: ChatSummary = {
           id: newChat.id.toString(),
           title: newChat.title,
-          icon: undefined,
+          icon: getEmotionIcon(newChat.emotion),
         };
         setChats((prev) => [newChatSummary, ...prev]);
         chatId = newChat.id.toString();
@@ -307,11 +383,33 @@ export default function Chatbot() {
         };
         setMessages((prev) => [...prev, botMsg]);
       }
+
+      // Mock Survey on success
+      if (res.success) {
+        const surveyMsg: UIMessage = {
+          id: (Date.now() + 2).toString(),
+          role: "assistant",
+          parts: [{ type: "text", text: "**[SURVEY]**\n\nSince I've understood your mood, could you please answer a few quick questions to help me tailor the trip?\n\n1. How much time do you have?\n2. What is your budget?" }],
+        };
+        setMessages((prev) => [...prev, surveyMsg]);
+      }
     } catch (e) {
       console.error(e);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleIntroClick = () => {
+    // For introduction, we can just trigger a suggestion click with the intro text
+    // This simplifies things and reuses the existing logic
+    const userText = "Could you briefly introduce what this Moodtrip website does?";
+    handleSuggestionClick(userText);
+  };
+
+  const handleQuickStartClick = () => {
+    const userText = "How do I quickly get started using Moodtrip? Please give me a short guide.";
+    handleSuggestionClick(userText);
   };
 
   return (
@@ -324,6 +422,9 @@ export default function Chatbot() {
         selectedChatId={selectedChatId}
         onNewChat={handleNewChat}
         onSelectChat={handleSelectChat}
+        onIntroductionClick={handleIntroClick}
+        onQuickStartClick={handleQuickStartClick}
+        onRefreshChats={loadChats}
       />
       <SidebarInset>
         <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 bg-white">

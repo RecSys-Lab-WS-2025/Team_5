@@ -9,6 +9,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavSecondary } from "@/components/sidebar/nav-secondary";
@@ -36,6 +37,7 @@ type Props = React.ComponentProps<typeof Sidebar> & {
   onSelectChat: (id: string) => void;
   onIntroductionClick?: () => void;
   onQuickStartClick?: () => void;
+  onRefreshChats?: () => void;
 };
 
 export function AppSidebar({
@@ -48,8 +50,17 @@ export function AppSidebar({
   onSelectChat,
   onIntroductionClick,
   onQuickStartClick,
+  onRefreshChats,
   ...props
 }: Props) {
+  const { open } = useSidebar();
+
+  React.useEffect(() => {
+    if (open && onRefreshChats) {
+      onRefreshChats();
+    }
+  }, [open, onRefreshChats]);
+
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>

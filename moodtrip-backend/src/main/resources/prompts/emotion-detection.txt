@@ -22,7 +22,8 @@ Rules
 Decision & conversational behavior
 - Let top_score be the highest score among all labels.
 - If top_score >= 0.7 AND the message contains meaningful linguistic content (not just numbers, punctuation, or random characters) AND clearly expresses some affect, set "success":true.
-  - Then set "content" to a short human-readable summary of the dominant emotion, e.g., "sad", "very anxious", "calm and content". You may base this on top_label.
+  - Then set "content" to a short, friendly sentence in the same language as the input that (1) briefly describes how the user seems to feel and (2) invites them to fill out a short survey so you can create a suitable plan for them.
+  - Example: "I noticed you are tired. If you answer a few questions, I can put together a relaxing plan for you." or "Du wirkst gerade etwas gestresst. Wenn du ein paar Fragen beantwortest, kann ich einen passenden Plan für dich machen.".
 - If the message is extremely short (e.g., "123", "...", "?", "ok") or consists only of numbers, symbols, or random character sequences and does not clearly express a feeling, treat it as "no clear emotion detected": set "success":false, assign the highest probability to NEUTRAL, and use "content" to politely ask the user (in the same language as the input) for more detail or clarification about how they feel.
 - In all other cases (e.g., ambiguous or mixed emotions), set "success":false.
   - Then set "content" to a short reply asking the user (in the same language as the input) for more detail or clarification about how they feel, e.g., "Könntest du ein bisschen genauer beschreiben, wie du dich fühlst?" or "Can you tell me a bit more about how you’re feeling?".
@@ -33,7 +34,7 @@ Output keys
 - "top_score": the score of top_label
 - "success": true or false as defined above
 - "content":
-    - if success = true: short emotion description (e.g., "sad", "calm and hopeful")
+    - if success = true: short, friendly sentence that briefly describes the detected feeling and asks the user to fill out a short survey so that a personalized plan can be created (e.g., "I noticed you are a bit sad. If you answer a few questions, I can plan something nice for you.").
     - if success = false: short follow-up message to the user asking for more input
 
 Tie-break precedence (from strongest to weakest when scores are equal):
@@ -63,5 +64,6 @@ OVERWHELMED → “too much to handle”/cognitive-emotional overload → overwh
 Output format (single line JSON):
 - When the model is confident (success = true), for example:
 {"scores":{"JOYFUL":0.000,"ENERGIZED":0.000,"CALM":0.000,"CONTENT":0.000,"HOPEFUL":0.000,"GRATEFUL":0.000,"CURIOUS":0.000,"NOSTALGIC":0.000,"NEUTRAL":1.000,"CONFUSED":0.000,"BORED":0.000,"TIRED":0.000,"LONELY":0.000,"SAD":0.000,"ANXIOUS":0.000,"STRESSED":0.000,"FRUSTRATED":0.000,"ANGRY":0.000,"OVERWHELMED":0.000},"top_label":"NEUTRAL","top_score":1.000,"success":true,"content":"Wow, I noticed that you're feeling very neutral right now. Let's proceed to the survey so I can prepare you a wonderful travel plan."}
+{"scores":{"JOYFUL":0.000,"ENERGIZED":0.000,"CALM":0.000,"CONTENT":0.000,"HOPEFUL":0.000,"GRATEFUL":0.000,"CURIOUS":0.000,"NOSTALGIC":0.000,"NEUTRAL":1.000,"CONFUSED":0.000,"BORED":0.000,"TIRED":0.000,"LONELY":0.000,"SAD":0.000,"ANXIOUS":0.000,"STRESSED":0.000,"FRUSTRATED":0.000,"ANGRY":0.000,"OVERWHELMED":0.000},"top_label":"NEUTRAL","top_score":1.000,"success":true,"content":"I get that you feel rather neutral right now. If you answer a few questions, I can prepare a small plan for you."}
 - When the model is not confident (success = false), for example:
 {"scores":{"JOYFUL":0.050,"ENERGIZED":0.020,"CALM":0.050,"CONTENT":0.050,"HOPEFUL":0.050,"GRATEFUL":0.020,"CURIOUS":0.100,"NOSTALGIC":0.010,"NEUTRAL":0.500,"CONFUSED":0.100,"BORED":0.020,"TIRED":0.010,"LONELY":0.005,"SAD":0.005,"ANXIOUS":0.005,"STRESSED":0.005,"FRUSTRATED":0.005,"ANGRY":0.005,"OVERWHELMED":0.005},"top_label":"NEUTRAL","top_score":0.500,"success":false,"content":"It's good to hear that! Can you tell me a bit more about how you’re feeling?"}
