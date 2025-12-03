@@ -3,18 +3,13 @@ package de.tum.moodtrip_backend.api.controller;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+import de.tum.moodtrip_backend.api.dto.MessageContentRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import de.tum.moodtrip_backend.api.security.JwtService;
@@ -114,4 +109,27 @@ public class ConversationController {
 
         return conversationService.generateConversationTitle(conversationId, userId);
     }
-}
+
+    @PostMapping("/{conversationId}/message")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<MessageDomain> addMessage(
+            @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
+            @RequestBody MessageContentRequest request,
+            Authentication authentication) {
+
+        Long userId = jwtService.extractUserId(authentication);
+        String content = request.content();
+        boolean isUser = request.isUser();
+
+
+        return conversationService.getConversationsByUserId(userId)
+                .filter(conv -> conv.id().equals(conversationId))
+                .next()
+                .switchIfEmpty(Mono.error(new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Conversation not found or access denied"
+                ))).flatMap(conversationDomain ->
+                        conversationService.addMessage(conversationId, content, isUser));
+                }
+    }
+

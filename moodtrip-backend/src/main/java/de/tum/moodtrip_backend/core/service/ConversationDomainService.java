@@ -8,6 +8,7 @@ import de.tum.moodtrip_backend.core.model.Emotion;
 import de.tum.moodtrip_backend.core.model.Sender;
 import de.tum.moodtrip_backend.core.model.EmotionResult;
 import de.tum.moodtrip_backend.core.port.ConversationTitlePort;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -99,6 +100,7 @@ public class ConversationDomainService {
                                             .flatMap(emotionResult ->
                                                     saveEmotionResult(conversationId, emotionResult)
                                                             .then(updateConversationEmotion(conversation, emotionResult))
+                                                            .then(generateConversationTitle(conversationId,userId))
                                                             .thenReturn(emotionResult)
                                             )
                             );
@@ -205,5 +207,18 @@ public class ConversationDomainService {
     private Mono<Void> updateConversationTitle(ConversationDomain conversation, String title) {
         ConversationDomain updated = conversation.withTitle(title);
         return conversationPort.save(updated).then();
+    }
+
+
+    public Mono<MessageDomain> addMessage(@NotNull(message = "Conversation ID cannot be null") Long conversationId, String content, boolean isUser) {
+        MessageDomain messageDomain = new MessageDomain(
+                null,
+                conversationId,
+                isUser ? Sender.USER : Sender.BOT,
+                content,
+                LocalDateTime.now()
+        );
+        return conversationPort.saveMessage(messageDomain);
+
     }
 }
