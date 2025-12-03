@@ -32,8 +32,8 @@ public class SurveyEntity {
     @Column("end_date")
     private LocalDate endDate;
     
-    @Column("preferences")
-    private String preferences; 
+    @Column("poi_categories")
+    private String poiCategories;
     
     @Column("created_at")
     private LocalDateTime createdAt;
@@ -42,7 +42,7 @@ public class SurveyEntity {
     }
 
     public SurveyEntity(Long id, Long userId, Long conversationId, String location, Integer rangeMeters,
-                        LocalDate startDate, LocalDate endDate, String preferences,
+                        LocalDate startDate, LocalDate endDate, String poiCategories,
                         LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
@@ -51,7 +51,7 @@ public class SurveyEntity {
         this.rangeMeters = rangeMeters;
         this.startDate = startDate;
         this.endDate = endDate;
-        this.preferences = preferences;
+        this.poiCategories = poiCategories;
         this.createdAt = createdAt;
     }
 
@@ -111,12 +111,12 @@ public class SurveyEntity {
         this.endDate = endDate;
     }
 
-    public String getPreferences() {
-        return preferences;
+    public String getPoiCategories() {
+        return poiCategories;
     }
 
-    public void setPreferences(String preferences) {
-        this.preferences = preferences;
+    public void setPoiCategories(String poiCategories) {
+        this.poiCategories = poiCategories;
     }
 
     public LocalDateTime getCreatedAt() {

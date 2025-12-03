@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-rename-preferences-to-poiCategories
+      author: system
+      changes:
+        - renameColumn:
+            tableName: surveys
+            oldColumnName: preferences
+            newColumnName: poi_categories
+            columnDataType: TEXT
