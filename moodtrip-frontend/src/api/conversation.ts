@@ -141,12 +141,21 @@ export async function extractEmotion(
 /**
  * 提交问卷
  */
+export interface SurveyData {
+  latitude: number;
+  longitude: number;
+  rangeMeters: number;
+  startDate: string;
+  endDate: string;
+  poiCategories: string[];
+}
+
 export interface SurveyResponse {
-  route: any;
+  route: Record<string, unknown>; // GeoJSON FeatureCollection
   spotifyPlaylistLink: string | null;
 }
 
-export async function submitSurvey(conversationId: number, data: any): Promise<SurveyResponse> {
+export async function submitSurvey(conversationId: number, data: SurveyData): Promise<SurveyResponse> {
   const res = await authFetch(`${BASE}/api/surveys?conversationId=${conversationId}`, {
     method: "POST",
     headers: {

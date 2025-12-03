@@ -5,7 +5,7 @@ import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import type { ChatSummary } from "@/components/sidebar/app-sidebar";
 import { WelcomeScreen } from "@/components/chat/welcome-screen";
 import { ChatInterface } from "@/components/chat/chat-interface";
-import type { SurveyData } from "@/components/chat/survey-form";
+import type { SurveyData } from "@/api/conversation";
 
 import {
   SidebarInset,
@@ -454,6 +454,7 @@ export default function Chatbot() {
                 if (!selectedChatId) return;
                 try {
                   const res = await submitSurvey(Number(selectedChatId), data);
+                  console.log("Received Route:", res.route);
 
                   // Persist survey as a user message
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(data)}`;

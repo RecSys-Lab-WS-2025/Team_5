@@ -40,14 +40,7 @@ const RANGE_OPTIONS = [
     { label: "10 km", value: 10000 },
 ];
 
-export interface SurveyData {
-    latitude: number;
-    longitude: number;
-    rangeMeters: number;
-    startDate: string;
-    endDate: string;
-    poiCategories: string[];
-}
+import type { SurveyData } from "@/api/conversation";
 
 export function SurveyForm({
     onSubmit,

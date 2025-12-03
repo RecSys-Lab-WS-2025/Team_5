@@ -9,7 +9,8 @@ import { Send } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 import { useSidebar } from "@/components/ui/sidebar";
 
-import { SurveyForm, type SurveyData } from "./survey-form";
+import { SurveyForm } from "./survey-form";
+import type { SurveyData } from "@/api/conversation";
 
 // ... inside ChatInterfaceProps
 interface ChatInterfaceProps {
