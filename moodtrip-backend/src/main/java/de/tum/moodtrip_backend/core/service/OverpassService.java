@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import de.tum.moodtrip_backend.adapter_osm.builder.PoiDescriptionBuilder;
+import de.tum.moodtrip_backend.adapter.maps.osm.builder.PoiDescriptionBuilder;
 import de.tum.moodtrip_backend.core.model.POICategory;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.WikipediaPort;

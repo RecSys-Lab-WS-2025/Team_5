@@ -5,11 +5,11 @@ import java.time.LocalDateTime;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import de.tum.moodtrip_backend.adapter_user.dto.LoginResponse;
+import de.tum.moodtrip_backend.api.dto.LoginResponse;
 import de.tum.moodtrip_backend.core.model.UserProfile;
 import de.tum.moodtrip_backend.core.port.UserPort;
 import de.tum.moodtrip_backend.exception.UserNotFoundException;
-import de.tum.moodtrip_backend.security.JwtService;
+import de.tum.moodtrip_backend.api.security.JwtService;
 import reactor.core.publisher.Mono;
 
 @Service
