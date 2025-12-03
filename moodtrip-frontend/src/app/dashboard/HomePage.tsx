@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/navbar";
 import { ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { getUser } from "@/api/auth";
 
 export function HomePage() {
+  const navigate = useNavigate();
   return (
     <div className="relative min-h-screen bg-blue-50 text-black">
       {/* Fixed Navbar */}
@@ -20,12 +22,20 @@ export function HomePage() {
           Chat with me — I’ll design travel plans that fit your mood.
         </p>
 
-        <Link to="/chat">
-          <Button className="flex items-center gap-2 !bg-black !text-white hover:!bg-gray-700">
-            Get My Trip
-            <ArrowRight className="w-4 h-4 animate-pulse" />
-          </Button>
-        </Link>
+        <Button
+          onClick={() => {
+            const user = getUser();
+            if (!user) {
+              alert("You must log in first");
+            } else {
+              navigate("/chat");
+            }
+          }}
+          className="flex items-center gap-2 !bg-black !text-white hover:!bg-gray-700"
+        >
+          Get My Trip
+          <ArrowRight className="w-4 h-4 animate-pulse" />
+        </Button>
       </main>
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ChevronRight} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ChevronRight, LogOut, User } from "lucide-react";
 
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
+import { getUser, logout, type AuthUser } from "@/api/auth";
 
 const ITEMS = [
   {
@@ -44,30 +45,53 @@ export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const pathname = useLocation().pathname;
+  const navigate = useNavigate();
+  const [user, setUser] = useState<AuthUser | null>(getUser());
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setUser(getUser());
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('userLogin', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userLogin', handleStorageChange);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    setUser(null);
+    window.dispatchEvent(new Event('userLogin')); // Notify other components
+    navigate("/");
+  };
 
   return (
     <section
       className={cn(
-        "bg-background/70 absolute left-1/2 z-50 w-[min(90%,700px)] -translate-x-1/2 rounded-4xl border backdrop-blur-md transition-all duration-300",
+        "bg-background/70 absolute left-1/2 z-50 w-[min(90%,1000px)] -translate-x-1/2 rounded-4xl border backdrop-blur-md transition-all duration-300",
         "top-5 lg:top-12",
-        "text-black [&_*]:!text-black" 
+        "text-black [&_*]:!text-black"
       )}
     >
       <div className="flex items-center justify-between px-6 py-3">
         <Link
-            to="/"
-            className="flex shrink-0 items-center gap-2 group hover:opacity-80 transition-opacity"
+          to="/"
+          className="flex shrink-0 items-center gap-2 group hover:opacity-80 transition-opacity"
         >
-            <img
-                src="/favicon.png"
-                alt="Moodtrip logo"
-                width={30}
-                height={30}
-                className="object-contain"
-            />
-            <span className="text-lg font-semibold !text-black select-none group-hover:!text-black">
-                Moodtrip
-            </span>
+          <img
+            src="/favicon.png"
+            alt="Moodtrip logo"
+            width={30}
+            height={30}
+            className="object-contain"
+          />
+          <span className="text-lg font-semibold !text-black select-none group-hover:!text-black">
+            Moodtrip
+          </span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -76,7 +100,7 @@ export const Navbar = () => {
             {ITEMS.map((link) =>
               link.dropdownItems ? (
                 <NavigationMenuItem key={link.label}>
-                  <NavigationMenuTrigger className="data-[state=open]:bg-accent/50 !bg-transparent !text-black px-1.5 hover:!text-black">
+                  <NavigationMenuTrigger className="data-[state=open]:bg-accent/50 !bg-transparent !text-black px-1.5 hover:!text-black whitespace-nowrap">
                     {link.label}
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
@@ -108,7 +132,7 @@ export const Navbar = () => {
                   <Link
                     to={link.href}
                     className={cn(
-                      "relative bg-transparent px-1.5 text-sm font-medium !text-black hover:opacity-75",
+                      "relative bg-transparent px-1.5 text-sm font-medium !text-black hover:opacity-75 whitespace-nowrap",
                       pathname === link.href && "!text-black"
                     )}
                   >
@@ -122,11 +146,30 @@ export const Navbar = () => {
 
         {/* Right side */}
         <div className="flex items-center gap-2.5">
-          <Link to="/login" className="max-lg:hidden">
-            <Button className="!bg-white hover:!bg-gray-200 !text-black">
-              <span className="relative z-10 !text-black">Login</span>
-            </Button>
-          </Link>
+          {user ? (
+            <div className="flex items-center gap-3 max-lg:hidden">
+              <div className="flex items-center gap-2 text-sm font-medium text-black">
+                <User className="w-4 h-4" />
+                <span>{user.email}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="h-8 w-8 hover:bg-gray-100 rounded-full"
+                title="Logout"
+                aria-label="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <Link to="/login" className="max-lg:hidden">
+              <Button className="!bg-white hover:!bg-gray-200 !text-black">
+                <span className="relative z-10 !text-black">Login</span>
+              </Button>
+            </Link>
+          )}
 
           {/* Hamburger button (mobile) */}
           <button
@@ -137,21 +180,18 @@ export const Navbar = () => {
             <div className="absolute top-1/2 left-1/2 block w-[18px] -translate-x-1/2 -translate-y-1/2">
               <span
                 aria-hidden="true"
-                className={`absolute block h-0.5 w-full rounded-full bg-current transition duration-500 ease-in-out ${
-                  isMenuOpen ? "rotate-45" : "-translate-y-1.5"
-                }`}
+                className={`absolute block h-0.5 w-full rounded-full bg-current transition duration-500 ease-in-out ${isMenuOpen ? "rotate-45" : "-translate-y-1.5"
+                  }`}
               />
               <span
                 aria-hidden="true"
-                className={`absolute block h-0.5 w-full rounded-full bg-current transition duration-500 ease-in-out ${
-                  isMenuOpen ? "opacity-0" : ""
-                }`}
+                className={`absolute block h-0.5 w-full rounded-full bg-current transition duration-500 ease-in-out ${isMenuOpen ? "opacity-0" : ""
+                  }`}
               />
               <span
                 aria-hidden="true"
-                className={`absolute block h-0.5 w-full rounded-full bg-current transition duration-500 ease-in-out ${
-                  isMenuOpen ? "-rotate-45" : "translate-y-1.5"
-                }`}
+                className={`absolute block h-0.5 w-full rounded-full bg-current transition duration-500 ease-in-out ${isMenuOpen ? "-rotate-45" : "translate-y-1.5"
+                  }`}
               />
             </div>
           </button>
@@ -226,6 +266,33 @@ export const Navbar = () => {
               </Link>
             ),
           )}
+          {/* Mobile Login/User */}
+          <div className="py-4">
+            {user ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-black">
+                  <User className="w-4 h-4" />
+                  <span>{user.email}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="w-full justify-start gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Login
+              </Link>
+            )}
+          </div>
         </nav>
       </div>
     </section>

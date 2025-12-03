@@ -138,3 +138,36 @@ export async function extractEmotion(
   return res.json();
 }
 
+/**
+ * 提交问卷
+ */
+export interface SurveyData {
+  latitude: number;
+  longitude: number;
+  rangeMeters: number;
+  startDate: string;
+  endDate: string;
+  poiCategories: string[];
+}
+
+export interface SurveyResponse {
+  route: Record<string, unknown>; // GeoJSON FeatureCollection
+  spotifyPlaylistLink: string | null;
+}
+
+export async function submitSurvey(conversationId: number, data: SurveyData): Promise<SurveyResponse> {
+  const res = await authFetch(`${BASE}/api/surveys?conversationId=${conversationId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to submit survey: ${res.status} ${res.statusText}`);
+  }
+
+  return res.json();
+}
+
