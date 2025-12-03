@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
-import { useChat } from "@ai-sdk/react";
+import { useEffect, useState, useRef } from "react";
 import type { UIMessage } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
 
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import type { ChatSummary } from "@/components/sidebar/app-sidebar";
@@ -15,11 +13,6 @@ import {
 } from "@/components/ui/sidebar";
 
 import {
-  Laugh,
-  Smile,
-  Meh,
-  Annoyed,
-  Angry,
   LifeBuoy,
   Send,
   Heart,
@@ -28,7 +21,14 @@ import {
   SquareTerminal,
 } from "lucide-react";
 
-import { BASE, authFetch, getUser } from "@/api/auth";
+import { getUser } from "@/api/auth";
+import {
+  startConversation,
+  getMyConversations,
+  getConversationMessages,
+  sendMessage as apiSendMessage,
+  extractEmotion as apiExtractEmotion,
+} from "@/api/conversation";
 
 // ---- static nav data ----
 const navData = {
@@ -90,410 +90,229 @@ const navData = {
   ],
 };
 
-// ---- backend DTOs ----
-type StoredTurn = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-};
-
-type ChatDetailDTO = {
-  id: string;
-  title: string;
-  icon?: "laugh" | "smile" | "meh" | "annoyed" | "angry";
-  turns: StoredTurn[];
-};
-
-const iconMap = {
-  laugh: Laugh,
-  smile: Smile,
-  meh: Meh,
-  annoyed: Annoyed,
-  angry: Angry,
-} as const;
-
-// mock-ready fetchers, now calling backend with JWT but still falling back to mock data
-async function fetchChatList(): Promise<ChatSummary[]> {
-  try {
-    const res = await authFetch(`${BASE}/api/chats`, { cache: "no-store" });
-    if (!res.ok) throw new Error("bad status");
-    const list: { id: string; title: string; icon?: keyof typeof iconMap }[] =
-      await res.json();
-    return list.map((x) => ({
-      id: x.id,
-      title: x.title,
-      icon: x.icon ? iconMap[x.icon] : undefined,
-    }));
-  } catch {
-    return [
-      { id: "1", title: "Chat1", icon: Laugh },
-      { id: "2", title: "Chat2", icon: Meh },
-      { id: "3", title: "Chat3", icon: Angry },
-    ];
-  }
-}
-
-async function fetchChatDetail(id: string): Promise<ChatDetailDTO> {
-  try {
-    const res = await authFetch(
-      `${BASE}/api/chats/${encodeURIComponent(id)}`,
-      {
-        cache: "no-store",
-      },
-    );
-    if (!res.ok) throw new Error("bad status");
-    return res.json();
-  } catch {
-    if (id === "2") {
-      return {
-        id: "2",
-        title: "Chat2",
-        icon: "smile",
-        turns: [
-          { id: "1", role: "user", content: "Do you have emotions?" },
-          {
-            id: "2",
-            role: "assistant",
-            content:
-              "I can't feel emotions myself, but I can understand and respond to yours! Tell me how you're feeling today.",
-          },
-        ],
-      };
-    }
-    return {
-      id,
-      title: `Chat${id}`,
-      icon: id === "1" ? "laugh" : "annoyed",
-      turns: [
-        { id: "u-1", role: "user", content: "Hello?" },
-        {
-          id: "a-1",
-          role: "assistant",
-          content: "Hi! How can I help you today?",
-        },
-      ],
-    };
-  }
-}
-
-function mapStoredToUIMessages(turns: StoredTurn[]): UIMessage[] {
-  return turns.map((t) => ({
-    id: t.id,
-    role: t.role,
-    parts: [{ type: "text", text: t.content }],
-  }));
-}
-
 export default function Chatbot() {
-  
-  const [displayUser, setDisplayUser] = useState(() => {
-    const storedUser = getUser();
-    return {
-      name: storedUser?.username ?? navData.user.name,
-      email: storedUser?.email ?? navData.user.email,
-      avatar: undefined,
-    };
-  });
-
-  
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const storedUser = getUser();
-      if (storedUser) {
-        setDisplayUser({
-          name: storedUser.username,
-          email: storedUser.email,
-          avatar: undefined,
-        });
-      }
-    };
-
-    
-    window.addEventListener('storage', handleStorageChange);
-
-   
-    window.addEventListener('userLogin', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('userLogin', handleStorageChange);
-    };
-  }, []);
+  const storedUser = getUser();
+  const displayUser = {
+    name: storedUser?.username ?? navData.user.name,
+    email: storedUser?.email ?? navData.user.email,
+    avatar: undefined,
+  };
 
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-
   const [chats, setChats] = useState<ChatSummary[]>([]);
+  const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [input, setInput] = useState("");
+  const [emotionExtracted, setEmotionExtracted] = useState(true);
+  const [pendingChatId, setPendingChatId] = useState<string | null>(null);
+  const skipLoadRef = useRef(false);
+
+  // Helper to parse backend message content
+  const parseMessageContent = (content: string) => {
+    if (content.startsWith("EmotionResult[")) {
+      // Try to extract content field
+      // Format: EmotionResult[..., content=Actual text, success=...]
+      // We use a regex that looks for content= and ends before , success=
+      // Note: This is a best-effort parser for the Java record toString
+      const match = content.match(/content=(.*), success=(true|false)\]$/);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    return content;
+  };
+
+  // Load chats on mount
   useEffect(() => {
-    fetchChatList()
-      .then(setChats)
-      .catch(() => setChats([]));
+    loadChats();
   }, []);
 
-  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+  async function loadChats() {
+    try {
+      const data = await getMyConversations();
+      const mapped: ChatSummary[] = data.map((c) => ({
+        id: c.id.toString(),
+        title: c.title,
+        icon: undefined, // Could map emotion to icon here
+      }));
+      setChats(mapped.reverse());
+    } catch (e) {
+      console.error("Failed to load chats", e);
+    }
+  }
 
+  // Load messages when chat selected
   useEffect(() => {
-    if (!selectedChatId || selectedChatId === "new") {
-      setInitialMessages([]);
+    if (!selectedChatId) {
+      setMessages([]);
       return;
     }
-    setLoadingDetail(true);
-    fetchChatDetail(selectedChatId)
-      .then((detail) => setInitialMessages(mapStoredToUIMessages(detail.turns)))
-      .catch(() => setInitialMessages([]))
-      .finally(() => setLoadingDetail(false));
+
+    if (skipLoadRef.current) {
+      skipLoadRef.current = false;
+      return;
+    }
+
+    loadMessages(selectedChatId);
   }, [selectedChatId]);
 
-  const {
-    messages,
-    sendMessage,
-    status,
-    setMessages,
-  } = useChat({
-    transport: new DefaultChatTransport({
-      api: `${BASE}/api/chat`,
-      fetch: (input, init) => authFetch(input, init),
-    }),
-    id: selectedChatId ?? undefined,
-    messages: initialMessages,
-    onError() {
-      const idBase = Date.now().toString();
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-assistant-${idBase}`,
-          role: "assistant",
-          parts: [
-            {
-              type: "text",
-              text:
-                "Sorry, something went wrong with the connection. I couldn’t reply this time. Please try again.",
-            },
-          ],
-        },
-      ]);
-    },
-  });
+  async function loadMessages(chatId: string) {
+    setIsLoading(true);
+    try {
+      const msgs = await getConversationMessages(Number(chatId));
+      const uiMsgs: UIMessage[] = msgs.map((m) => ({
+        id: m.id.toString(),
+        role: m.sender === "USER" ? "user" : "assistant",
+        parts: [{ type: "text", text: parseMessageContent(m.content) }],
+      }));
+      setMessages(uiMsgs);
 
-  const [input, setInput] = useState("");
+      // Determine emotionExtracted status
+      setEmotionExtracted(uiMsgs.length > 0);
+    } catch (e) {
+      console.error("Failed to load messages", e);
+      setMessages([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const handleNewChat = async () => {
+    try {
+      const newChat = await startConversation();
+      const newChatSummary: ChatSummary = {
+        id: newChat.id.toString(),
+        title: newChat.title,
+        icon: undefined,
+      };
+      setChats((prev) => [newChatSummary, ...prev]);
+      // Do NOT select it immediately. Keep showing Welcome Screen.
+      setSelectedChatId(null);
+      setMessages([]);
+      setEmotionExtracted(false);
+      setPendingChatId(newChat.id.toString());
+    } catch (e) {
+      console.error("Failed to create new chat", e);
+    }
+  };
+
+
+
+  const handleSelectChat = (chatId: string) => {
+    setSelectedChatId(chatId);
+    setPendingChatId(null); // Clear pending if user manually selects a chat
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setInput(e.target.value);
 
-  const isLoading =
-    status === "submitted" || status === "streaming" || loadingDetail;
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || !selectedChatId) return;
 
-    // normal chat input: always goes to backend
-    sendMessage({ text });
     setInput("");
-  };
 
-  const handleNewChat = () => {
-    setSelectedChatId("new");
-    setInitialMessages([]);
-    setMessages([]);
-  };
-
-  const handleSelectChat = (chatId: string) => setSelectedChatId(chatId);
-
-  function createSidebarChatEntry(firstUserText: string) {
-    const newId =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `local-${Date.now()}`;
-
-    const createdAt = new Date();
-
-    const titleFromTime = createdAt.toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const title =
-      firstUserText && firstUserText.trim().length > 0
-        ? firstUserText.slice(0, 40)
-        : titleFromTime;
-
-    const preview =
-      firstUserText && firstUserText.trim().length > 0
-        ? firstUserText.slice(0, 80)
-        : undefined;
-
-    setChats((prev) => [
-      ...prev,
-      {
-        id: newId,
-        title,
-        icon: undefined,
-        preview,
-      },
-    ]);
-
-    setSelectedChatId(newId);
-    setInitialMessages([]);
-    setMessages([]);
-  }
-
-  const handleSuggestionClick = (text: string) => {
-    const cleanText = text.trim();
-    if (!cleanText) return;
-
-    const isStartingFresh =
-      (!selectedChatId || selectedChatId === "new") && messages.length === 0;
-
-    if (isStartingFresh) {
-      createSidebarChatEntry(cleanText);
-    }
-
-    // send to backend; onError will automatically add a "network error" reply
-    sendMessage({ text: cleanText });
-  };
-
-  const startNewChatWithMessages = (
-    initialMsgs: UIMessage[],
-    firstUserText?: string,
-  ) => {
-    const newId =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `local-${Date.now()}`;
-
-    const createdAt = new Date();
-
-    const titleFromTime = createdAt.toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const title =
-      firstUserText && firstUserText.trim().length > 0
-        ? firstUserText.slice(0, 40)
-        : titleFromTime;
-
-    const preview =
-      firstUserText && firstUserText.trim().length > 0
-        ? firstUserText.slice(0, 80)
-        : undefined;
-
-    setChats((prev) => [
-      ...prev,
-      {
-        id: newId,
-        title,
-        icon: undefined,
-        preview,
-      },
-    ]);
-
-    setSelectedChatId(newId);
-    setInitialMessages(initialMsgs);
-    setMessages(initialMsgs);
-  };
-
-  const appendScriptedExchange = (userText: string, assistantText: string) => {
-    const idBase = Date.now().toString();
-
-    const userMessage: UIMessage = {
-      id: `script-user-${idBase}`,
+    // Optimistic update
+    const tempId = Date.now().toString();
+    const userMsg: UIMessage = {
+      id: tempId,
       role: "user",
-      parts: [{ type: "text", text: userText }],
+      parts: [{ type: "text", text }],
     };
+    setMessages((prev) => [...prev, userMsg]);
+    setIsLoading(true);
 
-    const assistantMessage: UIMessage = {
-      id: `script-assistant-${idBase}`,
-      role: "assistant",
-      parts: [{ type: "text", text: assistantText }],
-    };
+    try {
+      if (!emotionExtracted) {
+        // Attempt to extract emotion
+        const res = await apiExtractEmotion(Number(selectedChatId), text);
 
-    const isStartingFresh =
-      (!selectedChatId || selectedChatId === "new") && messages.length === 0;
+        if (res.success) {
+          setEmotionExtracted(true);
+        } else {
+          // Failed to extract, next time still extract
+          setEmotionExtracted(false);
+        }
 
-    if (isStartingFresh) {
-      // pre-saved conversation: no backend, just local messages + new chat
-      startNewChatWithMessages(
-        [userMessage, assistantMessage],
-        userText,
-      );
-    } else {
-      // already in a chat: just append locally, still not hitting backend
-      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        // If backend returns a content (bot response), display it
+        if (res.content) {
+          const botMsg: UIMessage = {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            parts: [{ type: "text", text: parseMessageContent(res.content) }],
+          };
+          setMessages((prev) => [...prev, botMsg]);
+        }
+      } else {
+        // Already extracted, just store message
+        await apiSendMessage(Number(selectedChatId), text, true);
+      }
+    } catch (e) {
+      console.error("Failed to send message", e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleIntroClick = () => {
-    const userText =
-      "Could you briefly introduce what this Moodtrip website does?";
+  const showWelcome = !selectedChatId && messages.length === 0;
 
-    const assistantText = `Of course! 😊  
+  const handleSuggestionClick = async (text: string) => {
+    let chatId = selectedChatId || pendingChatId;
 
-**In one sentence:**  
-Moodtrip is a tiny travel buddy that suggests same-day or short-notice trips that match your current mood.
+    if (!chatId) {
+      try {
+        const newChat = await startConversation();
+        const newChatSummary: ChatSummary = {
+          id: newChat.id.toString(),
+          title: newChat.title,
+          icon: undefined,
+        };
+        setChats((prev) => [newChatSummary, ...prev]);
+        chatId = newChat.id.toString();
+        setEmotionExtracted(false);
+      } catch (e) {
+        console.error(e);
+        return;
+      }
+    }
 
-**What Moodtrip helps with:**  
-- You’re not sure *where* to go, you just know *how* you feel  
-- You want a small reset rather than a big, complicated holiday  
-- You’d like ideas that feel emotionally right, not just “top rated nearby”
+    // Enter the chat
+    // Prevent loadMessages from overwriting our optimistic state
+    skipLoadRef.current = true;
+    setSelectedChatId(chatId);
+    setPendingChatId(null);
 
-**What you share with me:**  
-1. How you feel right now (tired, excited, overwhelmed, calm, “meh”…).  
-2. Who’s coming with you (solo, couple, friends, family).  
-3. When you’d roughly like to go and where you’re starting from (if you already know).
+    const tempId = Date.now().toString();
+    const userMsg: UIMessage = {
+      id: tempId,
+      role: "user",
+      parts: [{ type: "text", text }],
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setIsLoading(true);
 
-**What I do with that:**  
-- I turn your mood + context into a few trip ideas to explore.  
-- I try to match the vibe you want: soothing, energising, playful, reflective, etc.
-
-**A small heads-up:**  
-I’m not doing deep emotion analysis on the backend *yet*, so if you share something very complex I may not catch every nuance — but I’ll always respond kindly and try to stay close to your tone.
-
-**What you can do next:**  
-Choose a mood prompt from the sidebar, or just type how you’re feeling and hit **Send**.  
-I’ll take it from there and start shaping a Moodtrip for you 💫`;
-
-    appendScriptedExchange(userText, assistantText);
+    try {
+      const res = await apiExtractEmotion(Number(chatId), text);
+      if (res.success) {
+        setEmotionExtracted(true);
+      } else {
+        setEmotionExtracted(false);
+      }
+      if (res.content) {
+        const botMsg: UIMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          parts: [{ type: "text", text: parseMessageContent(res.content) }],
+        };
+        setMessages((prev) => [...prev, botMsg]);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  const handleQuickStartClick = () => {
-    const userText =
-      "How do I quickly get started using Moodtrip? Please give me a short guide.";
-
-    const assistantText = `Let’s keep it super simple 🌈  
-
-**Quick start in 4 tiny steps:**
-
-1. **Tell me how you feel.**  
-   For example: “I’m stressed from work and need a soft reset”,  
-   or “I’m in a great mood and want something fun and spontaneous”.
-
-2. **Say what you want this trip to do.**  
-   Do you want to:
-   - Relax and slow down?  
-   - Clear your head?  
-   - Celebrate something?  
-   - Feel inspired or creative?
-
-3. **Add a few basics when you’re ready.**  
-   - How many people are travelling  
-   - Rough timing (tonight, tomorrow, this weekend, sometime soon)  
-   - Your starting city or area  
-
-4. **Press Send and just chat.**  
-   I’ll ask for anything that’s missing and then suggest a few trip ideas that match your mood, energy and situation — not just your location.
-
-Later on, when Spotify is connected, I’ll also suggest playlists and artists that fit both your mood and the style of your trip, so your Moodtrip comes with its own soundtrack 🎧✨`;
-
-    appendScriptedExchange(userText, assistantText);
-  };
-
-  const showWelcome = messages.length === 0;
 
   return (
     <SidebarProvider>
@@ -505,8 +324,6 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
         selectedChatId={selectedChatId}
         onNewChat={handleNewChat}
         onSelectChat={handleSelectChat}
-        onIntroductionClick={handleIntroClick}
-        onQuickStartClick={handleQuickStartClick}
       />
       <SidebarInset>
         <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 bg-white">

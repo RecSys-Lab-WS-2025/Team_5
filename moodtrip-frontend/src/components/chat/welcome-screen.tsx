@@ -1,9 +1,8 @@
-"use client";
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowUpRight, Send } from "lucide-react";
+import { useSidebar } from "@/components/ui/sidebar";
 
 interface WelcomeScreenProps {
   onSuggestionClick: (suggestion: string) => void;
@@ -24,16 +23,18 @@ const suggestions = [
 export function WelcomeScreen({ onSuggestionClick, userName }: WelcomeScreenProps) {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { setOpen } = useSidebar();
 
   const handlePick = (text: string) => {
-    setValue(text);
-    requestAnimationFrame(() => inputRef.current?.focus());
+    setOpen(false);
+    onSuggestionClick(text);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const text = value.trim();
     if (!text) return;
+    setOpen(false);
     onSuggestionClick(text);
     setValue("");
   };
@@ -49,6 +50,9 @@ export function WelcomeScreen({ onSuggestionClick, userName }: WelcomeScreenProp
               Welcome, {displayName}
             </span>
           </h1>
+          <p className="mt-4 text-xl text-muted-foreground">
+            Type below to start a conversation...
+          </p>
         </div>
 
         <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-4 md:grid-cols-2">
@@ -87,7 +91,7 @@ export function WelcomeScreen({ onSuggestionClick, userName }: WelcomeScreenProp
                 ref={inputRef}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder='Share a quick check-in (e.g., "Feeling stressed from exams, want somewhere quiet to relax.")'
+                placeholder="Type here to start a conversation..."
                 className="
                   h-auto flex-1 border-0 bg-transparent px-0
                   text-sm
