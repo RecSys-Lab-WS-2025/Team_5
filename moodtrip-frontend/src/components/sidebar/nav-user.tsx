@@ -64,7 +64,14 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="
+                data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground
+                
+                /* Remove all border/ring/shadow effects */
+                !ring-0 !ring-offset-0 !border-none !shadow-none
+                !hover:ring-0 !hover:ring-offset-0 !hover:border-none !hover:shadow-none
+                !focus-visible:outline-none !focus-visible:ring-0 !focus-visible:ring-offset-0
+              "
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />

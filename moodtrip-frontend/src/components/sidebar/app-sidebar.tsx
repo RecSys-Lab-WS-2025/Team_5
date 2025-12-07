@@ -80,23 +80,24 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      <div className="shrink-0">
         <NavMain
           items={navMain}
           onIntroductionClick={onIntroductionClick}
           onQuickStartClick={onQuickStartClick}
         />
+      </div>
 
-        <NavChats
+      <SidebarContent>
+         <NavChats
           chats={chats}
           selectedChatId={selectedChatId}
           onSelectChat={onSelectChat}
         />
-
-        <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
 
       <SidebarFooter>
+        <NavSecondary items={navSecondary} className="border-t pt-2" /> 
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
