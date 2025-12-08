@@ -1,5 +1,6 @@
 // src/api/conversation.ts
 import { authFetch } from "./auth";
+import type { FeatureCollection } from "geojson";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -39,9 +40,11 @@ export async function startConversation(): Promise<ConversationDto> {
     console.error("Start conversation failed:", {
       status: res.status,
       statusText: res.statusText,
-      error: errorText
+      error: errorText,
     });
-    throw new Error(`Failed to start conversation: ${res.status} ${res.statusText}`);
+    throw new Error(
+      `Failed to start conversation: ${res.status} ${res.statusText}`,
+    );
   }
   return res.json();
 }
@@ -63,13 +66,13 @@ export async function getMyConversations(): Promise<ConversationDto[]> {
  * 获取某个对话的所有消息
  */
 export async function getConversationMessages(
-  conversationId: number
+  conversationId: number,
 ): Promise<MessageDto[]> {
   const res = await authFetch(
     `${BASE}/api/conversations/${conversationId}/messages`,
     {
       method: "GET",
-    }
+    },
   );
   if (!res.ok) {
     throw new Error("Failed to fetch messages");
@@ -84,7 +87,7 @@ export async function getConversationMessages(
 export async function sendMessage(
   conversationId: number,
   content: string,
-  isUser: boolean = true
+  isUser: boolean = true,
 ): Promise<MessageDto> {
   const res = await authFetch(
     `${BASE}/api/conversations/${conversationId}/message`,
@@ -94,7 +97,7 @@ export async function sendMessage(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ content, isUser }),
-    }
+    },
   );
   if (!res.ok) {
     const errorText = await res.text();
@@ -102,7 +105,7 @@ export async function sendMessage(
       status: res.status,
       statusText: res.statusText,
       url: res.url,
-      error: errorText
+      error: errorText,
     });
     throw new Error(`Failed to send message: ${res.status} ${res.statusText}`);
   }
@@ -115,15 +118,15 @@ export async function sendMessage(
  */
 export async function extractEmotion(
   conversationId: number,
-  message: string
+  message: string,
 ): Promise<EmotionResultDto> {
   const res = await authFetch(
     `${BASE}/api/conversations/extract-emotion?conversationId=${conversationId}&message=${encodeURIComponent(
-      message
+      message,
     )}`,
     {
       method: "POST",
-    }
+    },
   );
   if (!res.ok) {
     const errorText = await res.text();
@@ -131,9 +134,11 @@ export async function extractEmotion(
       status: res.status,
       statusText: res.statusText,
       url: res.url,
-      error: errorText
+      error: errorText,
     });
-    throw new Error(`Failed to extract emotion: ${res.status} ${res.statusText}`);
+    throw new Error(
+      `Failed to extract emotion: ${res.status} ${res.statusText}`,
+    );
   }
   return res.json();
 }
@@ -151,18 +156,24 @@ export interface SurveyData {
 }
 
 export interface SurveyResponse {
-  route: Record<string, unknown>; // GeoJSON FeatureCollection
+  route: FeatureCollection; // GeoJSON FeatureCollection
   spotifyPlaylistLink: string | null;
 }
 
-export async function submitSurvey(conversationId: number, data: SurveyData): Promise<SurveyResponse> {
-  const res = await authFetch(`${BASE}/api/surveys?conversationId=${conversationId}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+export async function submitSurvey(
+  conversationId: number,
+  data: SurveyData,
+): Promise<SurveyResponse> {
+  const res = await authFetch(
+    `${BASE}/api/surveys?conversationId=${conversationId}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
+  );
 
   if (!res.ok) {
     throw new Error(`Failed to submit survey: ${res.status} ${res.statusText}`);
@@ -170,4 +181,3 @@ export async function submitSurvey(conversationId: number, data: SurveyData): Pr
 
   return res.json();
 }
-

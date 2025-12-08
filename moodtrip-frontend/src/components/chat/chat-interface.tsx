@@ -8,9 +8,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 import { useSidebar } from "@/components/ui/sidebar";
+import type { FeatureCollection } from "geojson";
 
 import { SurveyForm } from "./survey-form";
 import type { SurveyData } from "@/api/conversation";
+import {RecommendedRouteMap} from "@/components/map/recommended-route.tsx";
 
 // ... inside ChatInterfaceProps
 interface ChatInterfaceProps {
@@ -19,6 +21,7 @@ interface ChatInterfaceProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
+  routeGeoJson?: FeatureCollection | null;
   onSurveySubmit?: (data: SurveyData) => void;
 }
 
@@ -29,6 +32,7 @@ export function ChatInterface({
   handleInputChange,
   handleSubmit,
   isLoading,
+  routeGeoJson,
   onSurveySubmit,
 }: ChatInterfaceProps) {
   const bottomRef = React.useRef<HTMLDivElement | null>(null);
@@ -109,13 +113,13 @@ export function ChatInterface({
 
         // Check for Survey Trigger
         if (text.includes("[SURVEY_FORM_TRIGGER]")) {
-          console.log("Rendering Survey Trigger");
           return (
             <div key={idx} className="mt-4">
-              <SurveyForm onSubmit={(data) => {
-                console.log("Survey Data:", data);
-                if (onSurveySubmit) onSurveySubmit(data);
-              }} />
+              <SurveyForm
+                onSubmit={(data) => {
+                  if (onSurveySubmit) onSurveySubmit(data);
+                }}
+              />
             </div>
           );
         }
@@ -144,6 +148,25 @@ export function ChatInterface({
           }
         }
 
+        // Check for Route Map marker
+        if (text.includes("[ROUTE_MAP]")) {
+          const jsonStr = text.replace("[ROUTE_MAP]", "").trim();
+
+          const dataFromMessage = JSON.parse(jsonStr) as FeatureCollection;
+
+          const mapData = dataFromMessage || routeGeoJson || null;
+          console.log("map data passed to RecommendedRouteMap:", mapData);
+
+          return (
+            mapData ? (
+                  <RecommendedRouteMap data={mapData} />
+              ) : (
+                <div className="rounded-lg border bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+                  Route will appear here after it loads.
+                </div>
+              )
+          );
+        }
         // not the one currently playing typing animation
         if (!isTypingMessage || !typingMessageId) {
           return (
@@ -157,7 +180,6 @@ export function ChatInterface({
         }
 
         // ... (rest of typing logic)
-
 
         // typing animation: nothing left to show
         if (typedCharsLeft <= 0) {
@@ -196,9 +218,10 @@ export function ChatInterface({
   const { state, isMobile } = useSidebar();
   const fixedBarStyle = !isMobile
     ? {
-      left: `var(${state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"
+        left: `var(${
+          state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"
         })`,
-    }
+      }
     : undefined;
 
   return (
@@ -207,6 +230,9 @@ export function ChatInterface({
         <div className="mx-auto max-w-3xl space-y-4">
           {messages.map((message) => {
             const isUser = message.role === "user";
+            const isMapBubble = message.parts.some(
+              (p) => p.type === "text" && p.text.includes("[ROUTE_MAP]"),
+            );
 
             return (
               <div
@@ -214,10 +240,12 @@ export function ChatInterface({
                 className={`flex ${isUser ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg px-4 py-3 text-base ${isUser
-                    ? "bg-emerald-500 text-white dark:bg-emerald-500 dark:text-white"
-                    : "border bg-muted text-foreground"
-                    }`}
+                  className={`${isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
+                    } rounded-lg px-4 py-3 text-base ${
+                    isUser
+                      ? "bg-emerald-500 text-white dark:bg-emerald-500 dark:text-white"
+                      : "border bg-muted text-foreground"
+                  }`}
                 >
                   <div className="space-y-1">{renderMessageParts(message)}</div>
                 </div>

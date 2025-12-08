@@ -36,6 +36,77 @@ import {
   extractEmotion as apiExtractEmotion,
   submitSurvey,
 } from "@/api/conversation";
+import type { FeatureCollection } from "geojson";
+
+type RawRoute = {
+  type?: string;
+  distanceMeters?: number;
+  durationSeconds?: number;
+  geometry?: Array<{
+    lat?: number;
+    latitude?: number;
+    lon?: number;
+    lng?: number;
+    longitude?: number;
+  }>;
+};
+
+const toGeoJsonRoute = (route: unknown): FeatureCollection | null => {
+  if (!route) return null;
+
+  // Attempt to parse string payloads (e.g., "Route[distanceMeters=..., geometry=[RouteCoordinate[lat=.., lon=..], ...]]")
+  if (typeof route === "string") {
+    const rawStr = route.trim();
+
+    // Try JSON first
+    try {
+      const parsed = JSON.parse(rawStr);
+      const geo = toGeoJsonRoute(parsed);
+      if (geo) return geo;
+    } catch {
+      console.warn("not a json");
+    }
+  }
+
+  if (typeof route !== "object") return null;
+  const raw = route as RawRoute;
+
+  if (raw.type === "FeatureCollection") {
+    return raw as FeatureCollection;
+  }
+
+  if (!Array.isArray(raw.geometry)) return null;
+
+  const coords = raw.geometry
+    .map((c) => {
+      const lat = c?.lat ?? c?.latitude;
+      const lon = c?.lon ?? c?.lng ?? c?.longitude;
+      if (typeof lat === "number" && typeof lon === "number") {
+        return [lon, lat];
+      }
+      return null;
+    })
+    .filter(Boolean) as [number, number][];
+
+  if (coords.length < 2) return null;
+
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {
+          distanceMeters: raw.distanceMeters,
+          durationSeconds: raw.durationSeconds,
+        },
+        geometry: {
+          type: "LineString",
+          coordinates: coords,
+        },
+      },
+    ],
+  };
+};
 
 // ---- static nav data ----
 const navData = {
@@ -119,12 +190,12 @@ export default function Chatbot() {
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('userLogin', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("userLogin", handleStorageChange);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('userLogin', handleStorageChange);
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("userLogin", handleStorageChange);
     };
   }, []);
 
@@ -135,11 +206,16 @@ export default function Chatbot() {
   const [input, setInput] = useState("");
   const [emotionExtracted, setEmotionExtracted] = useState(true);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
+  const [routeGeoJson, setRouteGeoJson] = useState<FeatureCollection | null>(
+    null,
+  );
   const skipLoadRef = useRef(false);
 
   const parseMessageContent = (content: string) => {
     if (content.startsWith("EmotionResult[")) {
-      const match: RegExpMatchArray | null = content.match(/content=([\s\S]*?),\s*success=(true|false)/);
+      const match: RegExpMatchArray | null = content.match(
+        /content=([\s\S]*?),\s*success=(true|false)/,
+      );
       if (match && match[1]) {
         return match[1];
       }
@@ -245,11 +321,13 @@ export default function Chatbot() {
     setMessages([]);
     setEmotionExtracted(false);
     setPendingChatId(null);
+    setRouteGeoJson(null);
   };
 
   const handleSelectChat = (chatId: string) => {
     setSelectedChatId(chatId);
     setPendingChatId(null);
+    setRouteGeoJson(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -325,6 +403,7 @@ export default function Chatbot() {
         setChats((prev) => [newChatSummary, ...prev]);
         chatId = newChat.id.toString();
         setEmotionExtracted(false);
+        setRouteGeoJson(null);
       } catch (e) {
         console.error(e);
         return;
@@ -392,7 +471,7 @@ export default function Chatbot() {
         setChats((prev) => [newChatSummary, ...prev]);
         currentChatId = newChat.id.toString();
         setEmotionExtracted(false);
-        
+
         skipLoadRef.current = true;
         setSelectedChatId(currentChatId);
         setMessages([]);
@@ -402,7 +481,7 @@ export default function Chatbot() {
         return;
       }
     }
-    
+
     if (!currentChatId) {
         setIsLoading(false);
         return;
@@ -421,7 +500,7 @@ export default function Chatbot() {
     };
 
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
-    setEmotionExtracted(true); 
+    setEmotionExtracted(true);
 
     try {
         await apiSendMessage(Number(currentChatId), userText, true);
@@ -429,7 +508,7 @@ export default function Chatbot() {
     } catch (e) {
         console.error("Failed to persist scripted exchange", e);
     }
-    
+
     setIsLoading(false);
   };
 
@@ -523,14 +602,20 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
               handleInputChange={handleInputChange}
               handleSubmit={handleSubmit}
               isLoading={isLoading}
+              routeGeoJson={routeGeoJson}
               onSurveySubmit={async (data: SurveyData) => {
                 if (!selectedChatId) return;
                 try {
                   const res = await submitSurvey(Number(selectedChatId), data);
                   console.log("Received Route:", res.route);
+                  setRouteGeoJson(res.route as FeatureCollection);
 
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(data)}`;
-                  await apiSendMessage(Number(selectedChatId), surveyContent, true);
+                  await apiSendMessage(
+                    Number(selectedChatId),
+                    surveyContent,
+                    true,
+                  );
 
                   const persistedSurveyMsg: UIMessage = {
                     id: Date.now().toString(),
@@ -539,7 +624,8 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                   };
                   setMessages((prev) => [...prev, persistedSurveyMsg]);
 
-                  let botText = "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
+                  let botText =
+                    "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
                   if (res.spotifyPlaylistLink) {
                     botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: ${res.spotifyPlaylistLink}`;
                   }
@@ -552,6 +638,30 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                     parts: [{ type: "text", text: botText }],
                   };
                   setMessages((prev) => [...prev, successMsg]);
+
+                  // Send and display the route map as a bot message
+                  if (res.route) {
+                    const geo = toGeoJsonRoute(res.route);
+                    if (geo) {
+                      const mapPayload = `[ROUTE_MAP] ${JSON.stringify(geo)}`;
+                      setRouteGeoJson(geo as FeatureCollection);
+                      await apiSendMessage(
+                        Number(selectedChatId),
+                        mapPayload,
+                        false,
+                      );
+                      const mapMsg: UIMessage = {
+                        id: (Date.now() + 2).toString(),
+                        role: "assistant",
+                        parts: [{ type: "text", text: mapPayload }],
+                      };
+                      setMessages((prev) => [...prev, mapMsg]);
+                    } else {
+                      console.warn(
+                        "Received route but could not convert to GeoJSON",
+                      );
+                    }
+                  }
                 } catch (e) {
                   console.error("Failed to submit survey", e);
                 }
