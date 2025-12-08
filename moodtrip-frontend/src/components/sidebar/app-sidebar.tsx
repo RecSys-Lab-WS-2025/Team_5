@@ -70,10 +70,10 @@ export function AppSidebar({
               <button
                 type="button"
                 onClick={onNewChat}
-                className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 transition-colors duration-200 !bg-[#1a1a1a] hover:!bg-[#2a2a2a] active:!bg-[#333333] !text-white focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0"
+                className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 transition-colors duration-200 !bg-[#1e3a8a] hover:!bg-[#142c65] active:!bg-[#0e204a] !text-white focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0"
               >
                 <Plus className="h-4 w-4" />
-                <span className="text-sm font-medium">New Chat</span>
+                <span className="text-sm font-semibold">New Chat</span>
               </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
