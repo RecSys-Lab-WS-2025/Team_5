@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/navbar";
-import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getUser } from "@/api/auth";
 

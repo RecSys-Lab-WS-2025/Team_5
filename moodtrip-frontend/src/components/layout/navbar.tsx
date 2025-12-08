@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronRight, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
 
 import { Button } from "@/components/ui/button";
