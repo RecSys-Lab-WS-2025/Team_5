@@ -12,7 +12,7 @@ import type { FeatureCollection } from "geojson";
 
 import { SurveyForm } from "./survey-form";
 import type { SurveyData } from "@/api/conversation";
-import {RecommendedRouteMap} from "@/components/map/recommended-route.tsx";
+import { RecommendedRouteMap } from "@/components/map/recommended-route.tsx";
 
 // ... inside ChatInterfaceProps
 interface ChatInterfaceProps {
@@ -39,7 +39,7 @@ export function ChatInterface({
 
   // --- typing effect state ---
   const [typingMessageId, setTypingMessageId] = React.useState<string | null>(
-    null,
+    null
   );
   const [typingIndex, setTypingIndex] = React.useState(0);
 
@@ -54,19 +54,19 @@ export function ChatInterface({
       setTypingIndex(0);
       return;
     }
-      const getAnimatableText = (message: UIMessage): string => {
-          return message.parts
-              .filter((p) => p.type === "text")
-              .map((p) => p.text)
-              .filter((text) => {
-                  if (!text) return false;
-                  // Skip survey + map control markers
-                  if (text.includes("[SURVEY_FORM_TRIGGER]")) return false;
-                  if (text.startsWith("[SURVEY_DATA]")) return false;
-                  return !text.includes("[ROUTE_MAP]");
-              })
-              .join("");
-      };
+    const getAnimatableText = (message: UIMessage): string => {
+      return message.parts
+        .filter((p) => p.type === "text")
+        .map((p) => p.text)
+        .filter((text) => {
+          if (!text) return false;
+          // Skip survey + map control markers
+          if (text.includes("[SURVEY_FORM_TRIGGER]")) return false;
+          if (text.startsWith("[SURVEY_DATA]")) return false;
+          return !text.includes("[ROUTE_MAP]");
+        })
+        .join("");
+    };
 
     if (lastAssistantMessage.id !== typingMessageId) {
       const fullText = getAnimatableText(lastAssistantMessage);
@@ -167,14 +167,12 @@ export function ChatInterface({
           const mapData = dataFromMessage || routeGeoJson || null;
           console.log("map data passed to RecommendedRouteMap:", mapData);
 
-          return (
-            mapData ? (
-                  <RecommendedRouteMap data={mapData} />
-              ) : (
-                <div className="rounded-lg border bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
-                  Route will appear here after it loads.
-                </div>
-              )
+          return mapData ? (
+            <RecommendedRouteMap data={mapData} />
+          ) : (
+            <div className="rounded-lg border bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+              Route will appear here after it loads.
+            </div>
           );
         }
         // not the one currently playing typing animation
@@ -241,7 +239,7 @@ export function ChatInterface({
           {messages.map((message) => {
             const isUser = message.role === "user";
             const isMapBubble = message.parts.some(
-              (p) => p.type === "text" && p.text.includes("[ROUTE_MAP]"),
+              (p) => p.type === "text" && p.text.includes("[ROUTE_MAP]")
             );
 
             return (
@@ -250,8 +248,9 @@ export function ChatInterface({
                 className={`flex ${isUser ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`${isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
-                    } rounded-lg px-4 py-3 text-base ${
+                  className={`${
+                    isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
+                  } rounded-lg px-4 py-3 text-base ${
                     isUser
                       ? "bg-emerald-500 text-white dark:bg-emerald-500 dark:text-white"
                       : "border bg-muted text-foreground"
