@@ -65,7 +65,20 @@ public class AuthService {
      * Get access token for a specific user ID (SpotifyToken.id), with automatic refresh if expired
      */
     public Mono<String> getAccessToken(Long userId) {
-        return spotifyTokenPort.findById(userId)
+        logger.info("getAccessToken called for userId: {}", userId);
+        return userPort.findById(userId)
+                .doOnNext(user -> logger.info("Found user: {}, spotifyTokenId: {}", user.id(), user.spotifyTokenId()))
+                .flatMap(user -> {
+                    if (user.spotifyTokenId() == null) {
+                        logger.error("User {} has no linked Spotify account", userId);
+                        return Mono.error(new IllegalStateException(
+                                "User " + userId + " has no linked Spotify account."
+                        ));
+                    }
+                    logger.info("Looking up Spotify token with ID: {}", user.spotifyTokenId());
+                    return spotifyTokenPort.findById(user.spotifyTokenId());
+                })
+                .doOnNext(token -> logger.info("Found Spotify token: {}", token != null ? token.id() : "null"))
                 .flatMap(spotifyToken -> {
                     long currentTime = System.currentTimeMillis() / 1000;
                     long tokenAge = currentTime - spotifyToken.fetchedAt();
@@ -78,11 +91,12 @@ public class AuthService {
 
                     return Mono.just(spotifyToken.accessToken());
                 })
-                .switchIfEmpty(Mono.defer(() ->
-                        Mono.error(new IllegalStateException(
-                                "No access token found for user " + userId + ". Please authorize via OAuth."
-                        ))
-                ));
+                .switchIfEmpty(Mono.defer(() -> {
+                    logger.error("No access token found for user {}", userId);
+                    return Mono.error(new IllegalStateException(
+                            "No access token found for user " + userId + ". Please authorize via OAuth."
+                    ));
+                }));
     }
 
 
