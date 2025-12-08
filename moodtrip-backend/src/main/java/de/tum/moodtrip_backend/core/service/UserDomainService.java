@@ -144,12 +144,22 @@ public class UserDomainService {
      * Generate username from Spotify display name or email
      */
     private String generateUsernameFromSpotify(String spotifyEmail, String spotifyDisplayName) {
+        // 1. If display name is valid (only contains allowed characters), use it directly
+        if (spotifyDisplayName != null && !spotifyDisplayName.isBlank() && spotifyDisplayName.matches("[a-zA-Z0-9_-]+")) {
+            return spotifyDisplayName;
+        }
+
+        // 2. If display name is invalid (needs sanitization), try to use email prefix
+        if (spotifyEmail != null && !spotifyEmail.isBlank() && spotifyEmail.contains("@")) {
+            String emailPrefix = spotifyEmail.split("@")[0];
+            return sanitizeUsername(emailPrefix);
+        }
+
+        // 3. Fallback: use sanitized display name
         if (spotifyDisplayName != null && !spotifyDisplayName.isBlank()) {
             return sanitizeUsername(spotifyDisplayName);
         }
-        if (spotifyEmail != null && !spotifyEmail.isBlank()&&spotifyEmail.contains("@")) {
-            return spotifyEmail.split("@")[0];
-        }
+
         return "spotify_user_" + System.currentTimeMillis();
     }
 
