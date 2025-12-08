@@ -54,12 +54,22 @@ export function ChatInterface({
       setTypingIndex(0);
       return;
     }
+      const getAnimatableText = (message: UIMessage): string => {
+          return message.parts
+              .filter((p) => p.type === "text")
+              .map((p) => p.text)
+              .filter((text) => {
+                  if (!text) return false;
+                  // Skip survey + map control markers
+                  if (text.includes("[SURVEY_FORM_TRIGGER]")) return false;
+                  if (text.startsWith("[SURVEY_DATA]")) return false;
+                  return !text.includes("[ROUTE_MAP]");
+              })
+              .join("");
+      };
 
     if (lastAssistantMessage.id !== typingMessageId) {
-      const fullText = lastAssistantMessage.parts
-        .filter((p) => p.type === "text")
-        .map((p) => (p.type === "text" ? p.text : ""))
-        .join("");
+      const fullText = getAnimatableText(lastAssistantMessage);
 
       if (!fullText.length) {
         setTypingMessageId(null);
