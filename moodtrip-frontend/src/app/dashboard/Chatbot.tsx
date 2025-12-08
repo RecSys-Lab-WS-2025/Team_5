@@ -207,14 +207,14 @@ export default function Chatbot() {
   const [emotionExtracted, setEmotionExtracted] = useState(true);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const [routeGeoJson, setRouteGeoJson] = useState<FeatureCollection | null>(
-    null,
+    null
   );
   const skipLoadRef = useRef(false);
 
   const parseMessageContent = (content: string) => {
     if (content.startsWith("EmotionResult[")) {
       const match: RegExpMatchArray | null = content.match(
-        /content=([\s\S]*?),\s*success=(true|false)/,
+        /content=([\s\S]*?),\s*success=(true|false)/
       );
       if (match && match[1]) {
         return match[1];
@@ -614,7 +614,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                   await apiSendMessage(
                     Number(selectedChatId),
                     surveyContent,
-                    true,
+                    true
                   );
 
                   const persistedSurveyMsg: UIMessage = {
@@ -648,7 +648,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                       await apiSendMessage(
                         Number(selectedChatId),
                         mapPayload,
-                        false,
+                        false
                       );
                       const mapMsg: UIMessage = {
                         id: (Date.now() + 2).toString(),
@@ -658,7 +658,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                       setMessages((prev) => [...prev, mapMsg]);
                     } else {
                       console.warn(
-                        "Received route but could not convert to GeoJSON",
+                        "Received route but could not convert to GeoJSON"
                       );
                     }
                   }
