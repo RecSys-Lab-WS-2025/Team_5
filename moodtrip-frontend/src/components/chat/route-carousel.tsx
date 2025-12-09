@@ -1,5 +1,6 @@
 import React from "react";
 import { RouteCard } from "./route-card";
+import type { FeatureCollection } from "geojson";
 
 export interface RouteCardData {
     id: string;
@@ -8,7 +9,7 @@ export interface RouteCardData {
     imageUrl: string;
     distanceMeters: number;
     durationSeconds: number;
-    geoJson?: any; // Keeping any for now or FeatureCollection if imported, but let's stick to any for geoJson to avoid import complexity if not needed for the card itself, or use generic object
+    geoJson?: FeatureCollection;
 }
 
 interface RouteCarouselProps {
