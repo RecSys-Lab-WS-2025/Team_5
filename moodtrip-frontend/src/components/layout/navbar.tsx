@@ -16,7 +16,7 @@ import { getUser, logout, type AuthUser } from "@/api/auth";
 
 // MODIFIED: Removed 'Start Trip' from the items list to handle it separately with custom logic.
 const ITEMS = [
-  { label: "About Us", href: "/about" },
+  { label: "About", href: "/about" },
   { label: "FAQ", href: "/faq" },
   { label: "Contact", href: "/contact" },
 ];
@@ -48,9 +48,9 @@ export const Navbar = () => {
     navigate("/");
   };
   
-  // NEW FUNCTION: Handles navigation logic for Start Trip/Login
+
   const handleStartTripNavigation = (e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
-    e.preventDefault(); // Prevent default Link behavior
+    e.preventDefault(); 
     const currentUser = getUser();
     if (!currentUser) {
       navigate("/login");

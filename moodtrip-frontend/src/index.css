@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import url("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
 @custom-variant dark (&:is(.dark *));
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@...&display=swap");
 
 /* Base light theme variables */
 :root {
@@ -12,7 +12,7 @@
 
   /* Only light mode */
   color-scheme: light;
-  background-color: #ffffff;
+  background-color: #f4f8fb;
   color: #213547;
 
   font-synthesis: none;
@@ -23,7 +23,8 @@
   --radius: 0.625rem;
 
   /* Light theme design tokens */
-  --background: oklch(1 0 0);
+  /* MODIFIED: --background variable also set to light blue */
+  --background: oklch(0.97 0.01 240);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -67,7 +68,7 @@ body {
 
 /* Big landing heading style */
 h1 {
-  font-family: "Varela Round", sans-serif;
+  font-family: "Montserrat", sans-serif;
   font-size: 5em;
   line-height: 1.1;
   font-weight: 900;
