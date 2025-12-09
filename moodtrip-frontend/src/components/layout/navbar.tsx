@@ -1,3 +1,5 @@
+// File: Navbar.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,7 +16,6 @@ import {
 import { cn } from "@/lib/utils";
 import { getUser, logout, type AuthUser } from "@/api/auth";
 
-// MODIFIED: Removed 'Start Trip' from the items list to handle it separately with custom logic.
 const ITEMS = [
   { label: "About", href: "/about" },
   { label: "FAQ", href: "/faq" },
@@ -44,7 +45,7 @@ export const Navbar = () => {
   const handleLogout = () => {
     logout();
     setUser(null);
-    window.dispatchEvent(new Event('userLogin')); // Notify other components
+    window.dispatchEvent(new Event('userLogin'));
     navigate("/");
   };
   
@@ -57,12 +58,12 @@ export const Navbar = () => {
     } else {
       navigate("/chat");
     }
-    // Close mobile menu if on mobile
     setIsMenuOpen(false);
   };
 
   return (
     <section
+      // MODIFIED: Re-added bg-background/70, border, and backdrop-blur-md for the frosted glass effect
       className={cn(
         "bg-background/70 absolute left-1/2 z-50 w-[min(90%,1000px)] -translate-x-1/2 rounded-4xl border backdrop-blur-md transition-all duration-300",
         "top-5 lg:top-12",
@@ -88,14 +89,13 @@ export const Navbar = () => {
 
         {/* Desktop Navigation */}
         <NavigationMenu className="max-lg:hidden">
-          <NavigationMenuList className="justify-around w-full gap-6"> {/* MODIFIED: Increased gap to 6 */}
+          <NavigationMenuList className="justify-around w-full gap-6">
             
             {/* NEW: Start Trip with conditional routing */}
             <NavigationMenuItem key="Start Trip">
               <a
-                href="/chat" // Provide href for accessibility/fallback
+                href="/chat"
                 onClick={handleStartTripNavigation}
-                // MODIFIED: Increased size to text-base and increased font-medium to font-semibold
                 className={cn(
                   "relative bg-transparent px-4 text-base font-semibold !text-black hover:opacity-75 whitespace-nowrap",
                   pathname === "/chat" && "!text-black"
@@ -110,7 +110,6 @@ export const Navbar = () => {
               <NavigationMenuItem key={link.label}>
                 <Link
                   to={link.href}
-                  // MODIFIED: Increased size to text-base and increased font-medium to font-semibold
                   className={cn(
                     "relative bg-transparent px-4 text-base font-semibold !text-black hover:opacity-75 whitespace-nowrap",
                     pathname === link.href && "!text-black"
@@ -124,11 +123,11 @@ export const Navbar = () => {
         </NavigationMenu>
 
         {/* Right side */}
-        <div className="flex items-center gap-4"> {/* MODIFIED: Increased gap to 4 */}
+        <div className="flex items-center gap-4">
           {user ? (
             <div className="flex items-center gap-3 max-lg:hidden">
-              <div className="flex items-center gap-2 text-base font-semibold text-black"> {/* MODIFIED: Increased size to text-base and font-medium to font-semibold */}
-                <User className="w-5 h-5" /> {/* MODIFIED: Increased icon size */}
+              <div className="flex items-center gap-2 text-base font-semibold text-black">
+                <User className="w-5 h-5" />
                 <span>{user.email}</span>
               </div>
               <Button
@@ -139,12 +138,12 @@ export const Navbar = () => {
                 title="Logout"
                 aria-label="Logout"
               >
-                <LogOut className="w-5 h-5" /> {/* MODIFIED: Increased icon size */}
+                <LogOut className="w-5 h-5" />
               </Button>
             </div>
           ) : (
             <Link to="/login" className="max-lg:hidden">
-              <Button className="!bg-white hover:!bg-gray-100 !text-black text-base px-5 py-3 h-auto border border-black">
+              <Button className="!bg-background hover:!bg-gray-100 !text-black text-base px-5 py-3 h-auto border border-black">
                 <span className="relative z-10 !text-black font-semibold">Login</span>
               </Button>
             </Link>
@@ -190,7 +189,7 @@ export const Navbar = () => {
           
           {/* NEW: Start Trip with conditional routing for mobile */}
           <a
-            href="/chat" // Provide href for accessibility/fallback
+            href="/chat"
             onClick={handleStartTripNavigation}
             className="py-4 text-lg font-bold first:pt-0 !text-black hover:!text-black" 
           >
@@ -212,9 +211,9 @@ export const Navbar = () => {
           {/* Mobile Login/User */}
           <div className="py-4">
             {user ? (
-              <div className="flex flex-col gap-3"> {/* MODIFIED: Increased gap */}
-                <div className="flex items-center gap-3 text-base font-semibold text-black"> {/* MODIFIED: Increased text size and font weight */}
-                  <User className="w-5 h-5" /> {/* MODIFIED: Increased icon size */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3 text-base font-semibold text-black">
+                  <User className="w-5 h-5" />
                   <span>{user.email}</span>
                 </div>
                 <Button
@@ -222,14 +221,14 @@ export const Navbar = () => {
                   onClick={handleLogout}
                   className="w-full justify-start gap-2 h-10"
                 >
-                  <LogOut className="w-5 h-5" /> {/* MODIFIED: Increased icon size */}
+                  <LogOut className="w-5 h-5" />
                   Logout
                 </Button>
               </div>
             ) : (
               <Link
                 to="/login"
-                className="flex w-full items-center justify-center rounded-md bg-white border border-black px-4 py-3 text-base font-bold text-black hover:bg-gray-100" 
+                className="flex w-full items-center justify-center rounded-md !bg-background border border-black px-4 py-3 text-base font-bold text-black hover:bg-gray-100" 
                 onClick={() => setIsMenuOpen(false)}
               >
                 Login
