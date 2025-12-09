@@ -165,7 +165,6 @@ export function ChatInterface({
           const dataFromMessage = JSON.parse(jsonStr) as FeatureCollection;
 
           const mapData = dataFromMessage || routeGeoJson || null;
-          console.log("map data passed to RecommendedRouteMap:", mapData);
 
           return mapData ? (
             <RecommendedRouteMap data={mapData} />

@@ -537,7 +537,6 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                 if (!selectedChatId) return;
                 try {
                   const res = await submitSurvey(Number(selectedChatId), data);
-                  console.log("Received Route:", res.route);
                   setRouteGeoJson(res.route as FeatureCollection);
 
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(data)}`;
