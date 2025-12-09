@@ -1,6 +1,4 @@
-"use client";
-
-import * as React from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +7,8 @@ import { Send } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 import { useSidebar } from "@/components/ui/sidebar";
 import type { FeatureCollection } from "geojson";
+import { useNavigate } from "react-router-dom"; // Added import
+import { RouteCarousel } from "@/components/chat/route-carousel"; // Added import
 
 import { SurveyForm } from "./survey-form";
 import type { SurveyData } from "@/api/conversation";
@@ -36,6 +36,7 @@ export function ChatInterface({
   onSurveySubmit,
 }: ChatInterfaceProps) {
   const bottomRef = React.useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate(); // Added hook
 
   // --- typing effect state ---
   const [typingMessageId, setTypingMessageId] = React.useState<string | null>(
@@ -63,6 +64,7 @@ export function ChatInterface({
           // Skip survey + map control markers
           if (text.includes("[SURVEY_FORM_TRIGGER]")) return false;
           if (text.startsWith("[SURVEY_DATA]")) return false;
+          if (text.includes("[ROUTE_CARDS]")) return false;
           return !text.includes("[ROUTE_MAP]");
         })
         .join("");
@@ -174,6 +176,25 @@ export function ChatInterface({
             </div>
           );
         }
+
+        // Check for Route Cards
+        if (text.includes("[ROUTE_CARDS]")) {
+          try {
+            const jsonStr = text.replace("[ROUTE_CARDS]", "").trim();
+            const routes = JSON.parse(jsonStr);
+            return (
+              <div key={idx} className="mt-4">
+                <RouteCarousel
+                  routes={routes}
+                  onRouteClick={(route) => navigate("/route-details", { state: route })}
+                />
+              </div>
+            );
+          } catch (e) {
+            console.error("Failed to parse route cards", e);
+            return null;
+          }
+        }
         // not the one currently playing typing animation
         if (!isTypingMessage || !typingMessageId) {
           return (
@@ -225,10 +246,9 @@ export function ChatInterface({
   const { state, isMobile } = useSidebar();
   const fixedBarStyle = !isMobile
     ? {
-        left: `var(${
-          state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"
+      left: `var(${state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"
         })`,
-      }
+    }
     : undefined;
 
   return (
@@ -244,16 +264,14 @@ export function ChatInterface({
             return (
               <div
                 key={message.id}
-                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                className={`flex ${isUser ? "justify-end" : "justify-start"} `}
               >
                 <div
-                  className={`${
-                    isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
-                  } rounded-lg px-4 py-3 text-base ${
-                    isUser
+                  className={`${isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
+                    } rounded-lg px-4 py-3 text-base ${isUser
                       ? "bg-emerald-500 text-white dark:bg-emerald-500 dark:text-white"
                       : "border bg-muted text-foreground"
-                  }`}
+                    } `}
                 >
                   <div className="space-y-1">{renderMessageParts(message)}</div>
                 </div>
@@ -285,11 +303,7 @@ export function ChatInterface({
 
       {/* bottom input bar */}
       <div
-        className={`
-          fixed bottom-10 z-50 flex justify-center
-          transition-all duration-320 ease-in-out
-          ${isMobile ? "left-3 right-3" : "right-4"}
-        `}
+        className={`fixed bottom-10 z-50 flex justify-center transition-all duration-320 ease-in-out ${isMobile ? "left-3 right-3" : "right-4"}`}
         style={fixedBarStyle}
       >
         <form onSubmit={handleSubmit} className="w-full max-w-3xl">

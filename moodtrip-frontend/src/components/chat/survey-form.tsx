@@ -216,7 +216,7 @@ export function SurveyForm({
             {isSubmitted && (
                 <CardFooter className="bg-gray-50/50 border-t border-gray-100 p-4">
                     <div className="w-full text-center text-sm text-gray-500 font-medium">
-                        Submitted successfully
+                        Submitted
                     </div>
                 </CardFooter>
             )}

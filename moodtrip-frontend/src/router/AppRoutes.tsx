@@ -4,6 +4,7 @@ import { HomePage } from "@/app/dashboard/HomePage";
 import Chatbot from "@/app/dashboard/Chatbot";
 import LoginPage from "@/app/login/page";
 import SignupPage from "@/app/signup/page";
+import { RouteDetailsPage } from "@/app/route-details/RouteDetailsPage";
 
 export function AppRoutes() {
   return (
@@ -11,6 +12,7 @@ export function AppRoutes() {
       <Route element={<AppLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/chat" element={<Chatbot />} />
+        <Route path="/route-details" element={<RouteDetailsPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
       </Route>
