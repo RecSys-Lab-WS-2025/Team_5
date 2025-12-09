@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import type { FeatureCollection, GeoJsonObject, Feature, Point } from "geojson";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -37,9 +37,7 @@ function FitToData({ data }: { data?: FeatureCollection | null }) {
     return () => {
       map.removeLayer(layer);
     };
-    // intentionally run once
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [map, data]);
 
   return null;
 }
@@ -79,16 +77,6 @@ export function RecommendedRouteMap({ data }: Props) {
         }) ?? [],
     [data]
   );
-
-  const poisLogRef = useRef<string | null>(null);
-  useEffect(() => {
-    const serialized = JSON.stringify(pois);
-    if (serialized !== poisLogRef.current) {
-      console.log("pois ", pois);
-      poisLogRef.current = serialized;
-    }
-  }, [pois]);
-  console.log("pois ", pois);
 
   return (
     <div className="w-full min-w-[240px] h-[360px] md:h-[420px]">
