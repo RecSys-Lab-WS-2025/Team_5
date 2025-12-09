@@ -38,76 +38,6 @@ import {
 } from "@/api/conversation";
 import type { FeatureCollection } from "geojson";
 
-type RawRoute = {
-  type?: string;
-  distanceMeters?: number;
-  durationSeconds?: number;
-  geometry?: Array<{
-    lat?: number;
-    latitude?: number;
-    lon?: number;
-    lng?: number;
-    longitude?: number;
-  }>;
-};
-
-const toGeoJsonRoute = (route: unknown): FeatureCollection | null => {
-  if (!route) return null;
-
-  // Attempt to parse string payloads (e.g., "Route[distanceMeters=..., geometry=[RouteCoordinate[lat=.., lon=..], ...]]")
-  if (typeof route === "string") {
-    const rawStr = route.trim();
-
-    // Try JSON first
-    try {
-      const parsed = JSON.parse(rawStr);
-      const geo = toGeoJsonRoute(parsed);
-      if (geo) return geo;
-    } catch {
-      console.warn("not a json");
-    }
-  }
-
-  if (typeof route !== "object") return null;
-  const raw = route as RawRoute;
-
-  if (raw.type === "FeatureCollection") {
-    return raw as FeatureCollection;
-  }
-
-  if (!Array.isArray(raw.geometry)) return null;
-
-  const coords = raw.geometry
-    .map((c) => {
-      const lat = c?.lat ?? c?.latitude;
-      const lon = c?.lon ?? c?.lng ?? c?.longitude;
-      if (typeof lat === "number" && typeof lon === "number") {
-        return [lon, lat];
-      }
-      return null;
-    })
-    .filter(Boolean) as [number, number][];
-
-  if (coords.length < 2) return null;
-
-  return {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: {
-          distanceMeters: raw.distanceMeters,
-          durationSeconds: raw.durationSeconds,
-        },
-        geometry: {
-          type: "LineString",
-          coordinates: coords,
-        },
-      },
-    ],
-  };
-};
-
 // ---- static nav data ----
 const navData = {
   user: {
@@ -641,26 +571,25 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
 
                   // Send and display the route map as a bot message
                   if (res.route) {
-                    const geo = toGeoJsonRoute(res.route);
-                    if (geo) {
-                      const mapPayload = `[ROUTE_MAP] ${JSON.stringify(geo)}`;
-                      setRouteGeoJson(geo as FeatureCollection);
-                      await apiSendMessage(
-                        Number(selectedChatId),
-                        mapPayload,
-                        false
-                      );
-                      const mapMsg: UIMessage = {
-                        id: (Date.now() + 2).toString(),
-                        role: "assistant",
-                        parts: [{ type: "text", text: mapPayload }],
-                      };
-                      setMessages((prev) => [...prev, mapMsg]);
-                    } else {
-                      console.warn(
-                        "Received route but could not convert to GeoJSON"
-                      );
-                    }
+                    const mapPayload = `[ROUTE_MAP] ${JSON.stringify(
+                      res.route
+                    )}`;
+                    setRouteGeoJson(res.route);
+                    await apiSendMessage(
+                      Number(selectedChatId),
+                      mapPayload,
+                      false
+                    );
+                    const mapMsg: UIMessage = {
+                      id: (Date.now() + 2).toString(),
+                      role: "assistant",
+                      parts: [{ type: "text", text: mapPayload }],
+                    };
+                    setMessages((prev) => [...prev, mapMsg]);
+                  } else {
+                    console.warn(
+                      "Received route but could not convert to GeoJSON"
+                    );
                   }
                 } catch (e) {
                   console.error("Failed to submit survey", e);

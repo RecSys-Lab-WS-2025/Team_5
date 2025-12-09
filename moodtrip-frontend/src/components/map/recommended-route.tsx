@@ -71,7 +71,7 @@ export function RecommendedRouteMap({ data }: Props) {
 
           return {
             id: props.osmId ?? props.id ?? `${lat}-${lon}`,
-            name: props.name ?? "Unknown POI",
+            name: props.displayName ?? "Unknown POI",
             description: props.description ?? "",
             imageUrl: props.imageUrl ?? "",
             position: [lat, lon] as [number, number], // Leaflet expects [lat, lon]
