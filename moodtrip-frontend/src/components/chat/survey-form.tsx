@@ -47,7 +47,7 @@ export function SurveyForm({
     readOnly = false,
     initialData,
 }: {
-    onSubmit?: (data: SurveyData) => void;
+    onSubmit?: (data: SurveyData) => Promise<void> | void;
     readOnly?: boolean;
     initialData?: SurveyData;
 }) {
@@ -64,8 +64,11 @@ export function SurveyForm({
     const [endDate, setEndDate] = React.useState<string>(initialData?.endDate ?? getTomorrowString());
     const [selectedCategories, setSelectedCategories] = React.useState<string[]>(initialData?.poiCategories ?? []);
 
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [isSubmitted, setIsSubmitted] = React.useState(false);
+
     const toggleCategory = (category: string) => {
-        if (readOnly) return;
+        if (readOnly || isSubmitted || isSubmitting) return;
         setSelectedCategories((prev) =>
             prev.includes(category)
                 ? prev.filter((c) => c !== category)
@@ -73,30 +76,43 @@ export function SurveyForm({
         );
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (readOnly || !onSubmit) return;
+        if (readOnly || !onSubmit || isSubmitting || isSubmitted) return;
+
+        setIsSubmitting(true);
 
         // Ensure dates are present
         const finalStartDate = startDate || getTodayString();
         const finalEndDate = endDate || getTomorrowString();
 
-        onSubmit({
-            latitude: MUNICH_COORDS.latitude,
-            longitude: MUNICH_COORDS.longitude,
-            rangeMeters: range,
-            startDate: finalStartDate,
-            endDate: finalEndDate,
-            poiCategories: selectedCategories,
-        });
+        try {
+            await onSubmit({
+                latitude: MUNICH_COORDS.latitude,
+                longitude: MUNICH_COORDS.longitude,
+                rangeMeters: range,
+                startDate: finalStartDate,
+                endDate: finalEndDate,
+                poiCategories: selectedCategories,
+            });
+            setIsSubmitted(true);
+        } catch (error) {
+            console.error("Survey submission failed", error);
+            // Optionally handle error state here, e.g. show error message
+            // For now, we allow retrying if it failed (by setting isSubmitting back to false)
+        } finally {
+            setIsSubmitting(false);
+        }
     };
+
+    const isDisabled = readOnly || isSubmitting || isSubmitted;
 
     return (
         <Card className="w-full max-w-lg mx-auto border border-gray-200 shadow-sm bg-white rounded-xl overflow-hidden">
             <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
                 <CardTitle className="text-lg font-semibold text-gray-800">Trip Preferences</CardTitle>
                 <CardDescription className="text-gray-500 text-sm">
-                    {readOnly ? "Your submitted preferences" : "Tell us what you're looking for in Munich."}
+                    {readOnly || isSubmitted ? "Your submitted preferences" : "Tell us what you're looking for in Munich."}
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
@@ -118,7 +134,7 @@ export function SurveyForm({
                             className="flex h-10 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all hover:border-gray-300"
                             value={range}
                             onChange={(e) => setRange(Number(e.target.value))}
-                            disabled={readOnly}
+                            disabled={isDisabled}
                         >
                             {RANGE_OPTIONS.map((opt) => (
                                 <option key={opt.value} value={opt.value}>
@@ -138,8 +154,8 @@ export function SurveyForm({
                                 className="rounded-lg border-gray-200 focus-visible:ring-gray-900"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
-                                required={!readOnly}
-                                disabled={readOnly}
+                                required={!isDisabled}
+                                disabled={isDisabled}
                             />
                         </div>
                         <div className="space-y-2">
@@ -150,8 +166,8 @@ export function SurveyForm({
                                 className="rounded-lg border-gray-200 focus-visible:ring-gray-900"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
-                                required={!readOnly}
-                                disabled={readOnly}
+                                required={!isDisabled}
+                                disabled={isDisabled}
                             />
                         </div>
                     </div>
@@ -167,14 +183,14 @@ export function SurveyForm({
                                         key={cat}
                                         type="button"
                                         onClick={() => toggleCategory(cat)}
-                                        disabled={readOnly}
+                                        disabled={isDisabled}
                                         style={isSelected ? { backgroundColor: '#4b5563', color: 'white', borderColor: '#4b5563' } : {}}
                                         className={`
                       px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border
                       ${isSelected
                                                 ? "shadow-sm"
                                                 : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"}
-                      ${readOnly ? "cursor-default opacity-80" : "cursor-pointer"}
+                      ${isDisabled ? "cursor-default opacity-80" : "cursor-pointer"}
                     `}
                                     >
                                         {cat}
@@ -185,15 +201,23 @@ export function SurveyForm({
                     </div>
                 </form>
             </CardContent>
-            {!readOnly && (
+            {!readOnly && !isSubmitted && (
                 <CardFooter className="bg-gray-50/50 border-t border-gray-100 p-4">
                     <Button
                         style={{ backgroundColor: '#4b5563', color: 'white' }}
                         className="w-full font-medium py-2.5 rounded-lg transition-all shadow-sm hover:opacity-90"
                         onClick={handleSubmit}
+                        disabled={isSubmitting}
                     >
-                        Find Recommendations
+                        {isSubmitting ? "Submitting..." : "Find Recommendations"}
                     </Button>
+                </CardFooter>
+            )}
+            {isSubmitted && (
+                <CardFooter className="bg-gray-50/50 border-t border-gray-100 p-4">
+                    <div className="w-full text-center text-sm text-gray-500 font-medium">
+                        Submitted successfully
+                    </div>
                 </CardFooter>
             )}
         </Card>

@@ -19,7 +19,7 @@ interface ChatInterfaceProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
-  onSurveySubmit?: (data: SurveyData) => void;
+  onSurveySubmit?: (data: SurveyData) => Promise<void> | void;
 }
 
 // ... inside ChatInterface component
@@ -109,7 +109,6 @@ export function ChatInterface({
 
         // Check for Survey Trigger
         if (text.includes("[SURVEY_FORM_TRIGGER]")) {
-          console.log("Rendering Survey Trigger");
           return (
             <div key={idx} className="mt-4">
               <SurveyForm onSubmit={(data) => {
