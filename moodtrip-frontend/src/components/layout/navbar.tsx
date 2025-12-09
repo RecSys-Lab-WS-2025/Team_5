@@ -2,48 +2,27 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronRight, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
 
 import { Button } from "@/components/ui/button";
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
 import { getUser, logout, type AuthUser } from "@/api/auth";
 
+// MODIFIED: Removed 'Start Trip' from the items list to handle it separately with custom logic.
 const ITEMS = [
-  {
-    label: "Features",
-    href: "#features",
-    dropdownItems: [
-      {
-        title: "Modern product teams",
-        href: "/#feature-modern-teams",
-        description:
-          "Mainline is built on the habits that make the best product teams successful",
-      },
-      {
-        title: "Resource Allocation",
-        href: "/#resource-allocation",
-        description: "Mainline your resource allocation and execution",
-      },
-    ],
-  },
   { label: "About Us", href: "/about" },
-  { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/faq" },
   { label: "Contact", href: "/contact" },
 ];
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const pathname = useLocation().pathname;
   const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(getUser());
@@ -68,6 +47,19 @@ export const Navbar = () => {
     window.dispatchEvent(new Event('userLogin')); // Notify other components
     navigate("/");
   };
+  
+  // NEW FUNCTION: Handles navigation logic for Start Trip/Login
+  const handleStartTripNavigation = (e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+    e.preventDefault(); // Prevent default Link behavior
+    const currentUser = getUser();
+    if (!currentUser) {
+      navigate("/login");
+    } else {
+      navigate("/chat");
+    }
+    // Close mobile menu if on mobile
+    setIsMenuOpen(false);
+  };
 
   return (
     <section
@@ -89,84 +81,71 @@ export const Navbar = () => {
             height={30}
             className="object-contain"
           />
-          <span className="text-lg font-semibold !text-black select-none group-hover:!text-black">
+          <span className="text-xl font-bold !text-black select-none group-hover:!text-black">
             Moodtrip
           </span>
         </Link>
 
         {/* Desktop Navigation */}
         <NavigationMenu className="max-lg:hidden">
-          <NavigationMenuList>
-            {ITEMS.map((link) =>
-              link.dropdownItems ? (
-                <NavigationMenuItem key={link.label}>
-                  <NavigationMenuTrigger className="data-[state=open]:bg-accent/50 !bg-transparent !text-black px-1.5 hover:!text-black whitespace-nowrap">
-                    {link.label}
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <ul className="w-[400px] space-y-2 p-4">
-                      {link.dropdownItems.map((item) => (
-                        <li key={item.title}>
-                          <NavigationMenuLink asChild>
-                            <Link
-                              to={item.href}
-                              className="group hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground flex items-center gap-4 rounded-md p-3 leading-none no-underline outline-hidden transition-colors select-none"
-                            >
-                              <div className="space-y-1.5 transition-transform duration-300 group-hover:translate-x-1">
-                                <div className="text-sm leading-none font-medium">
-                                  {item.title}
-                                </div>
-                                <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
-                                  {item.description}
-                                </p>
-                              </div>
-                            </Link>
-                          </NavigationMenuLink>
-                        </li>
-                      ))}
-                    </ul>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
-              ) : (
-                <NavigationMenuItem key={link.label}>
-                  <Link
-                    to={link.href}
-                    className={cn(
-                      "relative bg-transparent px-1.5 text-sm font-medium !text-black hover:opacity-75 whitespace-nowrap",
-                      pathname === link.href && "!text-black"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                </NavigationMenuItem>
-              ),
-            )}
+          <NavigationMenuList className="justify-around w-full gap-6"> {/* MODIFIED: Increased gap to 6 */}
+            
+            {/* NEW: Start Trip with conditional routing */}
+            <NavigationMenuItem key="Start Trip">
+              <a
+                href="/chat" // Provide href for accessibility/fallback
+                onClick={handleStartTripNavigation}
+                // MODIFIED: Increased size to text-base and increased font-medium to font-semibold
+                className={cn(
+                  "relative bg-transparent px-4 text-base font-semibold !text-black hover:opacity-75 whitespace-nowrap",
+                  pathname === "/chat" && "!text-black"
+                )}
+              >
+                Start Trip
+              </a>
+            </NavigationMenuItem>
+
+            {/* Original ITEMS map */}
+            {ITEMS.map((link) => (
+              <NavigationMenuItem key={link.label}>
+                <Link
+                  to={link.href}
+                  // MODIFIED: Increased size to text-base and increased font-medium to font-semibold
+                  className={cn(
+                    "relative bg-transparent px-4 text-base font-semibold !text-black hover:opacity-75 whitespace-nowrap",
+                    pathname === link.href && "!text-black"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              </NavigationMenuItem>
+            ))}
           </NavigationMenuList>
         </NavigationMenu>
 
         {/* Right side */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-4"> {/* MODIFIED: Increased gap to 4 */}
           {user ? (
             <div className="flex items-center gap-3 max-lg:hidden">
-              <div className="flex items-center gap-2 text-sm font-medium text-black">
-                <User className="w-4 h-4" />
+              <div className="flex items-center gap-2 text-base font-semibold text-black"> {/* MODIFIED: Increased size to text-base and font-medium to font-semibold */}
+                <User className="w-5 h-5" /> {/* MODIFIED: Increased icon size */}
                 <span>{user.email}</span>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                className="h-8 w-8 hover:bg-gray-100 rounded-full"
+                className="h-9 w-9 hover:bg-gray-100 rounded-full" 
                 title="Logout"
                 aria-label="Logout"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-5 h-5" /> {/* MODIFIED: Increased icon size */}
               </Button>
             </div>
           ) : (
             <Link to="/login" className="max-lg:hidden">
-              <Button className="!bg-white hover:!bg-gray-200 !text-black">
-                <span className="relative z-10 !text-black">Login</span>
+              <Button className="!bg-white hover:!bg-gray-100 !text-black text-base px-5 py-3 h-auto border border-black">
+                <span className="relative z-10 !text-black font-semibold">Login</span>
               </Button>
             </Link>
           )}
@@ -208,85 +187,49 @@ export const Navbar = () => {
         )}
       >
         <nav className="divide-border flex flex-1 flex-col divide-y">
-          {ITEMS.map((link) =>
-            link.dropdownItems ? (
-              <div key={link.label} className="py-4 first:pt-0 last:pb-0">
-                <button
-                  onClick={() =>
-                    setOpenDropdown(openDropdown === link.label ? null : link.label)
-                  }
-                  className="!text-black flex w-full items-center justify-between text-base font-medium"
-                >
-                  {link.label}
-                  <ChevronRight
-                    className={cn(
-                      "size-4 transition-transform duration-200",
-                      openDropdown === link.label ? "rotate-90" : "",
-                    )}
-                  />
-                </button>
-                <div
-                  className={cn(
-                    "overflow-hidden transition-all duration-300",
-                    openDropdown === link.label
-                      ? "mt-4 max-h-[1000px] opacity-100"
-                      : "max-h-0 opacity-0",
-                  )}
-                >
-                  <div className="bg-muted/50 space-y-3 rounded-lg p-4">
-                    {link.dropdownItems.map((item) => (
-                      <Link
-                        key={item.title}
-                        to={item.href}
-                        className="group hover:bg-accent block rounded-md p-2 transition-colors"
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        <div className="transition-transform duration-200 group-hover:translate-x-1">
-                          <div className="font-medium"> {item.title} </div>
-                          <p className="text-muted-foreground mt-1 text-sm">
-                            {item.description}
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <Link
-                key={link.label}
-                to={link.href}
-                className="py-4 text-base font-medium first:pt-0 last:pb-0 !text-black hover:!text-black"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ),
-          )}
+          
+          {/* NEW: Start Trip with conditional routing for mobile */}
+          <a
+            href="/chat" // Provide href for accessibility/fallback
+            onClick={handleStartTripNavigation}
+            className="py-4 text-lg font-bold first:pt-0 !text-black hover:!text-black" 
+          >
+            Start Trip
+          </a>
+
+          {/* Original ITEMS map */}
+          {ITEMS.map((link) => (
+            <Link
+              key={link.label}
+              to={link.href}
+              className="py-4 text-lg font-bold !text-black hover:!text-black" 
+              onClick={() => setIsMenuOpen(false)}
+            >
+              {link.label}
+            </Link>
+          ))}
+          
           {/* Mobile Login/User */}
           <div className="py-4">
             {user ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-black">
-                  <User className="w-4 h-4" />
+              <div className="flex flex-col gap-3"> {/* MODIFIED: Increased gap */}
+                <div className="flex items-center gap-3 text-base font-semibold text-black"> {/* MODIFIED: Increased text size and font weight */}
+                  <User className="w-5 h-5" /> {/* MODIFIED: Increased icon size */}
                   <span>{user.email}</span>
                 </div>
                 <Button
                   variant="outline"
                   onClick={handleLogout}
-                  className="w-full justify-start gap-2"
+                  className="w-full justify-start gap-2 h-10"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-5 h-5" /> {/* MODIFIED: Increased icon size */}
                   Logout
                 </Button>
               </div>
             ) : (
               <Link
                 to="/login"
-                className="flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                className="flex w-full items-center justify-center rounded-md bg-white border border-black px-4 py-3 text-base font-bold text-black hover:bg-gray-100" 
                 onClick={() => setIsMenuOpen(false)}
               >
                 Login

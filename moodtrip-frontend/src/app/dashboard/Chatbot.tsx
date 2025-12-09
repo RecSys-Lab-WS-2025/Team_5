@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import type { UIMessage } from "@ai-sdk/react";
 
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
@@ -137,11 +137,8 @@ export default function Chatbot() {
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const skipLoadRef = useRef(false);
 
-  // Helper to parse backend message content
   const parseMessageContent = (content: string) => {
     if (content.startsWith("EmotionResult[")) {
-      // Regex to extract content between "content=" and ", success="
-      // Using [\s\S]* to match any character including newlines
       const match: RegExpMatchArray | null = content.match(/content=([\s\S]*?),\s*success=(true|false)/);
       if (match && match[1]) {
         return match[1];
@@ -183,7 +180,6 @@ export default function Chatbot() {
       case "ANXIOUS":
       case "OVERWHELMED":
       case "FEARFUL":
-      case "ANNOYED":
         return Annoyed;
       default:
         return undefined;
@@ -193,7 +189,6 @@ export default function Chatbot() {
   const loadChats = useCallback(async () => {
     try {
       const data = await getMyConversations();
-      // Sort by ID descending (newest first)
       const sorted = data.sort((a, b) => b.id - a.id);
       const mapped: ChatSummary[] = sorted.map((c) => ({
         id: c.id.toString(),
@@ -206,7 +201,6 @@ export default function Chatbot() {
     }
   }, []);
 
-  // Load chats on mount
   useEffect(() => {
     loadChats();
   }, [loadChats]);
@@ -222,7 +216,6 @@ export default function Chatbot() {
       }));
       setMessages(uiMsgs);
 
-      // Determine emotionExtracted status
       setEmotionExtracted(uiMsgs.length > 0);
     } catch (e) {
       console.error("Failed to load messages", e);
@@ -232,7 +225,6 @@ export default function Chatbot() {
     }
   }, []);
 
-  // Load messages when chat selected
   useEffect(() => {
     if (!selectedChatId) {
       setMessages([]);
@@ -248,27 +240,16 @@ export default function Chatbot() {
   }, [selectedChatId, loadMessages]);
 
   const handleNewChat = async () => {
-    try {
-      const newChat = await startConversation();
-      const newChatSummary: ChatSummary = {
-        id: newChat.id.toString(),
-        title: newChat.title,
-        icon: getEmotionIcon(newChat.emotion),
-      };
-      setChats((prev) => [newChatSummary, ...prev]);
-      // Do NOT select it immediately. Keep showing Welcome Screen.
-      setSelectedChatId(null);
-      setMessages([]);
-      setEmotionExtracted(false);
-      setPendingChatId(newChat.id.toString());
-    } catch (e) {
-      console.error("Failed to create new chat", e);
-    }
+    // Only reset state to WelcomeScreen, do not call API.
+    setSelectedChatId(null);
+    setMessages([]);
+    setEmotionExtracted(false);
+    setPendingChatId(null);
   };
 
   const handleSelectChat = (chatId: string) => {
     setSelectedChatId(chatId);
-    setPendingChatId(null); // Clear pending if user manually selects a chat
+    setPendingChatId(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -281,7 +262,6 @@ export default function Chatbot() {
 
     setInput("");
 
-    // Optimistic update
     const tempId = Date.now().toString();
     const userMsg: UIMessage = {
       id: tempId,
@@ -293,18 +273,15 @@ export default function Chatbot() {
 
     try {
       if (!emotionExtracted) {
-        // Attempt to extract emotion
         const res = await apiExtractEmotion(Number(selectedChatId), text);
         console.log("Extract Emotion Result:", res);
 
         if (res.success) {
           setEmotionExtracted(true);
         } else {
-          // Failed to extract, next time still extract
           setEmotionExtracted(false);
         }
 
-        // If backend returns a content (bot response), display it
         if (res.content) {
           const botMsg: UIMessage = {
             id: (Date.now() + 1).toString(),
@@ -314,7 +291,6 @@ export default function Chatbot() {
           setMessages((prev) => [...prev, botMsg]);
         }
 
-        // Mock Survey on success
         if (res.success) {
           const surveyMsg: UIMessage = {
             id: (Date.now() + 2).toString(),
@@ -324,7 +300,6 @@ export default function Chatbot() {
           setMessages((prev) => [...prev, surveyMsg]);
         }
       } else {
-        // Already extracted, just store message
         await apiSendMessage(Number(selectedChatId), text, true);
       }
     } catch (e) {
@@ -356,8 +331,6 @@ export default function Chatbot() {
       }
     }
 
-    // Enter the chat
-    // Prevent loadMessages from overwriting our optimistic state
     skipLoadRef.current = true;
     setSelectedChatId(chatId);
     setPendingChatId(null);
@@ -388,7 +361,6 @@ export default function Chatbot() {
         setMessages((prev) => [...prev, botMsg]);
       }
 
-      // Mock Survey on success
       if (res.success) {
         const surveyMsg: UIMessage = {
           id: (Date.now() + 2).toString(),
@@ -404,16 +376,117 @@ export default function Chatbot() {
     }
   };
 
+  const handleScriptedClick = async (userText: string, assistantText: string) => {
+    setIsLoading(true);
+
+    let currentChatId = selectedChatId;
+
+    if (!currentChatId) {
+      try {
+        const newChat = await startConversation();
+        const newChatSummary: ChatSummary = {
+          id: newChat.id.toString(),
+          title: newChat.title,
+          icon: getEmotionIcon(newChat.emotion),
+        };
+        setChats((prev) => [newChatSummary, ...prev]);
+        currentChatId = newChat.id.toString();
+        setEmotionExtracted(false);
+        
+        skipLoadRef.current = true;
+        setSelectedChatId(currentChatId);
+        setMessages([]);
+      } catch (e) {
+        console.error("Failed to start new conversation for scripted content", e);
+        setIsLoading(false);
+        return;
+      }
+    }
+    
+    if (!currentChatId) {
+        setIsLoading(false);
+        return;
+    }
+
+    const userMsg: UIMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      parts: [{ type: "text", text: userText }],
+    };
+
+    const assistantMsg: UIMessage = {
+      id: (Date.now() + 1).toString(),
+      role: "assistant",
+      parts: [{ type: "text", text: assistantText }],
+    };
+
+    setMessages((prev) => [...prev, userMsg, assistantMsg]);
+    setEmotionExtracted(true); 
+
+    try {
+        await apiSendMessage(Number(currentChatId), userText, true);
+        await apiSendMessage(Number(currentChatId), assistantText, false);
+    } catch (e) {
+        console.error("Failed to persist scripted exchange", e);
+    }
+    
+    setIsLoading(false);
+  };
+
+
   const handleIntroClick = () => {
-    // For introduction, we can just trigger a suggestion click with the intro text
-    // This simplifies things and reuses the existing logic
-    const userText = "Could you briefly introduce what this Moodtrip website does?";
-    handleSuggestionClick(userText);
+    const userText =
+      "Could you briefly introduce what this Moodtrip website does?";
+
+    const assistantText = `Of course! 😊  
+
+**In one sentence:** Moodtrip is a tiny travel buddy that suggests same-day or short-notice trips that match your current mood.
+
+**What Moodtrip helps with:** - You’re not sure *where* to go, you just know *how* you feel  
+- You want a small reset rather than a big, complicated holiday  
+- You’d like ideas that feel emotionally right, not just “top rated nearby”
+
+**What you share with me:** 1. How you feel right now (tired, excited, overwhelmed, calm, “meh”…).  
+2. Who’s coming with you (solo, couple, friends, family).  
+3. When you’d roughly like to go and where you’re starting from (if you already know).
+
+**What I do with that:** - I turn your mood + context into a few trip ideas to explore.  
+- I try to match the vibe you want: soothing, energising, playful, reflective, etc.
+
+**A small heads-up:** I’m not doing deep emotion analysis on the backend *yet*, so if you share something very complex I may not catch every nuance — but I’ll always respond kindly and try to stay close to your tone.
+
+**What you can do next:** Choose a mood prompt from the sidebar, or just type how you’re feeling and hit **Send**.  
+I’ll take it from there and start shaping a Moodtrip for you 💫`;
+
+    handleScriptedClick(userText, assistantText);
   };
 
   const handleQuickStartClick = () => {
-    const userText = "How do I quickly get started using Moodtrip? Please give me a short guide.";
-    handleSuggestionClick(userText);
+    const userText =
+      "How do I quickly get started using Moodtrip? Please give me a short guide.";
+
+    const assistantText = `Let’s keep it super simple 🌈  
+
+**Quick start in 4 tiny steps:**
+
+1. **Tell me how you feel.** For example: “I’m stressed from work and need a soft reset”,  
+   or “I’m in a great mood and want something fun and spontaneous”.
+
+2. **Say what you want this trip to do.** Do you want to:
+   - Relax and slow down?  
+   - Clear your head?  
+   - Celebrate something?  
+   - Feel inspired or creative?
+
+3. **Add a few basics when you’re ready.** - How many people are travelling  
+   - Rough timing (tonight, tomorrow, this weekend, sometime soon)  
+   - Your starting city or area  
+
+4. **Press Send and just chat.** I’ll ask for anything that’s missing and then suggest a few trip ideas that match your mood, energy and situation — not just your location.
+
+Later on, when Spotify is connected, I’ll also suggest playlists and artists that fit both your mood and the style of your trip, so your Moodtrip comes with its own soundtrack 🎧✨`;
+
+    handleScriptedClick(userText, assistantText);
   };
 
   return (
@@ -456,11 +529,9 @@ export default function Chatbot() {
                   const res = await submitSurvey(Number(selectedChatId), data);
                   console.log("Received Route:", res.route);
 
-                  // Persist survey as a user message
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(data)}`;
                   await apiSendMessage(Number(selectedChatId), surveyContent, true);
 
-                  // Update local state to show the persisted survey immediately
                   const persistedSurveyMsg: UIMessage = {
                     id: Date.now().toString(),
                     role: "user",
@@ -468,13 +539,11 @@ export default function Chatbot() {
                   };
                   setMessages((prev) => [...prev, persistedSurveyMsg]);
 
-                  // Optional: Add a success message from bot
                   let botText = "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
                   if (res.spotifyPlaylistLink) {
                     botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: ${res.spotifyPlaylistLink}`;
                   }
 
-                  // Persist bot message
                   await apiSendMessage(Number(selectedChatId), botText, false);
 
                   const successMsg: UIMessage = {

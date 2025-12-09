@@ -81,7 +81,7 @@ export function NavMain({
                               className="text-sm font-normal"
                               onClick={(e) => {
                                 if (!handler) return;
-                                e.preventDefault(); // 不跳转，只走逻辑
+                                e.preventDefault();
                                 handler();
                               }}
                             >
