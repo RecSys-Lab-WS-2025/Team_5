@@ -22,7 +22,7 @@ interface ChatInterfaceProps {
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
   routeGeoJson?: FeatureCollection | null;
-  onSurveySubmit?: (data: SurveyData) => void;
+  onSurveySubmit?: (data: SurveyData) => Promise<void> | void;
 }
 
 // ... inside ChatInterface component
