@@ -589,8 +589,8 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                     // Append Cards
                     // TODO: This logic currently duplicates the single route response into 3 mock cards.
                     // Ideally, the backend should return a list of recommendations.
-                    const routeAny = res.route as any;
-                    const props = routeAny.features?.[0]?.properties || {};
+                    const routeFc = res.route as FeatureCollection;
+                    const props = routeFc.features?.[0]?.properties || {};
 
                     // Create 3 mock cards based on the single real result for demo purposes
                     const cardDataList = Array.from({ length: 3 }).map((_, i) => ({

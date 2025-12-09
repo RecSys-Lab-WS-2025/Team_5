@@ -1,10 +1,19 @@
-
-import * as React from "react";
+import React from "react";
 import { RouteCard } from "./route-card";
 
+export interface RouteCardData {
+    id: string;
+    title: string;
+    description: string;
+    imageUrl: string;
+    distanceMeters: number;
+    durationSeconds: number;
+    geoJson?: any; // Keeping any for now or FeatureCollection if imported, but let's stick to any for geoJson to avoid import complexity if not needed for the card itself, or use generic object
+}
+
 interface RouteCarouselProps {
-    routes: any[];
-    onRouteClick: (route: any) => void;
+    routes: RouteCardData[];
+    onRouteClick: (route: RouteCardData) => void;
 }
 
 export function RouteCarousel({ routes, onRouteClick }: RouteCarouselProps) {
