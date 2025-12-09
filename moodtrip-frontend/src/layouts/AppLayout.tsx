@@ -53,6 +53,7 @@ export function AppLayout() {
   const hideNavbar =
     location.pathname.startsWith("/chat") ||
     location.pathname.startsWith("/login") ||
+    location.pathname.startsWith("/route-details") ||
     location.pathname.startsWith("/signup");
 
   return (

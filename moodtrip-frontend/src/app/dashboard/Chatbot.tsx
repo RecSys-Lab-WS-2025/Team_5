@@ -413,8 +413,8 @@ export default function Chatbot() {
     }
 
     if (!currentChatId) {
-        setIsLoading(false);
-        return;
+      setIsLoading(false);
+      return;
     }
 
     const userMsg: UIMessage = {
@@ -433,10 +433,10 @@ export default function Chatbot() {
     setEmotionExtracted(true);
 
     try {
-        await apiSendMessage(Number(currentChatId), userText, true);
-        await apiSendMessage(Number(currentChatId), assistantText, false);
+      await apiSendMessage(Number(currentChatId), userText, true);
+      await apiSendMessage(Number(currentChatId), assistantText, false);
     } catch (e) {
-        console.error("Failed to persist scripted exchange", e);
+      console.error("Failed to persist scripted exchange", e);
     }
 
     setIsLoading(false);
@@ -585,6 +585,38 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                       parts: [{ type: "text", text: mapPayload }],
                     };
                     setMessages((prev) => [...prev, mapMsg]);
+
+                    // Append Cards
+                    // TODO: This logic currently duplicates the single route response into 3 mock cards.
+                    // Ideally, the backend should return a list of recommendations.
+                    const routeAny = res.route as any;
+                    const props = routeAny.features?.[0]?.properties || {};
+
+                    // Create 3 mock cards based on the single real result for demo purposes
+                    const cardDataList = Array.from({ length: 3 }).map((_, i) => ({
+                      id: `${i + 1}`,
+                      title: props.name || `Recommended Route ${i + 1}`,
+                      description: props.description || "A personalized route based on your mood.",
+                      imageUrl: props.image || "/placeholder-route.jpg",
+                      distanceMeters: (props.distance || 5000) + (i * 500), // minor variation
+                      durationSeconds: (props.duration || 3600) + (i * 300), // minor variation
+                      geoJson: res.route
+                    }));
+
+                    const cardsPayload = `[ROUTE_CARDS] ${JSON.stringify(cardDataList)}`;
+                    // We don't necessarily need to send this to backend as a separate message if we don't want to persist it as "cards", 
+                    // but for consistency with history let's send it or just add to local state. 
+                    // Let's just add to local state to avoid cluttering backend history if not needed, 
+                    // OR send it if we want it to persist. 
+                    // Decision: Send it so it persists on reload.
+                    await apiSendMessage(Number(selectedChatId), cardsPayload, false);
+
+                    const cardsMsg: UIMessage = {
+                      id: (Date.now() + 3).toString(),
+                      role: "assistant",
+                      parts: [{ type: "text", text: cardsPayload }],
+                    };
+                    setMessages((prev) => [...prev, cardsMsg]);
                   } else {
                     console.warn(
                       "Received route but could not convert to GeoJSON"
