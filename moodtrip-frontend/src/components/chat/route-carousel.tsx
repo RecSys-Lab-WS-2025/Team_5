@@ -1,4 +1,3 @@
-import React from "react";
 import { RouteCard } from "./route-card";
 import type { FeatureCollection } from "geojson";
 

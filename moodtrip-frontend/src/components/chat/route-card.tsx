@@ -1,5 +1,3 @@
-
-import * as React from "react";
 import { Star, Users, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 

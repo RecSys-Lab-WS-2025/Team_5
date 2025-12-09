@@ -1,6 +1,4 @@
-
-
-import * as React from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
