@@ -41,7 +41,9 @@ public class RouteService {
             List<PoiCategory> poiCategories,
             int radiusMeters
     ) {
+        LOGGER.info("Getting route for conversationId: {}, lat: {}, lon: {}, radius: {}", conversationId, lat, lon, radiusMeters);
         return osmPort.findAmenitiesAround(lat, lon, poiCategories, radiusMeters)
+                .doOnNext(poi -> LOGGER.info("Found POI: {}", poi.tags().get("name")))
                 .flatMap(poi ->
                         wikipediaPort.fetchSummaryForTag(poi.tags().get("wikipedia"))
                                 .defaultIfEmpty("")
@@ -65,6 +67,7 @@ public class RouteService {
                                 })
                 )
                 .collectList()
+                .doOnNext(enrichedPois -> LOGGER.info("Found {} enriched POIs for conversation {}", enrichedPois.size(), conversationId))
                 .flatMap(enrichedPois ->
                         routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(
                                         enrichedPois.stream().map(EnrichedPoi::poi).toList()

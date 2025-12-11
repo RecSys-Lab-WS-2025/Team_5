@@ -96,7 +96,7 @@ public class ConversationController {
         
         LOGGER.info("Start extracting user emotions for userId: {}", userId);
         return conversationService.extractEmotion(conversationId, userId, message)
-                .doOnSuccess(e -> LOGGER.info("Successfully extracted user emotions"))
+                .doOnSuccess(e -> LOGGER.info("Successfully extracted user emotions {}", e))
                 .doOnError(err -> LOGGER.error("Error while extracting emotions", err));
     }
 
