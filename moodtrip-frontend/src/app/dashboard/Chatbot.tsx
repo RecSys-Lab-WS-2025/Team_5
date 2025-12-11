@@ -599,7 +599,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
         onRefreshChats={loadChats}
       />
       <SidebarInset>
-        <header className="sticky top-0 flex h-16 shrink-0 items-center gap-2 bg-background">
+        <header className="sticky z-40 top-0 flex h-16 shrink-0 items-center gap-2 bg-background">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
           </div>
@@ -677,17 +677,13 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                     const cardDataList = Array.from({ length: 3 }).map(
                       (_, i) => ({
                         id: `${i + 1}`,
-                        title:
-                          props.name || `Recommended Route ${i + 1}`,
+                        title: props.name || `Recommended Route ${i + 1}`,
                         description:
                           props.description ||
                           "A personalized route based on your mood.",
-                        imageUrl:
-                          props.image || "/placeholder-route.jpg",
-                        distanceMeters:
-                          (props.distance || 5000) + i * 500,
-                        durationSeconds:
-                          (props.duration || 3600) + i * 300,
+                        imageUrl: props.image || "/placeholder-route.jpg",
+                        distanceMeters: (props.distance || 5000) + i * 500,
+                        durationSeconds: (props.duration || 3600) + i * 300,
                         geoJson: res.route,
                       })
                     );
@@ -735,7 +731,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
             ? `“${chatToDelete.title}” and all its messages will be permanently deleted.`
             : "This chat and all its messages will be permanently deleted."
         }
-        confirmLabel={isDeleting ? "Deleting..." : "Delete"}
+        confirmLabel="Delete"
         cancelLabel="Cancel"
         loading={isDeleting}
         onConfirm={handleConfirmDeleteChat}

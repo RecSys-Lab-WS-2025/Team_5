@@ -1,4 +1,3 @@
-"use client";
 import {
   Dialog,
   DialogContent,
@@ -41,9 +40,7 @@ export function DeleteConfirmDialog({
             {title}
           </DialogTitle>
           {description && (
-            <p className="mt-1 text-sm text-slate-500">
-              {description}
-            </p>
+            <p className="mt-1 text-sm text-slate-500">{description}</p>
           )}
         </DialogHeader>
 
