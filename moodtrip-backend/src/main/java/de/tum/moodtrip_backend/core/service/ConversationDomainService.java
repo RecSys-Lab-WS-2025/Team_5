@@ -42,6 +42,7 @@ public class ConversationDomainService {
 
     /**
      * Get a single conversation by its ID.
+     * Throws ResourceNotFoundException if no conversation exists.
      */
     public Mono<ConversationDomain> getConversationById(Long id) {
         return conversationPort.findById(id)
@@ -52,6 +53,8 @@ public class ConversationDomainService {
 
     /**
      * Get all messages of a conversation.
+     * NOTE: This method does not perform any permission checks.
+     * Caller is responsible for validating conversation ownership if needed.
      */
     public Flux<MessageDomain> getMessagesByConversationId(Long conversationId) {
         return conversationPort.findMessagesByConversationId(conversationId);
@@ -87,19 +90,14 @@ public class ConversationDomainService {
                         new ResourceNotFoundException("Conversation with ID " + conversationId + " not found")
                 ))
                 .flatMap(conversation -> {
-                    ConversationDomain updated = new ConversationDomain(
-                            conversation.id(),
-                            conversation.userId(),
-                            newTitle,
-                            conversation.emotion(),
-                            conversation.createdAt()
-                    );
+                    ConversationDomain updated = conversation.withTitle(newTitle);
                     return conversationPort.save(updated);
                 });
     }
 
     /**
      * Update conversation title and ensure the conversation belongs to the given user.
+     * This method is intended for public API usage where user ownership must be enforced.
      */
     public Mono<ConversationDomain> updateConversationTitle(Long conversationId,
                                                             Long userId,
@@ -112,13 +110,7 @@ public class ConversationDomainService {
                                 "Access denied: This conversation does not belong to you"
                         ));
                     }
-                    ConversationDomain updated = new ConversationDomain(
-                            conversation.id(),
-                            conversation.userId(),
-                            newTitle,
-                            conversation.emotion(),
-                            conversation.createdAt()
-                    );
+                    ConversationDomain updated = conversation.withTitle(newTitle);
                     return conversationPort.save(updated);
                 });
     }
@@ -175,6 +167,7 @@ public class ConversationDomainService {
 
     /**
      * Generate a title for the conversation using the LLM based on the transcript.
+     * Ensures that the conversation belongs to the given user.
      */
     public Mono<String> generateConversationTitle(Long conversationId, Long userId) {
         return getConversationById(conversationId)
@@ -272,6 +265,7 @@ public class ConversationDomainService {
 
     /**
      * Update the conversation title with the given value.
+     * This private helper is used when the title has already been generated.
      */
     private Mono<Void> updateConversationTitle(ConversationDomain conversation, String title) {
         ConversationDomain updated = conversation.withTitle(title);
@@ -280,6 +274,7 @@ public class ConversationDomainService {
 
     /**
      * Add a message (user or bot) to the conversation.
+     * This method does not perform ownership checks; the caller is responsible for that.
      */
     public Mono<MessageDomain> addMessage(
             @NotNull(message = "Conversation ID cannot be null") Long conversationId,
