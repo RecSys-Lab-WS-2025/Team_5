@@ -29,7 +29,7 @@ export type EmotionResultDto = {
 };
 
 /**
- * 开启新的对话
+ * Start a new conversation
  */
 export async function startConversation(): Promise<ConversationDto> {
   const res = await authFetch(`${BASE}/api/conversations/start`, {
@@ -50,7 +50,7 @@ export async function startConversation(): Promise<ConversationDto> {
 }
 
 /**
- * 获取当前用户的所有对话
+ * Get all conversations of the current user
  */
 export async function getMyConversations(): Promise<ConversationDto[]> {
   const res = await authFetch(`${BASE}/api/conversations/me`, {
@@ -63,7 +63,7 @@ export async function getMyConversations(): Promise<ConversationDto[]> {
 }
 
 /**
- * 获取某个对话的所有消息
+ * Get all messages of a specific conversation
  */
 export async function getConversationMessages(
   conversationId: number
@@ -81,8 +81,8 @@ export async function getConversationMessages(
 }
 
 /**
- * 发送消息(暂时不提取情绪,直接保存)
- * 返回保存的消息对象
+ * Send a message (temporarily not performing emotion extraction; directly saving)
+ * Returns the saved message object
  */
 export async function sendMessage(
   conversationId: number,
@@ -113,8 +113,8 @@ export async function sendMessage(
 }
 
 /**
- * 提取情绪(第一次发送消息时使用)
- * 返回情绪分析结果
+ * Extract emotion (used for the first user message)
+ * Returns emotion analysis result
  */
 export async function extractEmotion(
   conversationId: number,
@@ -144,7 +144,7 @@ export async function extractEmotion(
 }
 
 /**
- * 提交问卷
+ * Submit the survey
  */
 export interface SurveyData {
   latitude: number;
@@ -180,4 +180,63 @@ export async function submitSurvey(
   }
 
   return res.json();
+}
+
+/**
+ * Rename a conversation by ID
+ */
+export async function renameConversation(
+  conversationId: number,
+  title: string
+): Promise<ConversationDto> {
+  const res = await authFetch(
+    `${BASE}/api/conversations/${conversationId}/title?title=${encodeURIComponent(
+      title
+    )}`,
+    {
+      method: "PUT",
+    }
+  );
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("Rename conversation failed:", {
+      status: res.status,
+      statusText: res.statusText,
+      url: res.url,
+      error: errorText,
+    });
+    throw new Error(
+      `Failed to rename conversation: ${res.status} ${res.statusText}`
+    );
+  }
+
+  return res.json();
+}
+
+/**
+ * Delete a conversation by ID
+ */
+export async function deleteConversation(
+  conversationId: number
+): Promise<void> {
+  const res = await authFetch(
+    `${BASE}/api/conversations/${conversationId}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("Delete conversation failed:", {
+      status: res.status,
+      statusText: res.statusText,
+      url: res.url,
+      error: errorText,
+    });
+    throw new Error(
+      `Failed to delete conversation: ${res.status} ${res.statusText}`
+    );
+  }
 }

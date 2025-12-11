@@ -1,3 +1,4 @@
+// src/components/sidebar/app-sidebar.tsx
 "use client";
 
 import * as React from "react";
@@ -35,6 +36,9 @@ type Props = React.ComponentProps<typeof Sidebar> & {
   selectedChatId: string | null;
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
+  onRenameChat?: (id: string, currentTitle: string) => void;
+  onDeleteChat?: (id: string) => void;
+  onShareChat?: (id: string) => void;
   onIntroductionClick?: () => void;
   onQuickStartClick?: () => void;
   onRefreshChats?: () => void;
@@ -48,6 +52,9 @@ export function AppSidebar({
   selectedChatId,
   onNewChat,
   onSelectChat,
+  onRenameChat,
+  onDeleteChat,
+  onShareChat,
   onIntroductionClick,
   onQuickStartClick,
   onRefreshChats,
@@ -89,15 +96,18 @@ export function AppSidebar({
       </div>
 
       <SidebarContent>
-         <NavChats
+        <NavChats
           chats={chats}
           selectedChatId={selectedChatId}
           onSelectChat={onSelectChat}
+          onRenameChat={onRenameChat}
+          onDeleteChat={onDeleteChat}
+          onShareChat={onShareChat}
         />
       </SidebarContent>
 
       <SidebarFooter>
-        <NavSecondary items={navSecondary} className="border-t pt-2" /> 
+        <NavSecondary items={navSecondary} className="border-t pt-2" />
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>

@@ -10,6 +10,7 @@ import reactor.core.publisher.Mono;
 
 @Repository
 public interface R2dbcMessageRepository extends ReactiveCrudRepository<MessageEntity, Long> {
+
     @Query("SELECT * FROM message WHERE conversation_id = :conversationId")
     Flux<MessageEntity> findByConversationId(Long conversationId);
 
@@ -24,5 +25,10 @@ public interface R2dbcMessageRepository extends ReactiveCrudRepository<MessageEn
 
     @Query("SELECT * FROM message WHERE conversation_id = :conversationId ORDER BY created_at DESC LIMIT 1")
     Mono<MessageEntity> findFirstByConversationIdOrderByCreatedAtDesc(Long conversationId);
-}
 
+    /**
+     * Delete all messages for a given conversation id.
+     */
+    @Query("DELETE FROM message WHERE conversation_id = :conversationId")
+    Mono<Void> deleteByConversationId(Long conversationId);
+}

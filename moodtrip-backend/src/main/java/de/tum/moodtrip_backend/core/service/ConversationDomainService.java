@@ -8,13 +8,12 @@ import de.tum.moodtrip_backend.core.model.Emotion;
 import de.tum.moodtrip_backend.core.model.Sender;
 import de.tum.moodtrip_backend.core.model.EmotionResult;
 import de.tum.moodtrip_backend.core.port.ConversationTitlePort;
-import jakarta.validation.constraints.NotNull;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-
 import de.tum.moodtrip_backend.core.port.ConversationPort;
 import de.tum.moodtrip_backend.core.port.EmotionPort;
 import de.tum.moodtrip_backend.exception.ResourceNotFoundException;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -27,29 +26,47 @@ public class ConversationDomainService {
     private final ConversationTitlePort conversationTitlePort;
 
     public ConversationDomainService(ConversationPort conversationPort,
-                                     EmotionPort emotionPort, ConversationTitlePort conversationTitlePort) {
+                                     EmotionPort emotionPort,
+                                     ConversationTitlePort conversationTitlePort) {
         this.conversationPort = conversationPort;
         this.emotionPort = emotionPort;
         this.conversationTitlePort = conversationTitlePort;
     }
 
+    /**
+     * Get all conversations for a given user.
+     */
     public Flux<ConversationDomain> getConversationsByUserId(Long userId) {
         return conversationPort.findByUserId(userId);
     }
 
+    /**
+     * Get a single conversation by its ID.
+     */
     public Mono<ConversationDomain> getConversationById(Long id) {
         return conversationPort.findById(id)
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Conversation with ID " + id + " not found")));
+                .switchIfEmpty(Mono.error(
+                        new ResourceNotFoundException("Conversation with ID " + id + " not found")
+                ));
     }
 
+    /**
+     * Get all messages of a conversation.
+     */
     public Flux<MessageDomain> getMessagesByConversationId(Long conversationId) {
         return conversationPort.findMessagesByConversationId(conversationId);
     }
 
+    /**
+     * Count messages of a conversation.
+     */
     public Mono<Long> getMessageCount(Long conversationId) {
         return conversationPort.countMessagesByConversationId(conversationId);
     }
 
+    /**
+     * Start a new conversation for the given user with an initial title.
+     */
     public Mono<ConversationDomain> startConversation(Long userId, String title) {
         ConversationDomain conversation = new ConversationDomain(
                 null,
@@ -61,10 +78,14 @@ public class ConversationDomainService {
         return conversationPort.save(conversation);
     }
 
-
+    /**
+     * Update conversation title without user check (for internal usage if needed).
+     */
     public Mono<ConversationDomain> updateConversationTitle(Long conversationId, String newTitle) {
         return conversationPort.findById(conversationId)
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Conversation with ID " + conversationId + " not found")))
+                .switchIfEmpty(Mono.error(
+                        new ResourceNotFoundException("Conversation with ID " + conversationId + " not found")
+                ))
                 .flatMap(conversation -> {
                     ConversationDomain updated = new ConversationDomain(
                             conversation.id(),
@@ -77,12 +98,57 @@ public class ConversationDomainService {
                 });
     }
 
-    public Mono<Void> deleteConversation(Long conversationId) {
-        return conversationPort.findById(conversationId)
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Conversation with ID " + conversationId + " not found")))
-                .flatMap(conversation -> conversationPort.deleteById(conversationId));
+    /**
+     * Update conversation title and ensure the conversation belongs to the given user.
+     */
+    public Mono<ConversationDomain> updateConversationTitle(Long conversationId,
+                                                            Long userId,
+                                                            String newTitle) {
+        return getConversationById(conversationId)
+                .flatMap(conversation -> {
+                    if (!conversation.userId().equals(userId)) {
+                        return Mono.error(new ResponseStatusException(
+                                HttpStatus.FORBIDDEN,
+                                "Access denied: This conversation does not belong to you"
+                        ));
+                    }
+                    ConversationDomain updated = new ConversationDomain(
+                            conversation.id(),
+                            conversation.userId(),
+                            newTitle,
+                            conversation.emotion(),
+                            conversation.createdAt()
+                    );
+                    return conversationPort.save(updated);
+                });
     }
 
+    /**
+     * Delete conversation with user ownership check.
+     * Messages are deleted first to avoid foreign key constraint errors.
+     */
+    public Mono<Void> deleteConversation(Long conversationId, Long userId) {
+        return getConversationById(conversationId)
+                .flatMap(conversation -> {
+                    if (!conversation.userId().equals(userId)) {
+                        return Mono.error(new ResponseStatusException(
+                                HttpStatus.FORBIDDEN,
+                                "Access denied: This conversation does not belong to you"
+                        ));
+                    }
+
+                    // First delete all messages belonging to this conversation,
+                    // then delete the conversation itself.
+                    return conversationPort.deleteMessagesByConversationId(conversationId)
+                            .then(conversationPort.deleteById(conversationId));
+                });
+    }
+
+    /**
+     * Extract the user's emotion based on the latest message and conversation history.
+     * Saves the user message, emotion result, updates conversation emotion,
+     * and auto-generates a conversation title.
+     */
     public Mono<EmotionResult> extractEmotion(Long conversationId, Long userId, String message) {
         return getConversationById(conversationId)
                 .flatMap(conversation -> {
@@ -100,13 +166,16 @@ public class ConversationDomainService {
                                             .flatMap(emotionResult ->
                                                     saveEmotionResult(conversationId, emotionResult)
                                                             .then(updateConversationEmotion(conversation, emotionResult))
-                                                            .then(generateConversationTitle(conversationId,userId))
+                                                            .then(generateConversationTitle(conversationId, userId))
                                                             .thenReturn(emotionResult)
                                             )
                             );
                 });
     }
 
+    /**
+     * Generate a title for the conversation using the LLM based on the transcript.
+     */
     public Mono<String> generateConversationTitle(Long conversationId, Long userId) {
         return getConversationById(conversationId)
                 .flatMap(conversation -> {
@@ -129,7 +198,7 @@ public class ConversationDomainService {
 
     /**
      * Build a textual representation of the conversation history plus the latest user message.
-     * Each past message is prefixed with the sender (USER/BOT).
+     * Only USER messages are included in the history, each prefixed with the sender.
      */
     private Mono<String> buildConversationHistory(Long conversationId, String latestMessage) {
         return conversationPort.findMessagesByConversationId(conversationId)
@@ -147,7 +216,7 @@ public class ConversationDomainService {
     }
 
     /**
-     * Persist the latest user message in the conversation.
+     * Persist the latest user message into the conversation.
      */
     private Mono<MessageDomain> saveUserMessage(Long conversationId, String message) {
         MessageDomain userMessage = new MessageDomain(
@@ -161,7 +230,7 @@ public class ConversationDomainService {
     }
 
     /**
-     * Persist the bot's emotion result as a message in the conversation.
+     * Persist the emotion result as a bot message.
      */
     private Mono<MessageDomain> saveEmotionResult(Long conversationId, EmotionResult emotionResult) {
         MessageDomain botMessage = new MessageDomain(
@@ -175,7 +244,7 @@ public class ConversationDomainService {
     }
 
     /**
-     * Update the conversation's stored emotion based on the LLM's result.
+     * Update the stored emotion of the conversation based on the LLM result.
      */
     private Mono<Void> updateConversationEmotion(ConversationDomain conversation,
                                                  EmotionResult emotionResult) {
@@ -186,7 +255,7 @@ public class ConversationDomainService {
     }
 
     /**
-     * Build a textual representation of the full conversation history for title generation.
+     * Build the full conversation transcript for title generation.
      * Includes both USER and BOT messages, each prefixed with the sender.
      */
     private Mono<String> buildConversationTranscriptForTitle(Long conversationId) {
@@ -202,15 +271,21 @@ public class ConversationDomainService {
     }
 
     /**
-     * Update the conversation's stored title based on the LLM's result.
+     * Update the conversation title with the given value.
      */
     private Mono<Void> updateConversationTitle(ConversationDomain conversation, String title) {
         ConversationDomain updated = conversation.withTitle(title);
         return conversationPort.save(updated).then();
     }
 
-
-    public Mono<MessageDomain> addMessage(@NotNull(message = "Conversation ID cannot be null") Long conversationId, String content, boolean isUser) {
+    /**
+     * Add a message (user or bot) to the conversation.
+     */
+    public Mono<MessageDomain> addMessage(
+            @NotNull(message = "Conversation ID cannot be null") Long conversationId,
+            String content,
+            boolean isUser
+    ) {
         MessageDomain messageDomain = new MessageDomain(
                 null,
                 conversationId,
@@ -219,6 +294,5 @@ public class ConversationDomainService {
                 LocalDateTime.now()
         );
         return conversationPort.saveMessage(messageDomain);
-
     }
 }
