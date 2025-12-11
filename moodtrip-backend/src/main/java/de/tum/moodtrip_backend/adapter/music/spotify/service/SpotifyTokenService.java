@@ -26,7 +26,8 @@ public class SpotifyTokenService {
 
 
     public Mono<SpotifyTokenDomain> create(SpotifyTokenDomain domain) {
-        return spotifyTokenPort.save(domain);
+        return spotifyTokenPort.save(domain)
+                .doOnSuccess(token -> logger.info("Spotify token created with ID: {}", token.id()));
     }
 
     public Mono<SpotifyTokenDomain> getById(Long id) {
@@ -46,6 +47,7 @@ public class SpotifyTokenService {
     }
 
     public Mono<Void> deleteById(Long id, long authUserId) {
+        logger.info("Request to delete Spotify token {} by user {}", id, authUserId);
         return spotifyTokenPort.findById(id)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -56,12 +58,14 @@ public class SpotifyTokenService {
                                 .flatMap(user -> {
                                     if (user.spotifyTokenId() == null ||
                                             !user.spotifyTokenId().equals(id)) {
+                                        logger.warn("Unauthorized deletion attempt of token {} by user {}", id, authUserId);
                                         return Mono.error(new ResponseStatusException(
                                                 HttpStatus.FORBIDDEN,
                                                 "You are not authorized to delete this Spotify token"
                                         ));
                                     }
-                                    return spotifyTokenPort.deleteById(id);
+                                    return spotifyTokenPort.deleteById(id)
+                                            .doOnSuccess(v -> logger.info("Spotify token {} deleted successfully", id));
                                 })
                 );
     }

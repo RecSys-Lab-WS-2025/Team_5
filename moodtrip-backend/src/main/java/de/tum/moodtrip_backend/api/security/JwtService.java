@@ -17,8 +17,13 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class JwtService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(JwtService.class);
 
     private final Key signingKey;
     private final long expirationMinutes;
@@ -38,6 +43,7 @@ public class JwtService {
      * Generate a JWT for a logged-in user.
      */
     public String generateToken(UserProfile user) {
+        LOGGER.info("Generating JWT token for user ID: {}", user.id());
         Instant now = Instant.now();
         Instant exp = now.plus(expirationMinutes, ChronoUnit.MINUTES);
 
@@ -72,6 +78,7 @@ public class JwtService {
         try {
             return Long.valueOf(claims.getSubject());
         } catch (NumberFormatException e) {
+            LOGGER.error("Invalid userId format in token subject: {}", claims.getSubject());
             throw new JwtException("Invalid userId (subject) in JWT token", e);
         }
     }
@@ -129,6 +136,7 @@ public class JwtService {
             Date exp = claims.getExpiration();
             return exp != null && exp.after(new Date());
         } catch (JwtException e) {
+            LOGGER.debug("Token validation failed: {}", e.getMessage());
             return false;
         }
     }

@@ -18,9 +18,13 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Component
 public class OverpassAdapter implements OsmPort {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(OverpassAdapter.class);
     private final WebClient webClient;
 
     public OverpassAdapter(Builder webClientBuilder) {
@@ -38,6 +42,8 @@ public class OverpassAdapter implements OsmPort {
     @Override
     public Flux<Poi> findAmenitiesAround(double lat, double lon, List<PoiCategory> poiCategories, int radiusMeters) {
         String query = POICategoryOsmQueryBuilder.buildAroundQuery(poiCategories, lat, lon, radiusMeters);
+        LOGGER.info("Sending Overpass query: {}", query);
+
         return webClient.post()
                 .uri("/api/interpreter")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -45,6 +51,14 @@ public class OverpassAdapter implements OsmPort {
                 .body(BodyInserters.fromFormData("data", query))
                 .retrieve()
                 .bodyToMono(OverpassResponse.class)
+                .doOnSuccess(response -> {
+                   if (response != null && response.elements() != null) {
+                       LOGGER.info("Overpass returned {} elements", response.elements().size());
+                   } else {
+                       LOGGER.info("Overpass returned empty response");
+                   }
+                })
+                .doOnError(e -> LOGGER.error("Overpass query failed", e))
                 .map(OverpassResponsePOIMapper::toPois)
                 .flatMapMany(Flux::fromIterable)
                 .retryWhen(Retry.fixedDelay(5, Duration.ofMillis(10)));

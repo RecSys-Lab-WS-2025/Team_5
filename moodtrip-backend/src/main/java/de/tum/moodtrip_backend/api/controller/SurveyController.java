@@ -71,10 +71,12 @@ public class SurveyController {
             Authentication authentication) {
 
         Long userId = jwtService.extractUserId(authentication);
+        logger.info("Received survey submission for conversationId: {} from userId: {}", conversationId, userId);
 
         return conversationDomainService.getConversationById(conversationId)
                 .flatMap(conversation -> {
                     if (!conversation.userId().equals(userId)) {
+                        logger.warn("Access denied for survey submission. User {} tried to submit for conversation {}", userId, conversationId);
                         return Mono.error(new ResponseStatusException(
                                 HttpStatus.FORBIDDEN,
                                 "Access denied: This conversation does not belong to you"
@@ -83,16 +85,19 @@ public class SurveyController {
                     return Mono.just(request)
                             .map(req -> surveyDtoMapper.requestToDomain(req, conversationId, userId))
                             .flatMap(surveyPort::save)
+                            .doOnNext(s -> logger.info("Survey saved successfully for conversationId: {}", conversationId))
                             .flatMap(surveyDomain -> {
                                 // Generate route
                                 Mono<FeatureCollection> routeMono = routeService.getRoute(conversationId,
                                         surveyDomain.latitude(), surveyDomain.longitude(), surveyDomain.poiCategories(),
                                         surveyDomain.rangeMeters())
-                                        .map(geoJsonRouteMapper::toFeatureCollection);
+                                        .map(geoJsonRouteMapper::toFeatureCollection)
+                                        .doOnNext(route -> logger.info("Route generated successfully for conversationId: {}", conversationId));
 
                                 Mono<String> spotifyMono = userDomainService.findById(userId)
                                         .flatMap(user -> {
                                             if (user.hasSpotifyAuthorization()) {
+                                                logger.info("Generating spotify recommendation for user: {}", userId);
                                                 return conversationDomainService.getConversationById(conversationId)
                                                         .flatMap(conv -> {
                                                             String emotion = conv.emotion().toString();

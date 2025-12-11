@@ -55,16 +55,16 @@ public class ConversationController {
     public Flux<ConversationDomain> getConversations(
             @PathVariable @NotNull(message = "User ID cannot be null") Long userId,
             Authentication authentication) {
-        
+
         Long authenticatedUserId = jwtService.extractUserId(authentication);
-        
+
         if (!userId.equals(authenticatedUserId)) {
             return Flux.error(new ResponseStatusException(
-                HttpStatus.FORBIDDEN,
-                "Access denied: You can only view your own conversations"
+                    HttpStatus.FORBIDDEN,
+                    "Access denied: You can only view your own conversations"
             ));
         }
-        
+
         return conversationService.getConversationsByUserId(userId);
     }
 
@@ -72,15 +72,15 @@ public class ConversationController {
     public Flux<MessageDomain> getMessages(
             @PathVariable @NotNull(message = "Conversation ID cannot be null") Long conversationId,
             Authentication authentication) {
-        
+
         Long userId = jwtService.extractUserId(authentication);
-        
+
         // Verify conversation belongs to user
         return conversationService.getConversationsByUserId(userId)
                 .filter(conv -> conv.id().equals(conversationId))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Conversation not found or access denied"
+                        HttpStatus.NOT_FOUND,
+                        "Conversation not found or access denied"
                 )))
                 .flatMap(conv -> conversationService.getMessagesByConversationId(conversationId));
     }
@@ -91,12 +91,12 @@ public class ConversationController {
             @RequestParam @NotNull(message = "Conversation ID cannot be null") Long conversationId,
             @RequestParam @NotBlank(message = "Message cannot be blank") String message,
             Authentication authentication) {
-        
+
         Long userId = jwtService.extractUserId(authentication);
-        
+
         LOGGER.info("Start extracting user emotions for userId: {}", userId);
         return conversationService.extractEmotion(conversationId, userId, message)
-                .doOnSuccess(e -> LOGGER.info("Successfully extracted user emotions"))
+                .doOnSuccess(e -> LOGGER.info("Successfully extracted user emotions {}", e))
                 .doOnError(err -> LOGGER.error("Error while extracting emotions", err));
     }
 
@@ -126,10 +126,10 @@ public class ConversationController {
                 .filter(conv -> conv.id().equals(conversationId))
                 .next()
                 .switchIfEmpty(Mono.error(new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Conversation not found or access denied"
+                        HttpStatus.NOT_FOUND,
+                        "Conversation not found or access denied"
                 ))).flatMap(conversationDomain ->
                         conversationService.addMessage(conversationId, content, isUser));
-                }
     }
+}
 

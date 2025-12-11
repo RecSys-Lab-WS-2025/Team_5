@@ -45,6 +45,7 @@ public class MusicRecommendationService {
     }
 
     private Mono<String> getNeutralPlaylistId(Long userId) {
+        logger.info("Fetching neutral playlist ID fallback for user: {}", userId);
         return authService.getAccessToken(userId)
                 .flatMap(token -> webClient.get()
                         .uri(uriBuilder -> uriBuilder
@@ -58,13 +59,16 @@ public class MusicRecommendationService {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .retrieve()
                         .bodyToMono(JsonNode.class)
-                        .map(json -> json.path("playlists").path("items").path(0).path("id").asText()));
+                        .map(json -> json.path("playlists").path("items").path(0).path("id").asText())
+                        .doOnNext(id -> logger.info("Found neutral playlist ID: {}", id))
+                );
     }
 
 
     public Mono<String> findPlaylistIdByEmotion(String emotionKeyword, Long userId) {
         logger.info("Searching Spotify for playlist matching emotion: {}", emotionKeyword);
-        Mono<String> fallbackId = getNeutralPlaylistId(userId);
+        Mono<String> fallbackId = getNeutralPlaylistId(userId)
+                .doOnNext(id -> logger.info("Using neutral fallback playlist ID: {}", id));
 
 
         return authService.getAccessToken(userId)
@@ -116,6 +120,7 @@ public class MusicRecommendationService {
                                         .filter(id -> !id.isEmpty())
                                         .toList()
                                 )
+                                .doOnNext(list -> logger.info("Found {} tracks for playlist {}", list.size(), playlistId))
                 );
     }
 
@@ -144,6 +149,7 @@ public class MusicRecommendationService {
                                     .build())
                             .retrieve()
                             .bodyToMono(JsonNode.class)
+                            .doOnNext(json -> logger.info("ReccoBeats returned recommendation"))
                             .onErrorResume(e -> {
                                 logger.error("ReccoBeats call failed: {}", e.getMessage());
                                 return Mono.empty();
@@ -154,11 +160,15 @@ public class MusicRecommendationService {
     public Mono<String> createSpotifyPlaylistFromRecommendation(JsonNode recommendationJson, String mood, Long userId, Long convId) {
         String playlistName = "MoodTrip - " + mood + " Vibes";
         String description = "A playlist generated based on your mood: " + mood;
+        logger.info("Creating Spotify playlist '{}' for user {}", playlistName, userId);
         return Mono.fromCallable(() -> playlistMapper.extractTrackIdsFromJson(recommendationJson))
+                .doOnNext(trackIds -> logger.info("Extracted {} track IDs for new playlist", trackIds.size()))
                 .flatMap(trackIds ->
                         spotifyPlaylistService.createPlaylist(playlistName, true, description, userId)
+                                .doOnNext(id -> logger.info("Created empty playlist with ID: {}", id))
                                 .flatMap(playlistId ->
                                         spotifyPlaylistService.addTracksToPlaylist(playlistId, trackIds, userId)
+                                                .doOnSuccess(v -> logger.info("Added tracks to playlist {}", playlistId))
                                                 .then(Mono.defer(() -> {
                                                     String playlistUrl = "https://open.spotify.com/playlist/" + playlistId;
 

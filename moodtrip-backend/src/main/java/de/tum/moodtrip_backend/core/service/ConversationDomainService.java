@@ -19,8 +19,13 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class ConversationDomainService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConversationDomainService.class);
 
     private final ConversationPort conversationPort;
     private final EmotionPort emotionPort;
@@ -51,6 +56,7 @@ public class ConversationDomainService {
     }
 
     public Mono<ConversationDomain> startConversation(Long userId, String title) {
+        LOGGER.info("Starting new conversation for user identified by id {} with title: {}", userId, title);
         ConversationDomain conversation = new ConversationDomain(
                 null,
                 userId,
@@ -58,11 +64,13 @@ public class ConversationDomainService {
                 Emotion.NEUTRAL,
                 LocalDateTime.now()
         );
-        return conversationPort.save(conversation);
+        return conversationPort.save(conversation)
+                .doOnSuccess(c -> LOGGER.info("Conversation started with ID: {}", c.id()));
     }
 
 
     public Mono<ConversationDomain> updateConversationTitle(Long conversationId, String newTitle) {
+        LOGGER.info("Updating title for conversation {} to: {}", conversationId, newTitle);
         return conversationPort.findById(conversationId)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Conversation with ID " + conversationId + " not found")))
                 .flatMap(conversation -> {
@@ -78,15 +86,18 @@ public class ConversationDomainService {
     }
 
     public Mono<Void> deleteConversation(Long conversationId) {
+        LOGGER.info("Deleting conversation {}", conversationId);
         return conversationPort.findById(conversationId)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Conversation with ID " + conversationId + " not found")))
                 .flatMap(conversation -> conversationPort.deleteById(conversationId));
     }
 
     public Mono<EmotionResult> extractEmotion(Long conversationId, Long userId, String message) {
+        LOGGER.info("Extracting emotion for conversation {}, message length: {}", conversationId, message != null ? message.length() : 0);
         return getConversationById(conversationId)
                 .flatMap(conversation -> {
                     if (!conversation.userId().equals(userId)) {
+                        LOGGER.warn("Access denied for emotion extraction. User {} on conversation {}", userId, conversationId);
                         return Mono.error(new ResponseStatusException(
                                 HttpStatus.FORBIDDEN,
                                 "Access denied: This conversation does not belong to you"
@@ -97,12 +108,13 @@ public class ConversationDomainService {
                             .flatMap(historyAndNewMessage ->
                                     saveUserMessage(conversation.id(), message)
                                             .then(emotionPort.extractEmotion(historyAndNewMessage))
-                                            .flatMap(emotionResult ->
-                                                    saveEmotionResult(conversationId, emotionResult)
-                                                            .then(updateConversationEmotion(conversation, emotionResult))
-                                                            .then(generateConversationTitle(conversationId,userId))
-                                                            .thenReturn(emotionResult)
-                                            )
+                                            .flatMap(emotionResult -> {
+                                                LOGGER.info("Emotion extracted: {}, Score: {}", emotionResult.topLabel(), emotionResult.topScore());
+                                                return saveEmotionResult(conversationId, emotionResult)
+                                                        .then(updateConversationEmotion(conversation, emotionResult))
+                                                        .then(generateConversationTitle(conversationId, userId))
+                                                        .thenReturn(emotionResult);
+                                            })
                             );
                 });
     }

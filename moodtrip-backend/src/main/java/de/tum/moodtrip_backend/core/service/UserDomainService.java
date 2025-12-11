@@ -12,8 +12,13 @@ import de.tum.moodtrip_backend.exception.UserNotFoundException;
 import de.tum.moodtrip_backend.api.security.JwtService;
 import reactor.core.publisher.Mono;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class UserDomainService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserDomainService.class);
 
     private final UserPort userPort;
     private final PasswordEncoder passwordEncoder;
@@ -31,14 +36,17 @@ public class UserDomainService {
     }
 
     public Mono<UserProfile> createUser(String username, String email, String rawPassword) {
+        LOGGER.info("Attempting to create user with username: {}", username);
         return userPort.existsByUsername(username)
                 .flatMap(usernameExists -> {
                     if (usernameExists) {
+                        LOGGER.warn("Username already exists: {}", username);
                         return Mono.error(new IllegalArgumentException("Username already exists: " + username));
                     }
                     return userPort.existsByEmail(email)
                             .flatMap(emailExists -> {
                                 if (emailExists) {
+                                    LOGGER.warn("Email already exists: {}", email);
                                     return Mono.error(new IllegalArgumentException("Email already exists: " + email));
                                 }
 
@@ -52,7 +60,8 @@ public class UserDomainService {
                                         hash,
                                         null
                                 );
-                                return userPort.save(user);
+                                return userPort.save(user)
+                                        .doOnSuccess(u -> LOGGER.info("User created successfully: {}", u.id()));
                             });
                 });
     }
@@ -73,6 +82,7 @@ public class UserDomainService {
     }
 
     public Mono<Void> deleteUser(Long id) {
+        LOGGER.info("Deleting user with ID: {}", id);
         return userPort.findById(id)
                 .switchIfEmpty(Mono.error(new UserNotFoundException("User not found with Id: " + id)))
                 .then(userPort.deleteById(id));
@@ -86,12 +96,15 @@ public class UserDomainService {
             String spotifyEmail,
             String spotifyDisplayName
     ) {
+        LOGGER.info("Linking/Creating user from Spotify. Email: {}", spotifyEmail);
         // 1. Check if already linked
         return userPort.findBySpotifyTokenId(spotifyTokenId)
+                .doOnNext(u -> LOGGER.info("User already linked to token {}: {}", spotifyTokenId, u.username()))
                 .switchIfEmpty(Mono.defer(() -> {
                     // 2. Try to link to existing user by email
                     if (spotifyEmail != null && !spotifyEmail.isBlank()) {
                         return userPort.findByEmail(spotifyEmail)
+                                .doOnNext(u -> LOGGER.info("Found existing user by email {}, linking spotify account", spotifyEmail))
                                 .flatMap(existingUser -> linkSpotifyAccount(existingUser.id(), spotifyTokenId))
                                 .switchIfEmpty(Mono.defer(() -> createUserFromSpotify(spotifyTokenId, spotifyEmail, spotifyDisplayName)));
                     }
@@ -114,7 +127,8 @@ public class UserDomainService {
                             user.passwordHash(),
                             spotifyTokenId
                     );
-                    return userPort.save(updated);
+                    return userPort.save(updated)
+                            .doOnSuccess(u -> LOGGER.info("Linked Spotify token {} to user {}", spotifyTokenId, u.id()));
                 });
     }
 
@@ -127,6 +141,7 @@ public class UserDomainService {
             String spotifyDisplayName
     ) {
         String username = generateUsernameFromSpotify(spotifyEmail, spotifyDisplayName);
+        LOGGER.info("Creating new Spotify user with username: {}", username);
 
         UserProfile newUser = new UserProfile(
                 null,
@@ -137,7 +152,8 @@ public class UserDomainService {
                 spotifyTokenId
         );
 
-        return userPort.save(newUser);
+        return userPort.save(newUser)
+                .doOnSuccess(u -> LOGGER.info("Created new Spotify user {}", u.id()));
     }
 
     /**
