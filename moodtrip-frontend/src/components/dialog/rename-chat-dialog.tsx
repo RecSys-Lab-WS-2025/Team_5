@@ -73,7 +73,12 @@ export function RenameChatDialog({
           </Button>
           <Button
             type="button"
-            className="rounded-full px-4 text-sm"
+            className="
+              rounded-full px-4 text-sm
+              !bg-[#1e3a8a] text-white
+              hover:!bg-[#142c65]
+              disabled:opacity-60 disabled:cursor-not-allowed
+            "
             onClick={handleConfirm}
             disabled={loading || !value.trim()}
           >
