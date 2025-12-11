@@ -111,9 +111,9 @@ public class ConversationDomainService {
                                             .flatMap(emotionResult -> {
                                                 LOGGER.info("Emotion extracted: {}, Score: {}", emotionResult.topLabel(), emotionResult.topScore());
                                                 return saveEmotionResult(conversationId, emotionResult)
-                                                            .then(updateConversationEmotion(conversation, emotionResult))
-                                                            .then(generateConversationTitle(conversationId,userId))
-                                                            .thenReturn(emotionResult);
+                                                        .then(updateConversationEmotion(conversation, emotionResult))
+                                                        .then(generateConversationTitle(conversationId, userId))
+                                                        .thenReturn(emotionResult);
                                             })
                             );
                 });

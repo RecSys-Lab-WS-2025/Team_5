@@ -42,7 +42,7 @@ public class SpotifyAuthController {
     public Mono<ResponseEntity<String>> login() {
         String state = UUID.randomUUID().toString();
         String authorizeUrl = authService.buildAuthorizeUrl(state);
-        return Mono.just( ResponseEntity.status(HttpStatus.FOUND)
+        return Mono.just(ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(authorizeUrl))
                 .build()
         );
@@ -67,7 +67,7 @@ public class SpotifyAuthController {
         if (state == null || state.isEmpty()) {
             return redirectWithError("missing_state");
         }
-        
+
 
         return authService.exchangeCodeForToken(code)
                 .flatMap(spotifyToken ->
@@ -81,10 +81,10 @@ public class SpotifyAuthController {
                                     log.info("jwt Token {}", jwtToken);
 
                                     String redirectUrl = String.format(
-                                        "%s/?auth=success&token=%s&userId=%d&username=%s&email=%s",
-                                        frontendUrl, jwtToken, user.id(), encodedUsername, encodedEmail
+                                            "%s/?auth=success&token=%s&userId=%d&username=%s&email=%s",
+                                            frontendUrl, jwtToken, user.id(), encodedUsername, encodedEmail
                                     );
-                                    
+
                                     return ResponseEntity.status(HttpStatus.FOUND)
                                             .location(URI.create(redirectUrl))
                                             .build();

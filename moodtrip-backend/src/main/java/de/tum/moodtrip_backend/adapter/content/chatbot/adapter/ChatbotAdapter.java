@@ -61,7 +61,6 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort {
                 .reduce(new StringBuilder(), StringBuilder::append)
                 .map(StringBuilder::toString)
                 .filter(result -> !result.isBlank())
-                .doOnNext(LOGGER::info)
                 .switchIfEmpty(Mono.error(new RuntimeException("AI returned empty response")))
                 .map(EmotionMapper::fromJson);
     }

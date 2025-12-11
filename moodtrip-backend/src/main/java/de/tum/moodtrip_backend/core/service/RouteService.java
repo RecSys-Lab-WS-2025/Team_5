@@ -76,7 +76,7 @@ public class RouteService {
                                 .map(route -> new PoiRouteResult(enrichedPois, route))
                 )
                 .flatMap(route ->
-                    routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(route, conversationId)).thenReturn(route)
+                        routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(route, conversationId)).thenReturn(route)
                 );
     }
 }
