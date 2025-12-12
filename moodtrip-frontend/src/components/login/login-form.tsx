@@ -46,7 +46,6 @@ export function LoginForm({
         saveUser(user);
         window.dispatchEvent(new Event('userLogin'));
       }
-      alert(`Hi! ${user?.username}, login is successful!`);
       navigate("/");
     } catch (err) {
       if (err instanceof Error) {
@@ -126,7 +125,7 @@ export function LoginForm({
                 </FieldDescription>
               )}
               <Field>
-                <Button type="submit" disabled={pending}>
+                <Button type="submit" disabled={pending} className="!bg-blue-900 !text-white">
                   {pending ? "Signing in..." : "Login"}
                 </Button>
                 <FieldDescription className="text-center">

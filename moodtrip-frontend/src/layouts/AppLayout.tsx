@@ -21,12 +21,15 @@ export function AppLayout() {
     hasProcessedAuth.current = true;
 
     if (flag === "success" && token && userId && username) {
+      const decodedUsername = decodeURIComponent(username);
+      const decodedEmail = email ? decodeURIComponent(email) : "";
+
       saveToken(token);
 
       saveUser({
         id: parseInt(userId, 10),
-        username: decodeURIComponent(username),
-        email: email ? decodeURIComponent(email) : "",
+        username: decodedUsername,
+        email: decodedEmail,
       });
 
       window.dispatchEvent(new Event("userLogin"));
@@ -37,8 +40,13 @@ export function AppLayout() {
         window.location.pathname
       );
 
-      alert("Hi! " + decodeURIComponent(username) + ", login is successful!");
-      navigate("/");
+      navigate("/", {
+        replace: true,
+        state: {
+          fromLogin: true,
+          username: decodedUsername,
+        },
+  });
     } else if (flag === "error") {
       const raw = params.get("msg") || "Spotify Authorization failed";
       const msg = decodeURIComponent(raw);
@@ -58,14 +66,12 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* ✅ Navbar sits fixed at top */}
       {!hideNavbar && (
         <header className="fixed top-0 left-0 w-full z-50">
           <Navbar />
         </header>
       )}
 
-      {/* ✅ No padding at all — the pages will handle spacing if needed */}
       <main className="flex-1">
         <Outlet />
       </main>

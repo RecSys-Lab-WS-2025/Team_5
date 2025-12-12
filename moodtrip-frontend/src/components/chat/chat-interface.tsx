@@ -7,8 +7,8 @@ import { Send } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 import { useSidebar } from "@/components/ui/sidebar";
 import type { FeatureCollection } from "geojson";
-import { useNavigate } from "react-router-dom"; // Added import
-import { RouteCarousel } from "@/components/chat/route-carousel"; // Added import
+import { useNavigate } from "react-router-dom";
+import { RouteCarousel } from "@/components/chat/route-carousel";
 
 import { SurveyForm } from "./survey-form";
 import type { SurveyData } from "@/api/conversation";
@@ -200,7 +200,7 @@ export function ChatInterface({
           return (
             <div
               key={idx}
-              className="prose prose-sm dark:prose-invert whitespace-pre-wrap"
+              className="prose prose-sm whitespace-pre-wrap"
             >
               <ReactMarkdown>{text}</ReactMarkdown>
             </div>
@@ -221,7 +221,7 @@ export function ChatInterface({
         return (
           <div
             key={idx}
-            className="prose prose-sm dark:prose-invert whitespace-pre-wrap"
+            className="prose prose-sm whitespace-pre-wrap"
           >
             <ReactMarkdown>{slice}</ReactMarkdown>
           </div>
@@ -252,7 +252,7 @@ export function ChatInterface({
     : undefined;
 
   return (
-    <div className="relative flex flex-1 flex-col">
+    <div className="bg-white relative flex flex-1 flex-col">
       <ScrollArea className="flex-1 p-6 pb-32">
         <div className="mx-auto max-w-3xl space-y-4">
           {messages.map((message) => {
@@ -269,7 +269,7 @@ export function ChatInterface({
                 <div
                   className={`${isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
                     } rounded-lg px-4 py-3 text-base ${isUser
-                      ? "bg-emerald-500 text-white dark:bg-emerald-500 dark:text-white"
+                      ? "!bg-blue-100 !text-black"
                       : "border bg-muted text-foreground"
                     } `}
                 >
@@ -310,7 +310,7 @@ export function ChatInterface({
           <div
             className="
               flex items-center gap-3
-              rounded-full border border-black/10 bg-background px-4 py-2.5
+              rounded-full border border-black/10 bg-white px-4 py-2.5
               dark:border-white/10 dark:bg-[#303030]
             "
           >
