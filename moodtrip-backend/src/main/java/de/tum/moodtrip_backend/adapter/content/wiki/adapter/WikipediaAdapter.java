@@ -7,9 +7,13 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class WikipediaAdapter implements WikipediaPort {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(WikipediaAdapter.class);
     private final WebClient wikipediaClient;
 
     public WikipediaAdapter(WebClient.Builder webClientBuilder) {
@@ -47,6 +51,7 @@ public class WikipediaAdapter implements WikipediaPort {
                         .build(tag.title()))
                 .retrieve()
                 .bodyToMono(bodyType)
+                .doOnError(e -> LOGGER.warn("Failed to fetch Wikipedia summary for tag {}: {}", wikipediaTag, e.getMessage()))
                 .onErrorResume(e -> Mono.empty());
     }
 
@@ -93,6 +98,7 @@ public class WikipediaAdapter implements WikipediaPort {
                     String url = WikipediaMediaMapper.mapImageFromWikidataJson(json, id);
                     return url != null ? Mono.just(url) : Mono.empty();
                 })
+                .doOnError(e -> LOGGER.warn("Failed to fetch Wikidata image for ID {}: {}", id, e.getMessage()))
                 .onErrorResume(e -> Mono.empty());
     }
 
@@ -144,15 +150,19 @@ public class WikipediaAdapter implements WikipediaPort {
         // 1. Direct image tag, if it looks like a usable URL
         if (imageTag != null && !imageTag.isBlank() && WikipediaMediaMapper.isValidHttpUrl(imageTag)) {
             String normalized = WikipediaMediaMapper.normalizeCommonsFileUrl(imageTag);
+            LOGGER.info("Using direct image tag: {}", normalized);
             return Mono.just(normalized);
         }
 
         // 2. Wikipedia → image (originalimage/thumbnail)
         return fetchImageFromWikipediaTag(wikipediaTag)
+                .doOnNext(url -> LOGGER.info("Found image via Wikipedia tag {}: {}", wikipediaTag, url))
                 // 3. If still empty, fall back to Wikidata → P18 → Commons
-                .switchIfEmpty(fetchImageFromWikidataId(wikidataId))
+                .switchIfEmpty(fetchImageFromWikidataId(wikidataId)
+                        .doOnNext(url -> LOGGER.info("Found image via Wikidata ID {}: {}", wikidataId, url)))
                 // 4. Finally, try Wikimedia Commons tag as a last resort
-                .switchIfEmpty(fetchImageFromWikimediaCommonsTag(wikimediaCommonsTag));
+                .switchIfEmpty(fetchImageFromWikimediaCommonsTag(wikimediaCommonsTag)
+                        .doOnNext(url -> LOGGER.info("Found image via Commons tag {}: {}", wikimediaCommonsTag, url)));
     }
 
     /**
@@ -166,6 +176,7 @@ public class WikipediaAdapter implements WikipediaPort {
         if (wikiTag == null || wikiTag.isBlank()) {
             return Mono.empty();
         }
+        LOGGER.info("Fetching summary for Wikipedia tag: {}", wikiTag);
         return fetchSummaryFromWikipediaTag(wikiTag);
     }
 }

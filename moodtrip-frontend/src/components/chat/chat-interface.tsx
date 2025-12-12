@@ -47,6 +47,28 @@ export function ChatInterface({
     return reversed.find((m) => m.role !== "user") ?? null;
   }, [messages]);
 
+  const hasRouteResponse = React.useMemo(
+    () =>
+      !!routeGeoJson ||
+      messages.some((m) =>
+        m.parts.some(
+          (p) => p.type === "text" && p.text.includes("[ROUTE_MAP]")
+        )
+      ),
+    [messages, routeGeoJson]
+  );
+  const lastSurveyTriggerId = React.useMemo(() => {
+    const reversed = [...messages].reverse();
+    const triggerMessage = reversed.find((m) =>
+      m.parts.some(
+        (p) =>
+          p.type === "text" &&
+          p.text.startsWith("[SURVEY_FORM_TRIGGER")
+      )
+    );
+    return triggerMessage?.id ?? null;
+  }, [messages]);
+
   React.useEffect(() => {
     if (!lastAssistantMessage) {
       setTypingMessageId(null);
@@ -120,6 +142,8 @@ export function ChatInterface({
         const text = part.text;
 
         if (text.includes("[SURVEY_FORM_TRIGGER]")) {
+          const isLastTrigger = message.id === lastSurveyTriggerId;
+          if (!isLastTrigger || hasRouteResponse) return null;
           return (
             <div key={idx} className="mt-4">
               <SurveyForm
@@ -155,14 +179,22 @@ export function ChatInterface({
 
         if (text.includes("[ROUTE_MAP]")) {
           const jsonStr = text.replace("[ROUTE_MAP]", "").trim();
-          const dataFromMessage = JSON.parse(jsonStr) as FeatureCollection;
+          let dataFromMessage: FeatureCollection | null = null;
+
+          try {
+            dataFromMessage = JSON.parse(jsonStr) as FeatureCollection;
+          } catch (e) {
+            console.error("Failed to parse route map data", e);
+          }
+
           const mapData = dataFromMessage || routeGeoJson || null;
 
           return mapData ? (
             <RecommendedRouteMap data={mapData} />
           ) : (
             <div className="rounded-lg border bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
-              Route will appear here after it loads.
+              We couldn't display the route map. Please try submitting the survey
+              again.
             </div>
           );
         }
@@ -246,6 +278,12 @@ export function ChatInterface({
         <div className="mx-auto max-w-3xl space-y-4">
           {messages.map((message) => {
             const isUser = message.role === "user";
+            const renderedParts = renderMessageParts(message).filter(
+              (part) => part !== null && part !== undefined
+            );
+            if (renderedParts.length === 0) {
+              return null;
+            }
             const isMapBubble = message.parts.some(
               (p) => p.type === "text" && p.text.includes("[ROUTE_MAP]")
             );
@@ -264,7 +302,7 @@ export function ChatInterface({
                       : "border bg-muted text-foreground"
                   } `}
                 >
-                  <div className="space-y-1">{renderMessageParts(message)}</div>
+                  <div className="space-y-1">{renderedParts}</div>
                 </div>
               </div>
             );

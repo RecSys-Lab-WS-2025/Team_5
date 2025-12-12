@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.tum.moodtrip_backend.core.model.PoiRouteResult;
 import de.tum.moodtrip_backend.core.model.RouteRecommendationDomain;
 
-import java.time.LocalDateTime;
-
 public final class PoiRouteResultRouteRecommendationMapper {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -18,7 +16,7 @@ public final class PoiRouteResultRouteRecommendationMapper {
                 null,
                 conversationId,
                 objectMapper.valueToTree(poiRouteResult),
-                LocalDateTime.now()
+                null
         );
     }
 }

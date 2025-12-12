@@ -19,3 +19,7 @@ databaseChangeLog:
       file: db/changelog/changes/009-rename-preferences-to-poiCategories.yaml
   - include:
       file: db/changelog/changes/010-update-surveys-location-to-coordinates.yaml
+  - include:
+      file: db/changelog/changes/011-add-location-name-to-surveys.yaml
+  - include:
+      file: db/changelog/changes/012-drop-survey-conversation-unique.yaml

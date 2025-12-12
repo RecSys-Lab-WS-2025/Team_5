@@ -24,18 +24,25 @@ function FitToData({ data }: { data?: FeatureCollection | null }) {
   useEffect(() => {
     if (!map || !data) return;
 
-    const layer = L.geoJSON(data as GeoJsonObject);
-    const bounds = layer.getBounds();
+    let layer: L.GeoJSON | null = null;
+    try {
+      layer = L.geoJSON(data as GeoJsonObject);
+      const bounds = layer.getBounds();
 
-    if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [32, 32] });
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [32, 32] });
+      }
+    } catch (error) {
+      console.error("Unable to fit map to provided data", error);
     }
 
     // Recalculate after paint to avoid size issues
     requestAnimationFrame(() => map.invalidateSize());
 
     return () => {
-      map.removeLayer(layer);
+      if (layer) {
+        map.removeLayer(layer);
+      }
     };
   }, [map, data]);
 
@@ -43,22 +50,39 @@ function FitToData({ data }: { data?: FeatureCollection | null }) {
 }
 
 export function RecommendedRouteMap({ data }: Props) {
+  const safeData = useMemo(() => {
+    if (!data) return null;
+    try {
+      const layer = L.geoJSON(data as GeoJsonObject);
+      layer.remove();
+      return data;
+    } catch (error) {
+      console.error("Invalid GeoJSON data for map rendering", error);
+      return null;
+    }
+  }, [data]);
+
   // Try to grab a reasonable initial center from the first coordinate
   const initialCenter = useMemo(() => {
-    if (!data?.features?.length)
+    if (!safeData?.features?.length)
       return [48.137154, 11.576124] as [number, number];
 
-    const coords = L.geoJSON(data as GeoJsonObject)
-      .getBounds()
-      .getCenter();
+    try {
+      const coords = L.geoJSON(safeData as GeoJsonObject)
+        .getBounds()
+        .getCenter();
 
-    return [coords.lat, coords.lng] as [number, number];
-  }, [data]);
+      return [coords.lat, coords.lng] as [number, number];
+    } catch (error) {
+      console.error("Failed to derive map center from data", error);
+      return [48.137154, 11.576124] as [number, number];
+    }
+  }, [safeData]);
 
   // Extract POIs from the FeatureCollection
   const pois = useMemo(
     () =>
-      data?.features
+      safeData?.features
         ?.filter(
           (f): f is Feature<Point> =>
             f.geometry?.type === "Point" && f.properties?.type === "poi"
@@ -75,7 +99,7 @@ export function RecommendedRouteMap({ data }: Props) {
             position: [lat, lon] as [number, number], // Leaflet expects [lat, lon]
           };
         }) ?? [],
-    [data]
+    [safeData?.features]
   );
 
   return (
@@ -111,20 +135,20 @@ export function RecommendedRouteMap({ data }: Props) {
                 <div>
                   <h3 className="text-sm font-semibold">{poi.name}</h3>
                   {poi.description && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {poi.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </MapPopup>
-          </MapMarker>
-        ))}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {poi.description}
+                </p>
+              )}
+            </div>
+          </div>
+        </MapPopup>
+      </MapMarker>
+    ))}
 
-        {data && (
+        {safeData && (
           <>
             <GeoJSON
-              data={data as GeoJsonObject}
+              data={safeData as GeoJsonObject}
               style={() => ({
                 color: "#2563eb",
                 weight: 4,
@@ -132,7 +156,7 @@ export function RecommendedRouteMap({ data }: Props) {
               // Do not render Point features via GeoJSON; we have custom markers for POIs
               filter={(feature) => feature.geometry?.type !== "Point"}
             />
-            <FitToData data={data} />
+            <FitToData data={safeData} />
           </>
         )}
       </Map>

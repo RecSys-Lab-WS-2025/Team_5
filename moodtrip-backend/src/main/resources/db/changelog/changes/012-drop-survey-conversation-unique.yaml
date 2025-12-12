@@ -1,0 +1,8 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0012-drop-survey-conversation-unique
+      author: moodtrip
+      changes:
+        - dropUniqueConstraint:
+            tableName: surveys
+            constraintName: surveys_conversation_id_key
