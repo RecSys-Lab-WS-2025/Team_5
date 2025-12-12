@@ -556,7 +556,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                   let botText =
                     "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
                   if (res.spotifyPlaylistLink) {
-                    botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: ${res.spotifyPlaylistLink}`;
+                    botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${res.spotifyPlaylistLink})`;
                   }
 
                   await apiSendMessage(Number(selectedChatId), botText, false);
