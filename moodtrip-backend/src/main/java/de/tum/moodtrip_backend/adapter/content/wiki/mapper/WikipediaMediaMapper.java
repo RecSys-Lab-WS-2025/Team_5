@@ -96,6 +96,7 @@ public final class WikipediaMediaMapper {
                 if (value.isBlank()) return null;
                 int colon = value.indexOf(':');
                 String filename = colon >= 0 ? value.substring(colon + 1) : value;
+                if (filename.isBlank()) return null;
                 return filename.replace(' ', '_');
             }
         } catch (Exception ignored) {
