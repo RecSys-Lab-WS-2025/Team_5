@@ -23,7 +23,7 @@ import java.util.concurrent.TimeoutException;
 @Service
 public class RouteService {
 
-    public static final Logger LOGGER = LoggerFactory.getLogger(RouteService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RouteService.class);
     private static final Duration ROUTE_TIMEOUT = Duration.ofSeconds(30);
     private static final String GENERIC_ERROR_MESSAGE = "I couldn't generate a route due to a routing service error. Please try again.";
 
