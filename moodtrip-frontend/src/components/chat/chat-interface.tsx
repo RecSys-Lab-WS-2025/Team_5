@@ -59,16 +59,6 @@ export function ChatInterface({
       ),
     [messages, routeGeoJson]
   );
-    React.useMemo(
-        () =>
-            !!routeGeoJson ||
-            messages.some((m) =>
-                m.parts.some(
-                    (p) => p.type === "text" && p.text.includes("[ROUTE_MAP]")
-                )
-            ),
-        [messages, routeGeoJson]
-    );
   const lastSurveyTriggerId = React.useMemo(() => {
     const reversed = [...messages].reverse();
     const triggerMessage = reversed.find((m) =>
