@@ -156,10 +156,18 @@ export interface SurveyData {
   poiCategories: string[];
 }
 
-export interface SurveyResponse {
-  route: FeatureCollection; // GeoJSON FeatureCollection
-  spotifyPlaylistLink: string | null;
-}
+export type SurveyResponse =
+  | {
+      routeStatus: "SUCCEEDED";
+      route: FeatureCollection;
+      spotifyPlaylistLink: string | null;
+    }
+  | {
+      routeStatus: "FAILED";
+      userMessage?: string;
+      route?: FeatureCollection | null;
+      spotifyPlaylistLink?: string | null;
+    };
 
 export async function submitSurvey(
   conversationId: number,
@@ -176,9 +184,21 @@ export async function submitSurvey(
     }
   );
 
-  if (!res.ok) {
-    throw new Error(`Failed to submit survey: ${res.status} ${res.statusText}`);
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
   }
 
-  return res.json();
+  if (!res.ok) {
+    const errorMessage =
+      (body as { userMessage?: string } | null)?.userMessage ??
+      `Failed to submit survey: ${res.status} ${res.statusText}`;
+    const error = new Error(errorMessage);
+    (error as { response?: unknown }).response = body;
+    throw error;
+  }
+
+  return body as SurveyResponse;
 }
