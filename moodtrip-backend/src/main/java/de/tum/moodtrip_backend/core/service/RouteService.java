@@ -4,6 +4,7 @@ import de.tum.moodtrip_backend.core.mapper.PoiRouteCoordinatesMapper;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteResultRouteRecommendationMapper;
 import de.tum.moodtrip_backend.core.model.EnrichedPoi;
 import de.tum.moodtrip_backend.core.model.PoiRouteResult;
+import de.tum.moodtrip_backend.core.model.RouteGenerationResult;
 import de.tum.moodtrip_backend.core.port.RouteRecommendationPort;
 import de.tum.moodtrip_backend.core.port.RoutingPort;
 import org.slf4j.Logger;
@@ -15,13 +16,17 @@ import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.WikipediaPort;
 import reactor.core.publisher.Mono;
-
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 @Service
 public class RouteService {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(RouteService.class);
+    private static final Duration ROUTE_TIMEOUT = Duration.ofSeconds(30);
+    private static final String GENERIC_ERROR_MESSAGE = "I couldn't generate a route due to a routing service error. Please try again.";
+
     private final OsmPort osmPort;
     private final WikipediaPort wikipediaPort;
     private final RoutingPort routingPort;
@@ -34,7 +39,7 @@ public class RouteService {
         this.routeRecommendationPort = routeRecommendationPort;
     }
 
-    public Mono<PoiRouteResult> getRoute(
+    public Mono<RouteGenerationResult> getRoute(
             long conversationId,
             double lat,
             double lon,
@@ -42,8 +47,27 @@ public class RouteService {
             int radiusMeters
     ) {
         LOGGER.info("Getting route for conversationId: {}, lat: {}, lon: {}, radius: {}", conversationId, lat, lon, radiusMeters);
+
+        return buildRoute(lat, lon, poiCategories, radiusMeters)
+                .timeout(ROUTE_TIMEOUT)
+                .flatMap(route ->
+                        routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(route, conversationId))
+                                .doOnNext(saved -> LOGGER.info("Route generated successfully for conversationId: {}", saved.conversationId()))
+                                .map(saved -> RouteGenerationResult.success(route))
+                )
+                .onErrorResume(ex -> {
+                    LOGGER.error("Unexpected error during route generation for conversationId: {}", conversationId, ex);
+                    return Mono.just(RouteGenerationResult.failure(mapErrorToUserMessage(ex)));
+                });
+    }
+
+    private Mono<PoiRouteResult> buildRoute(
+            double lat,
+            double lon,
+            List<PoiCategory> poiCategories,
+            int radiusMeters
+    ) {
         return osmPort.findAmenitiesAround(lat, lon, poiCategories, radiusMeters)
-                .doOnNext(poi -> LOGGER.info("Found POI: {}", poi.tags().get("name")))
                 .flatMap(poi ->
                         wikipediaPort.fetchSummaryForTag(poi.tags().get("wikipedia"))
                                 .defaultIfEmpty("")
@@ -67,16 +91,32 @@ public class RouteService {
                                 })
                 )
                 .collectList()
-                .doOnNext(enrichedPois -> LOGGER.info("Found {} enriched POIs for conversation {}", enrichedPois.size(), conversationId))
                 .flatMap(enrichedPois ->
                         routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(
                                         enrichedPois.stream().map(EnrichedPoi::poi).toList()
                                 ))
-                                .doOnNext(route -> LOGGER.info(route.toString()))
                                 .map(route -> new PoiRouteResult(enrichedPois, route))
-                )
-                .flatMap(route ->
-                        routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(route, conversationId)).thenReturn(route)
                 );
+    }
+
+    private String mapErrorToUserMessage(Throwable error) {
+        if (error == null) {
+            return GENERIC_ERROR_MESSAGE;
+        }
+        if (isTimeout(error)) {
+            return "I couldn't generate a route because the routing service timed out. Please try again.";
+        }
+        return GENERIC_ERROR_MESSAGE;
+    }
+
+    private boolean isTimeout(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            if (current instanceof TimeoutException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

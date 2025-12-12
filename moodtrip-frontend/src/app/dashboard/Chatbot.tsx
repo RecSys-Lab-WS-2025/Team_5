@@ -306,6 +306,11 @@ export default function Chatbot() {
             parts: [{ type: "text", text: "[SURVEY_FORM_TRIGGER]" }],
           };
           setMessages((prev) => [...prev, surveyMsg]);
+          try {
+            await apiSendMessage(Number(selectedChatId), "[SURVEY_FORM_TRIGGER]", false);
+          } catch (err) {
+            console.error("Failed to persist survey form trigger", err);
+          }
         }
       } else {
         await apiSendMessage(Number(selectedChatId), text, true);
@@ -377,6 +382,11 @@ export default function Chatbot() {
           parts: [{ type: "text", text: "[SURVEY_FORM_TRIGGER]" }],
         };
         setMessages((prev) => [...prev, surveyMsg]);
+        try {
+          await apiSendMessage(Number(chatId), "[SURVEY_FORM_TRIGGER]", false);
+        } catch (err) {
+          console.error("Failed to persist survey form trigger", err);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -535,13 +545,59 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
               routeGeoJson={routeGeoJson}
               onSurveySubmit={async (data: SurveyData) => {
                 if (!selectedChatId) return;
+                const conversationId = Number(selectedChatId);
+                const appendRecovery = async (messageText: string) => {
+                  const triggerPayload = "[SURVEY_FORM_TRIGGER]";
+
+                  const errorMsg: UIMessage = {
+                    id: Date.now().toString(),
+                    role: "assistant",
+                    parts: [{ type: "text", text: messageText }],
+                  };
+                  const triggerMsg: UIMessage = {
+                    id: (Date.now() + 1).toString(),
+                    role: "assistant",
+                    parts: [{ type: "text", text: triggerPayload }],
+                  };
+                  setMessages((prev) => [...prev, errorMsg, triggerMsg]);
+
+                  try {
+                    await apiSendMessage(conversationId, messageText, false);
+                    await apiSendMessage(conversationId, triggerPayload, false);
+                  } catch (err) {
+                    console.error("Failed to persist recovery messages", err);
+                  }
+                };
+
+                let handledFailure = false;
+                setIsLoading(true);
                 try {
-                  const res = await submitSurvey(Number(selectedChatId), data);
-                  setRouteGeoJson(res.route as FeatureCollection);
+                  const res = await submitSurvey(conversationId, data);
+
+                  if (res.routeStatus === "FAILED") {
+                    const errorMessage =
+                      res.userMessage ??
+                      "I couldn't generate a route due to a routing service error. Please try again.";
+                    await appendRecovery(errorMessage);
+                    setRouteGeoJson(null);
+                    handledFailure = true;
+                    throw new Error(errorMessage);
+                  }
+
+                  const routeData = res.route as FeatureCollection | undefined;
+                  if (!routeData) {
+                    const message =
+                      "The route data was missing or malformed. Please try again.";
+                    await appendRecovery(message);
+                    handledFailure = true;
+                    throw new Error(message);
+                  }
+
+                  setRouteGeoJson(routeData);
 
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(data)}`;
                   await apiSendMessage(
-                    Number(selectedChatId),
+                    conversationId,
                     surveyContent,
                     true
                   );
@@ -559,7 +615,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                     botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${res.spotifyPlaylistLink})`;
                   }
 
-                  await apiSendMessage(Number(selectedChatId), botText, false);
+                  await apiSendMessage(conversationId, botText, false);
 
                   const successMsg: UIMessage = {
                     id: (Date.now() + 1).toString(),
@@ -569,16 +625,12 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                   setMessages((prev) => [...prev, successMsg]);
 
                   // Send and display the route map as a bot message
-                  if (res.route) {
+                  try {
                     const mapPayload = `[ROUTE_MAP] ${JSON.stringify(
-                      res.route
+                      routeData
                     )}`;
-                    setRouteGeoJson(res.route);
-                    await apiSendMessage(
-                      Number(selectedChatId),
-                      mapPayload,
-                      false
-                    );
+                    setRouteGeoJson(routeData);
+                    await apiSendMessage(conversationId, mapPayload, false);
                     const mapMsg: UIMessage = {
                       id: (Date.now() + 2).toString(),
                       role: "assistant",
@@ -586,30 +638,21 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                     };
                     setMessages((prev) => [...prev, mapMsg]);
 
-                    // Append Cards
-                    // TODO: This logic currently duplicates the single route response into 3 mock cards.
-                    // Ideally, the backend should return a list of recommendations.
-                    const routeFc = res.route as FeatureCollection;
+                    const routeFc = routeData as FeatureCollection;
                     const props = routeFc.features?.[0]?.properties || {};
 
-                    // Create 3 mock cards based on the single real result for demo purposes
                     const cardDataList = Array.from({ length: 3 }).map((_, i) => ({
                       id: `${i + 1}`,
                       title: props.name || `Recommended Route ${i + 1}`,
                       description: props.description || "A personalized route based on your mood.",
                       imageUrl: props.image || "/placeholder-route.jpg",
-                      distanceMeters: (props.distance || 5000) + (i * 500), // minor variation
-                      durationSeconds: (props.duration || 3600) + (i * 300), // minor variation
-                      geoJson: res.route
+                      distanceMeters: (props.distance || 5000) + (i * 500),
+                      durationSeconds: (props.duration || 3600) + (i * 300),
+                      geoJson: routeData
                     }));
 
                     const cardsPayload = `[ROUTE_CARDS] ${JSON.stringify(cardDataList)}`;
-                    // We don't necessarily need to send this to backend as a separate message if we don't want to persist it as "cards", 
-                    // but for consistency with history let's send it or just add to local state. 
-                    // Let's just add to local state to avoid cluttering backend history if not needed, 
-                    // OR send it if we want it to persist. 
-                    // Decision: Send it so it persists on reload.
-                    await apiSendMessage(Number(selectedChatId), cardsPayload, false);
+                    await apiSendMessage(conversationId, cardsPayload, false);
 
                     const cardsMsg: UIMessage = {
                       id: (Date.now() + 3).toString(),
@@ -617,13 +660,26 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                       parts: [{ type: "text", text: cardsPayload }],
                     };
                     setMessages((prev) => [...prev, cardsMsg]);
-                  } else {
-                    console.warn(
-                      "Received route but could not convert to GeoJSON"
-                    );
+                  } catch (mapErr) {
+                    console.error("Failed to persist or render route map", mapErr);
+                    const message =
+                      "I generated a route but couldn't render the map. Please try again.";
+                    await appendRecovery(message);
+                    handledFailure = true;
+                    throw mapErr instanceof Error ? mapErr : new Error(message);
                   }
                 } catch (e) {
+                  if (!handledFailure) {
+                    setRouteGeoJson(null);
+                    const fallbackMessage =
+                      e instanceof Error && e.message
+                        ? e.message
+                        : "I couldn't generate a route due to an unexpected error. Please try again.";
+                    await appendRecovery(fallbackMessage);
+                  }
                   console.error("Failed to submit survey", e);
+                } finally {
+                  setIsLoading(false);
                 }
               }}
             />
