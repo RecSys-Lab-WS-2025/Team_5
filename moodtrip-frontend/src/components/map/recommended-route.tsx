@@ -99,7 +99,7 @@ export function RecommendedRouteMap({ data }: Props) {
             position: [lat, lon] as [number, number], // Leaflet expects [lat, lon]
           };
         }) ?? [],
-    [data]
+    [safeData?.features]
   );
 
   return (

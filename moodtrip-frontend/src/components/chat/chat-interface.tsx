@@ -54,7 +54,7 @@ export function ChatInterface({
       !!routeGeoJson ||
       messages.some((m) =>
         m.parts.some(
-          (p) => p.type === "text" && typeof p.text === "string" && p.text.includes("[ROUTE_MAP]")
+          (p) => p.type === "text" && p.text.includes("[ROUTE_MAP]")
         )
       ),
     [messages, routeGeoJson]
@@ -65,7 +65,6 @@ export function ChatInterface({
       m.parts.some(
         (p) =>
           p.type === "text" &&
-          typeof p.text === "string" &&
           p.text.startsWith("[SURVEY_FORM_TRIGGER")
       )
     );
