@@ -171,7 +171,7 @@ public class ConversationController {
                 )))
                 .flatMap(conv -> conversationService.addMessage(conversationId, content, isUser));
     }
-}
+
 
     /**
      * Delete a conversation for the authenticated user.
