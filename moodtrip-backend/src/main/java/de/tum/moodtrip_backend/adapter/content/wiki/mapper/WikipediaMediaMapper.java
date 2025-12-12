@@ -41,6 +41,13 @@ public final class WikipediaMediaMapper {
         if (trimmed.contains("//upload.wikimedia.org/")) {
             return trimmed;
         }
+
+        // Handle index.php?title=File:... / Datei:... style URLs
+        String fromTitleParam = extractFilenameFromTitleParam(trimmed);
+        if (fromTitleParam != null) {
+            return "https://commons.wikimedia.org/wiki/Special:FilePath/" + fromTitleParam;
+        }
+
         int wikiIndex = trimmed.indexOf("/wiki/");
         if (wikiIndex == -1) {
             return trimmed;
@@ -71,6 +78,29 @@ public final class WikipediaMediaMapper {
         // Defensive cleanup
         filename = filename.replace(' ', '_');
         return filename;
+    }
+
+    private static String extractFilenameFromTitleParam(String url) {
+        try {
+            java.net.URI uri = new java.net.URI(url);
+            String query = uri.getRawQuery();
+            if (query == null || !query.contains("title=")) {
+                return null;
+            }
+            for (String param : query.split("&")) {
+                int eq = param.indexOf('=');
+                if (eq <= 0) continue;
+                String key = param.substring(0, eq);
+                if (!"title".equalsIgnoreCase(key)) continue;
+                String value = java.net.URLDecoder.decode(param.substring(eq + 1), java.nio.charset.StandardCharsets.UTF_8);
+                if (value.isBlank()) return null;
+                int colon = value.indexOf(':');
+                String filename = colon >= 0 ? value.substring(colon + 1) : value;
+                return filename.replace(' ', '_');
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     /**
