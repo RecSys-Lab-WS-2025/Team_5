@@ -1,6 +1,9 @@
+"use client";
+
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { UIMessage } from "@ai-sdk/react";
-
+import { DeleteConfirmDialog } from "@/components/dialog/delete-confirm-dialog";
+import { RenameChatDialog } from "@/components/dialog/rename-chat-dialog";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import type { ChatSummary } from "@/components/sidebar/app-sidebar";
 import { WelcomeScreen } from "@/components/chat/welcome-screen";
@@ -35,10 +38,11 @@ import {
   sendMessage as apiSendMessage,
   extractEmotion as apiExtractEmotion,
   submitSurvey,
+  renameConversation,
+  deleteConversation,
 } from "@/api/conversation";
 import type { FeatureCollection } from "geojson";
 
-// ---- static nav data ----
 const navData = {
   user: {
     name: "John Doe",
@@ -56,7 +60,6 @@ const navData = {
         { title: "Quick-Start", url: "#" },
       ],
     },
-
     {
       title: "My favourites",
       url: "#",
@@ -68,7 +71,6 @@ const navData = {
         { title: "Pinned Ideas", url: "#" },
       ],
     },
-
     {
       title: "My Spotify",
       url: "#",
@@ -78,7 +80,6 @@ const navData = {
         { title: "Settings", url: "#" },
       ],
     },
-
     {
       title: "Community",
       url: "#",
@@ -140,6 +141,14 @@ export default function Chatbot() {
     null
   );
   const skipLoadRef = useRef(false);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<ChatSummary | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [chatToRename, setChatToRename] = useState<ChatSummary | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
 
   const parseMessageContent = (content: string) => {
     if (content.startsWith("EmotionResult[")) {
@@ -221,7 +230,6 @@ export default function Chatbot() {
         parts: [{ type: "text", text: parseMessageContent(m.content) }],
       }));
       setMessages(uiMsgs);
-
       setEmotionExtracted(uiMsgs.length > 0);
     } catch (e) {
       console.error("Failed to load messages", e);
@@ -246,7 +254,6 @@ export default function Chatbot() {
   }, [selectedChatId, loadMessages]);
 
   const handleNewChat = async () => {
-    // Only reset state to WelcomeScreen, do not call API.
     setSelectedChatId(null);
     setMessages([]);
     setEmotionExtracted(false);
@@ -282,8 +289,6 @@ export default function Chatbot() {
     try {
       if (!emotionExtracted) {
         const res = await apiExtractEmotion(Number(selectedChatId), text);
-        console.log("Extract Emotion Result:", res);
-
         if (res.success) {
           setEmotionExtracted(true);
         } else {
@@ -360,7 +365,6 @@ export default function Chatbot() {
 
     try {
       const res = await apiExtractEmotion(Number(chatId), text);
-      console.log("Suggestion Click - Extract Emotion Result:", res);
       if (res.success) {
         setEmotionExtracted(true);
       } else {
@@ -395,7 +399,10 @@ export default function Chatbot() {
     }
   };
 
-  const handleScriptedClick = async (userText: string, assistantText: string) => {
+  const handleScriptedClick = async (
+    userText: string,
+    assistantText: string
+  ) => {
     setIsLoading(true);
 
     let currentChatId = selectedChatId;
@@ -452,7 +459,6 @@ export default function Chatbot() {
     setIsLoading(false);
   };
 
-
   const handleIntroClick = () => {
     const userText =
       "Could you briefly introduce what this Moodtrip website does?";
@@ -508,6 +514,83 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
     handleScriptedClick(userText, assistantText);
   };
 
+  const handleRenameChat = (id: string, currentTitle: string) => {
+    const chat = chats.find((c) => c.id === id) || { id, title: currentTitle };
+    setChatToRename(chat as ChatSummary);
+    setRenameDialogOpen(true);
+  };
+
+  const handleConfirmRenameChat = async (newTitle: string) => {
+    if (!chatToRename) return;
+    setIsRenaming(true);
+    try {
+      const updated = await renameConversation(
+        Number(chatToRename.id),
+        newTitle
+      );
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === chatToRename.id ? { ...c, title: updated.title } : c
+        )
+      );
+    } catch (e) {
+      console.error("Failed to rename chat", e);
+    } finally {
+      setIsRenaming(false);
+      setRenameDialogOpen(false);
+      setChatToRename(null);
+    }
+  };
+
+  const handleDeleteChat = (id: string) => {
+    const chat = chats.find((c) => c.id === id) || null;
+    setChatToDelete(chat || ({ id, title: "This chat" } as ChatSummary));
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteChat = async () => {
+    if (!chatToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteConversation(Number(chatToDelete.id));
+      setChats((prev) => prev.filter((c) => c.id !== chatToDelete.id));
+      if (selectedChatId === chatToDelete.id) {
+        setSelectedChatId(null);
+        setMessages([]);
+        setEmotionExtracted(false);
+        setRouteGeoJson(null);
+      }
+    } catch (e) {
+      console.error("Failed to delete chat", e);
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setChatToDelete(null);
+    }
+  };
+
+  const handleShareChat = async (id: string) => {
+    const baseUrl = window.location.origin;
+    const url = `${baseUrl}/chat/${id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Moodtrip Chat",
+          text: "Check out this Moodtrip conversation.",
+          url,
+        });
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        window.alert("Chat link copied to clipboard.");
+      } else {
+        window.prompt("Copy this link:", url);
+      }
+    } catch (e) {
+      console.error("Failed to share chat", e);
+    }
+  };
+
   return (
     <SidebarProvider>
       <AppSidebar
@@ -518,12 +601,15 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
         selectedChatId={selectedChatId}
         onNewChat={handleNewChat}
         onSelectChat={handleSelectChat}
+        onRenameChat={handleRenameChat}
+        onDeleteChat={handleDeleteChat}
+        onShareChat={handleShareChat}
         onIntroductionClick={handleIntroClick}
         onQuickStartClick={handleQuickStartClick}
         onRefreshChats={loadChats}
       />
       <SidebarInset>
-        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 bg-background">
+        <header className="sticky z-40 top-0 flex h-16 shrink-0 items-center gap-2 bg-background">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
           </div>
@@ -686,6 +772,39 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
           )}
         </div>
       </SidebarInset>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setChatToDelete(null);
+          }
+        }}
+        title="Delete this chat?"
+        description={
+          chatToDelete
+            ? `“${chatToDelete.title}” and all its messages will be permanently deleted.`
+            : "This chat and all its messages will be permanently deleted."
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        loading={isDeleting}
+        onConfirm={handleConfirmDeleteChat}
+      />
+
+      <RenameChatDialog
+        open={renameDialogOpen}
+        onOpenChange={(open) => {
+          setRenameDialogOpen(open);
+          if (!open) {
+            setChatToRename(null);
+          }
+        }}
+        initialTitle={chatToRename?.title ?? ""}
+        loading={isRenaming}
+        onConfirm={handleConfirmRenameChat}
+      />
     </SidebarProvider>
   );
 }
