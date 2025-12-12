@@ -225,6 +225,10 @@ export function SurveyForm({
             return;
         }
 
+        if (!startDate || !endDate || selectedCategories.length === 0) {
+            return;
+        }
+
         setIsSubmitting(true);
         setLocationError(null);
 
@@ -251,6 +255,12 @@ export function SurveyForm({
             setIsSubmitting(false);
         }
     };
+
+    const hasLocation = Boolean(selectedLocation);
+    const hasRange = Number.isFinite(range);
+    const hasDates = Boolean(startDate) && Boolean(endDate);
+    const hasCategories = selectedCategories.length > 0;
+    const isFormComplete = hasLocation && hasRange && hasDates && hasCategories;
 
     const isDisabled = readOnly || isSubmitting || isSubmitted;
 
@@ -427,7 +437,7 @@ export function SurveyForm({
                         style={{ backgroundColor: '#4b5563', color: 'white' }}
                         className="w-full font-medium py-2.5 rounded-lg transition-all shadow-sm hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={handleSubmit}
-                        disabled={isSubmitting || !selectedLocation}
+                        disabled={isSubmitting || !isFormComplete}
                     >
                         {isSubmitting ? "Submitting..." : "Find Recommendations"}
                     </Button>
