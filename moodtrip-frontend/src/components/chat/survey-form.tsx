@@ -1,5 +1,5 @@
 import * as React from "react";
-import { MapPin } from "lucide-react";
+import { Loader2, LocateFixed, MapPin } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,10 +13,25 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// Mock Munich Coordinates
-const MUNICH_COORDS = {
-    latitude: 48.1351,
-    longitude: 11.5820,
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+type LocationSuggestion = {
+    place_id: number;
+    display_name: string;
+    lat: string;
+    lon: string;
+};
+
+type SelectedLocation = {
+    latitude: number;
+    longitude: number;
+    label: string;
+    locationName: string;
 };
 
 const POI_CATEGORIES = [
@@ -63,9 +78,89 @@ export function SurveyForm({
     const [startDate, setStartDate] = React.useState<string>(initialData?.startDate ?? getTodayString());
     const [endDate, setEndDate] = React.useState<string>(initialData?.endDate ?? getTomorrowString());
     const [selectedCategories, setSelectedCategories] = React.useState<string[]>(initialData?.poiCategories ?? []);
+    const [locationQuery, setLocationQuery] = React.useState<string>("");
+    const [selectedLocation, setSelectedLocation] = React.useState<SelectedLocation | null>(null);
+    const [locationSuggestions, setLocationSuggestions] = React.useState<LocationSuggestion[]>([]);
+    const [isSearchingLocation, setIsSearchingLocation] = React.useState(false);
+    const [isFetchingCurrentLocation, setIsFetchingCurrentLocation] = React.useState(false);
+    const [locationError, setLocationError] = React.useState<string | null>(null);
 
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [isSubmitted, setIsSubmitted] = React.useState(false);
+
+    // Populate from initial data (read-only view)
+    React.useEffect(() => {
+        if (!initialData) return;
+        const fallbackLabel = `Lat ${initialData.latitude.toFixed(4)}, Lon ${initialData.longitude.toFixed(4)}`;
+        const label = initialData.locationName?.trim() ? initialData.locationName : fallbackLabel;
+        setSelectedLocation({
+            latitude: initialData.latitude,
+            longitude: initialData.longitude,
+            label,
+            locationName: initialData.locationName ?? fallbackLabel,
+        });
+        setLocationQuery(label);
+    }, [initialData]);
+
+    // Fetch location suggestions (debounced)
+    React.useEffect(() => {
+        if (readOnly || isSubmitted) return;
+        const query = locationQuery.trim();
+        if (selectedLocation && selectedLocation.label === query) {
+            setLocationSuggestions([]);
+            return;
+        }
+        if (query.length < 3) {
+            setLocationSuggestions([]);
+            return;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(async () => {
+            try {
+                setIsSearchingLocation(true);
+                setLocationError(null);
+                const params = new URLSearchParams({
+                    q: query,
+                    format: "json",
+                    addressdetails: "1",
+                    limit: "5",
+                });
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+                    {
+                        signal: controller.signal,
+                        headers: {
+                            "Accept-Language": "en",
+                        },
+                    }
+                );
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                const data: LocationSuggestion[] = await res.json();
+                setLocationSuggestions(data);
+            } catch (error: unknown) {
+                if (
+                    error &&
+                    typeof error === "object" &&
+                    "name" in error &&
+                    (error as { name?: string }).name === "AbortError"
+                ) {
+                    return;
+                }
+                setLocationError("Could not fetch locations. Please try again.");
+                setLocationSuggestions([]);
+            } finally {
+                setIsSearchingLocation(false);
+            }
+        }, 350);
+
+        return () => {
+            clearTimeout(timeoutId);
+            controller.abort();
+        };
+    }, [locationQuery, readOnly, isSubmitted, selectedLocation]);
 
     const toggleCategory = (category: string) => {
         if (readOnly || isSubmitted || isSubmitting) return;
@@ -76,11 +171,62 @@ export function SurveyForm({
         );
     };
 
+    const handleLocationSelect = (suggestion: LocationSuggestion) => {
+        const latitude = parseFloat(suggestion.lat);
+        const longitude = parseFloat(suggestion.lon);
+        setSelectedLocation({
+            latitude,
+            longitude,
+            label: suggestion.display_name,
+            locationName: suggestion.display_name,
+        });
+        setLocationQuery(suggestion.display_name);
+        setLocationSuggestions([]);
+        setLocationError(null);
+    };
+
+    const handleUseCurrentLocation = () => {
+        if (readOnly || isSubmitted || isSubmitting) return;
+        if (!navigator.geolocation) {
+            setLocationError("Geolocation is not supported in this browser.");
+            return;
+        }
+
+        setIsFetchingCurrentLocation(true);
+        setLocationError(null);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                const label = "Current location";
+                setSelectedLocation({
+                    latitude,
+                    longitude,
+                    label,
+                    locationName: label,
+                });
+                setLocationQuery(label);
+                setLocationSuggestions([]);
+                setIsFetchingCurrentLocation(false);
+            },
+            () => {
+                setLocationError("Could not fetch your current location. Please allow location access or pick a place manually.");
+                setIsFetchingCurrentLocation(false);
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (readOnly || !onSubmit || isSubmitting || isSubmitted) return;
 
+        if (!selectedLocation) {
+            setLocationError("Please choose a location to start from.");
+            return;
+        }
+
         setIsSubmitting(true);
+        setLocationError(null);
 
         // Ensure dates are present
         const finalStartDate = startDate || getTodayString();
@@ -88,8 +234,9 @@ export function SurveyForm({
 
         try {
             await onSubmit({
-                latitude: MUNICH_COORDS.latitude,
-                longitude: MUNICH_COORDS.longitude,
+                latitude: selectedLocation.latitude,
+                longitude: selectedLocation.longitude,
+                locationName: selectedLocation.locationName ?? selectedLocation.label,
                 rangeMeters: range,
                 startDate: finalStartDate,
                 endDate: finalEndDate,
@@ -112,18 +259,91 @@ export function SurveyForm({
             <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
                 <CardTitle className="text-lg font-semibold text-gray-800">Trip Preferences</CardTitle>
                 <CardDescription className="text-gray-500 text-sm">
-                    {readOnly || isSubmitted ? "Your submitted preferences" : "Tell us what you're looking for in Munich."}
+                    {readOnly || isSubmitted ? "Your submitted preferences" : "Tell us where you're starting and what you're looking for."}
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Location (Fixed) */}
+                    {/* Location Picker */}
                     <div className="space-y-2">
                         <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Location</Label>
-                        <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 text-sm">
-                            <MapPin className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">Munich (Current Location)</span>
-                        </div>
+                        {readOnly || isSubmitted ? (
+                            <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 text-sm">
+                                <MapPin className="w-4 h-4 text-gray-400" />
+                                <div className="flex flex-col">
+                                    <span className="font-medium">
+                                        {selectedLocation?.label ?? "Location not provided"}
+                                    </span>
+                                    {selectedLocation && (
+                                        <span className="text-xs text-gray-500">
+                                            Lat {selectedLocation.latitude.toFixed(4)}, Lon {selectedLocation.longitude.toFixed(4)}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="relative">
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={locationQuery}
+                                        onChange={(e) => {
+                                            setLocationQuery(e.target.value);
+                                            setSelectedLocation(null);
+                                            setLocationError(null);
+                                        }}
+                                        placeholder="Search for a city, address, or place"
+                                        disabled={isDisabled || isFetchingCurrentLocation}
+                                        className="pr-3"
+                                    />
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    size="icon"
+                                                    onClick={handleUseCurrentLocation}
+                                                    disabled={isDisabled || isFetchingCurrentLocation}
+                                                    aria-label={isFetchingCurrentLocation ? "Locating current position" : "Use my current location"}
+                                                    className="h-10 w-10"
+                                                >
+                                                    {isFetchingCurrentLocation ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <LocateFixed className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>{isFetchingCurrentLocation ? "Locating…" : "Use my location"}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </div>
+                                {isSearchingLocation && (
+                                    <div className="mt-1 text-xs text-gray-500">Searching…</div>
+                                )}
+                                {locationSuggestions.length > 0 && (
+                                    <ul className="absolute z-20 mt-1 w-full max-h-52 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-md">
+                                        {locationSuggestions.map((suggestion) => (
+                                            <li
+                                                key={suggestion.place_id}
+                                                className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                                onClick={() => handleLocationSelect(suggestion)}
+                                            >
+                                                {suggestion.display_name}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                                <div className="mt-1 text-xs text-gray-500">
+                                    Start typing (min 3 characters) to search worldwide, or use your current location.
+                                </div>
+                            </div>
+                        )}
+                        {locationError && (
+                            <div className="text-xs text-red-600">{locationError}</div>
+                        )}
                     </div>
 
                     {/* Range */}
@@ -205,9 +425,9 @@ export function SurveyForm({
                 <CardFooter className="bg-gray-50/50 border-t border-gray-100 p-4">
                     <Button
                         style={{ backgroundColor: '#4b5563', color: 'white' }}
-                        className="w-full font-medium py-2.5 rounded-lg transition-all shadow-sm hover:opacity-90"
+                        className="w-full font-medium py-2.5 rounded-lg transition-all shadow-sm hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={handleSubmit}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !selectedLocation}
                     >
                         {isSubmitting ? "Submitting..." : "Find Recommendations"}
                     </Button>

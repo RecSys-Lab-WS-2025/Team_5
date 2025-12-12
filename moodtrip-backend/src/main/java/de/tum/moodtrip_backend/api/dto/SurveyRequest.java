@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
@@ -13,6 +14,9 @@ public record SurveyRequest(
 
         @NotNull(message = "Longitude cannot be null")
         Double longitude,
+
+        @NotBlank(message = "Location name cannot be blank")
+        String locationName,
         
         @NotNull(message = "Range meters cannot be null")
         @Positive(message = "Range meters must be positive")
