@@ -27,6 +27,7 @@ public class SurveyDtoMapper {
                 conversationId,
                 request.latitude(),
                 request.longitude(),
+                request.locationName(),
                 request.rangeMeters(),
                 request.startDate(),
                 request.endDate(),

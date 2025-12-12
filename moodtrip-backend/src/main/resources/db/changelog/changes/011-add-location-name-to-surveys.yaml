@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-add-location-name-to-surveys
+      author: xu
+      changes:
+        - addColumn:
+            tableName: surveys
+            columns:
+              - column:
+                  name: location_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: true

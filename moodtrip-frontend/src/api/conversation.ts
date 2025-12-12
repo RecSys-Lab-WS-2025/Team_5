@@ -149,6 +149,7 @@ export async function extractEmotion(
 export interface SurveyData {
   latitude: number;
   longitude: number;
+  locationName: string;
   rangeMeters: number;
   startDate: string;
   endDate: string;

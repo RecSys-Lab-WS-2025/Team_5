@@ -26,6 +26,9 @@ public class SurveyEntity {
     @Column("longitude")
     private Double longitude;
 
+    @Column("location_name")
+    private String locationName;
+
     @Column("range_meters")
     private Integer rangeMeters;
 
@@ -44,7 +47,7 @@ public class SurveyEntity {
     public SurveyEntity() {
     }
 
-    public SurveyEntity(Long id, Long userId, Long conversationId, Double latitude, Double longitude, Integer rangeMeters,
+    public SurveyEntity(Long id, Long userId, Long conversationId, Double latitude, Double longitude, String locationName, Integer rangeMeters,
                         LocalDate startDate, LocalDate endDate, String poiCategories,
                         LocalDateTime createdAt) {
         this.id = id;
@@ -52,6 +55,7 @@ public class SurveyEntity {
         this.conversationId = conversationId;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.locationName = locationName;
         this.rangeMeters = rangeMeters;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -97,6 +101,14 @@ public class SurveyEntity {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+    }
+
+    public String getLocationName() {
+        return locationName;
+    }
+
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
     }
 
     public Integer getRangeMeters() {
