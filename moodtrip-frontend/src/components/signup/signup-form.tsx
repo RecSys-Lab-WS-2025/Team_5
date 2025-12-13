@@ -138,7 +138,7 @@ export function SignupForm({
               )}
 
               <Field>
-                <Button type="submit" disabled={pending}>
+                <Button type="submit" disabled={pending} className="!bg-blue-900 !text-white">
                   {pending ? "Creating..." : "Create Account"}
                 </Button>
 

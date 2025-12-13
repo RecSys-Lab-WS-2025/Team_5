@@ -134,7 +134,7 @@ export const Navbar = () => {
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                className="h-9 w-9 hover:bg-gray-100 rounded-full" 
+                className="h-9 w-9 !bg-background hover:bg-gray-100 rounded-full" 
                 title="Logout"
                 aria-label="Logout"
               >
@@ -219,7 +219,7 @@ export const Navbar = () => {
                 <Button
                   variant="outline"
                   onClick={handleLogout}
-                  className="w-full justify-start gap-2 h-10"
+                  className="w-full !bg-background justify-start gap-2 h-10"
                 >
                   <LogOut className="w-5 h-5" />
                   Logout

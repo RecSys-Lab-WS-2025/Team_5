@@ -609,7 +609,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
         onRefreshChats={loadChats}
       />
       <SidebarInset>
-        <header className="sticky z-40 top-0 flex h-16 shrink-0 items-center gap-2 bg-background">
+        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 bg-white">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
           </div>
