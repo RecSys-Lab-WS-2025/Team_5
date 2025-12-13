@@ -77,8 +77,8 @@ public class MusicRecommendationController {
                 .flatMapMany(conversation -> {
                     if (!conversation.userId().equals(userId)) {
                         return Flux.error(new ResponseStatusException(
-                            HttpStatus.FORBIDDEN,
-                            "Access denied: This conversation does not belong to you"
+                                HttpStatus.FORBIDDEN,
+                                "Access denied: This conversation does not belong to you"
                         ));
                     }
                     return recommendationService.getPlaylistsByConversation(conversationId);

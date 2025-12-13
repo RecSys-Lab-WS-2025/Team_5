@@ -11,6 +11,7 @@ public record SurveyDomain(
         Long conversationId,
         Double latitude,
         Double longitude,
+        String locationName,
         Integer rangeMeters,
         LocalDate startDate,
         LocalDate endDate,

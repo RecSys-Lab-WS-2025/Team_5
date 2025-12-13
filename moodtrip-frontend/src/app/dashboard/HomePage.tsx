@@ -61,7 +61,7 @@ export function HomePage() {
             </p>
 
             <h1
-              className="!text-[3.6rem] md:text-6xl font-black mb-9 whitespace-nowrap tracking-tight text-gray-900"
+              className="!text-[3rem] md:text-6xl font-black mb-9 tracking-tight text-gray-900"
               style={{ fontFamily: "'Montserrat', sans-serif" }}
             >
               Your Mood Trip Maker

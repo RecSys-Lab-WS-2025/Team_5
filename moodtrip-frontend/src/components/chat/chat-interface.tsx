@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -9,12 +11,10 @@ import { useSidebar } from "@/components/ui/sidebar";
 import type { FeatureCollection } from "geojson";
 import { useNavigate } from "react-router-dom";
 import { RouteCarousel } from "@/components/chat/route-carousel";
-
 import { SurveyForm } from "./survey-form";
 import type { SurveyData } from "@/api/conversation";
-import { RecommendedRouteMap } from "@/components/map/recommended-route.tsx";
+import { RecommendedRouteMap } from "@/components/map/recommended-route";
 
-// ... inside ChatInterfaceProps
 interface ChatInterfaceProps {
   messages: UIMessage[];
   input: string;
@@ -25,7 +25,6 @@ interface ChatInterfaceProps {
   onSurveySubmit?: (data: SurveyData) => Promise<void> | void;
 }
 
-// ... inside ChatInterface component
 export function ChatInterface({
   messages,
   input,
@@ -36,9 +35,8 @@ export function ChatInterface({
   onSurveySubmit,
 }: ChatInterfaceProps) {
   const bottomRef = React.useRef<HTMLDivElement | null>(null);
-  const navigate = useNavigate(); // Added hook
+  const navigate = useNavigate();
 
-  // --- typing effect state ---
   const [typingMessageId, setTypingMessageId] = React.useState<string | null>(
     null
   );
@@ -47,6 +45,28 @@ export function ChatInterface({
   const lastAssistantMessage = React.useMemo(() => {
     const reversed = [...messages].reverse();
     return reversed.find((m) => m.role !== "user") ?? null;
+  }, [messages]);
+
+  const hasRouteResponse = React.useMemo(
+    () =>
+      !!routeGeoJson ||
+      messages.some((m) =>
+        m.parts.some(
+          (p) => p.type === "text" && p.text.includes("[ROUTE_MAP]")
+        )
+      ),
+    [messages, routeGeoJson]
+  );
+  const lastSurveyTriggerId = React.useMemo(() => {
+    const reversed = [...messages].reverse();
+    const triggerMessage = reversed.find((m) =>
+      m.parts.some(
+        (p) =>
+          p.type === "text" &&
+          p.text.startsWith("[SURVEY_FORM_TRIGGER")
+      )
+    );
+    return triggerMessage?.id ?? null;
   }, [messages]);
 
   React.useEffect(() => {
@@ -61,7 +81,6 @@ export function ChatInterface({
         .map((p) => p.text)
         .filter((text) => {
           if (!text) return false;
-          // Skip survey + map control markers
           if (text.includes("[SURVEY_FORM_TRIGGER]")) return false;
           if (text.startsWith("[SURVEY_DATA]")) return false;
           if (text.includes("[ROUTE_CARDS]")) return false;
@@ -108,7 +127,6 @@ export function ChatInterface({
     return () => clearInterval(interval);
   }, [typingMessageId, lastAssistantMessage]);
 
-  // auto scroll to bottom
   React.useEffect(() => {
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
@@ -123,8 +141,9 @@ export function ChatInterface({
       if (part.type === "text") {
         const text = part.text;
 
-        // Check for Survey Trigger
         if (text.includes("[SURVEY_FORM_TRIGGER]")) {
+          const isLastTrigger = message.id === lastSurveyTriggerId;
+          if (!isLastTrigger || hasRouteResponse) return null;
           return (
             <div key={idx} className="mt-4">
               <SurveyForm
@@ -136,7 +155,6 @@ export function ChatInterface({
           );
         }
 
-        // Check for Persisted Survey Data
         if (text.startsWith("[SURVEY_DATA]")) {
           try {
             const jsonStr = text.replace("[SURVEY_DATA]", "").trim();
@@ -148,7 +166,6 @@ export function ChatInterface({
             );
           } catch (e) {
             console.error("Failed to parse survey data", e);
-            // Fallback to text if parsing fails
             return (
               <div
                 key={idx}
@@ -160,11 +177,15 @@ export function ChatInterface({
           }
         }
 
-        // Check for Route Map marker
         if (text.includes("[ROUTE_MAP]")) {
           const jsonStr = text.replace("[ROUTE_MAP]", "").trim();
+          let dataFromMessage: FeatureCollection | null = null;
 
-          const dataFromMessage = JSON.parse(jsonStr) as FeatureCollection;
+          try {
+            dataFromMessage = JSON.parse(jsonStr) as FeatureCollection;
+          } catch (e) {
+            console.error("Failed to parse route map data", e);
+          }
 
           const mapData = dataFromMessage || routeGeoJson || null;
 
@@ -172,12 +193,12 @@ export function ChatInterface({
             <RecommendedRouteMap data={mapData} />
           ) : (
             <div className="rounded-lg border bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
-              Route will appear here after it loads.
+              We couldn't display the route map. Please try submitting the survey
+              again.
             </div>
           );
         }
 
-        // Check for Route Cards
         if (text.includes("[ROUTE_CARDS]")) {
           try {
             const jsonStr = text.replace("[ROUTE_CARDS]", "").trim();
@@ -186,7 +207,9 @@ export function ChatInterface({
               <div key={idx} className="mt-4">
                 <RouteCarousel
                   routes={routes}
-                  onRouteClick={(route) => navigate("/route-details", { state: route })}
+                  onRouteClick={(route) =>
+                    navigate("/route-details", { state: route })
+                  }
                 />
               </div>
             );
@@ -195,7 +218,7 @@ export function ChatInterface({
             return null;
           }
         }
-        // not the one currently playing typing animation
+
         if (!isTypingMessage || !typingMessageId) {
           return (
             <div
@@ -207,9 +230,6 @@ export function ChatInterface({
           );
         }
 
-        // ... (rest of typing logic)
-
-        // typing animation: nothing left to show
         if (typedCharsLeft <= 0) {
           return <div key={idx} />;
         }
@@ -246,9 +266,10 @@ export function ChatInterface({
   const { state, isMobile } = useSidebar();
   const fixedBarStyle = !isMobile
     ? {
-      left: `var(${state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"
+        left: `var(${
+          state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"
         })`,
-    }
+      }
     : undefined;
 
   return (
@@ -257,6 +278,12 @@ export function ChatInterface({
         <div className="mx-auto max-w-3xl space-y-4">
           {messages.map((message) => {
             const isUser = message.role === "user";
+            const renderedParts = renderMessageParts(message).filter(
+              (part) => part !== null && part !== undefined
+            );
+            if (renderedParts.length === 0) {
+              return null;
+            }
             const isMapBubble = message.parts.some(
               (p) => p.type === "text" && p.text.includes("[ROUTE_MAP]")
             );
@@ -271,9 +298,9 @@ export function ChatInterface({
                     } rounded-lg px-4 py-3 text-base ${isUser
                       ? "!bg-blue-100 !text-black"
                       : "border bg-muted text-foreground"
-                    } `}
+                  } `}
                 >
-                  <div className="space-y-1">{renderMessageParts(message)}</div>
+                  <div className="space-y-1">{renderedParts}</div>
                 </div>
               </div>
             );
@@ -301,9 +328,10 @@ export function ChatInterface({
         </div>
       </ScrollArea>
 
-      {/* bottom input bar */}
       <div
-        className={`fixed bottom-10 z-50 flex justify-center transition-all duration-320 ease-in-out ${isMobile ? "left-3 right-3" : "right-4"}`}
+        className={`fixed bottom-10 z-50 flex justify-center transition-all duration-320 ease-in-out ${
+          isMobile ? "left-3 right-3" : "right-4"
+        }`}
         style={fixedBarStyle}
       >
         <form onSubmit={handleSubmit} className="w-full max-w-3xl">

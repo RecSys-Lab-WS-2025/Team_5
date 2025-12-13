@@ -73,4 +73,12 @@ public class DatabaseConversationAdapter implements ConversationPort {
     public Mono<Long> countMessagesByConversationId(Long conversationId) {
         return messageRepository.countByConversationId(conversationId);
     }
+
+    /**
+     * Delete all messages belonging to the given conversation.
+     */
+    @Override
+    public Mono<Void> deleteMessagesByConversationId(Long conversationId) {
+        return messageRepository.deleteByConversationId(conversationId);
+    }
 }

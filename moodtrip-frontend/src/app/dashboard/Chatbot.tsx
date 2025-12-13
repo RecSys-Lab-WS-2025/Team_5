@@ -1,6 +1,9 @@
+"use client";
+
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { UIMessage } from "@ai-sdk/react";
-
+import { DeleteConfirmDialog } from "@/components/dialog/delete-confirm-dialog";
+import { RenameChatDialog } from "@/components/dialog/rename-chat-dialog";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import type { ChatSummary } from "@/components/sidebar/app-sidebar";
 import { WelcomeScreen } from "@/components/chat/welcome-screen";
@@ -35,10 +38,11 @@ import {
   sendMessage as apiSendMessage,
   extractEmotion as apiExtractEmotion,
   submitSurvey,
+  renameConversation,
+  deleteConversation,
 } from "@/api/conversation";
 import type { FeatureCollection } from "geojson";
 
-// ---- static nav data ----
 const navData = {
   user: {
     name: "John Doe",
@@ -56,7 +60,6 @@ const navData = {
         { title: "Quick-Start", url: "#" },
       ],
     },
-
     {
       title: "My favourites",
       url: "#",
@@ -68,7 +71,6 @@ const navData = {
         { title: "Pinned Ideas", url: "#" },
       ],
     },
-
     {
       title: "My Spotify",
       url: "#",
@@ -78,7 +80,6 @@ const navData = {
         { title: "Settings", url: "#" },
       ],
     },
-
     {
       title: "Community",
       url: "#",
@@ -140,6 +141,14 @@ export default function Chatbot() {
     null
   );
   const skipLoadRef = useRef(false);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<ChatSummary | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [chatToRename, setChatToRename] = useState<ChatSummary | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
 
   const parseMessageContent = (content: string) => {
     if (content.startsWith("EmotionResult[")) {
@@ -221,7 +230,6 @@ export default function Chatbot() {
         parts: [{ type: "text", text: parseMessageContent(m.content) }],
       }));
       setMessages(uiMsgs);
-
       setEmotionExtracted(uiMsgs.length > 0);
     } catch (e) {
       console.error("Failed to load messages", e);
@@ -246,7 +254,6 @@ export default function Chatbot() {
   }, [selectedChatId, loadMessages]);
 
   const handleNewChat = async () => {
-    // Only reset state to WelcomeScreen, do not call API.
     setSelectedChatId(null);
     setMessages([]);
     setEmotionExtracted(false);
@@ -282,8 +289,6 @@ export default function Chatbot() {
     try {
       if (!emotionExtracted) {
         const res = await apiExtractEmotion(Number(selectedChatId), text);
-        console.log("Extract Emotion Result:", res);
-
         if (res.success) {
           setEmotionExtracted(true);
         } else {
@@ -306,6 +311,11 @@ export default function Chatbot() {
             parts: [{ type: "text", text: "[SURVEY_FORM_TRIGGER]" }],
           };
           setMessages((prev) => [...prev, surveyMsg]);
+          try {
+            await apiSendMessage(Number(selectedChatId), "[SURVEY_FORM_TRIGGER]", false);
+          } catch (err) {
+            console.error("Failed to persist survey form trigger", err);
+          }
         }
       } else {
         await apiSendMessage(Number(selectedChatId), text, true);
@@ -355,7 +365,6 @@ export default function Chatbot() {
 
     try {
       const res = await apiExtractEmotion(Number(chatId), text);
-      console.log("Suggestion Click - Extract Emotion Result:", res);
       if (res.success) {
         setEmotionExtracted(true);
       } else {
@@ -377,6 +386,11 @@ export default function Chatbot() {
           parts: [{ type: "text", text: "[SURVEY_FORM_TRIGGER]" }],
         };
         setMessages((prev) => [...prev, surveyMsg]);
+        try {
+          await apiSendMessage(Number(chatId), "[SURVEY_FORM_TRIGGER]", false);
+        } catch (err) {
+          console.error("Failed to persist survey form trigger", err);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -385,7 +399,10 @@ export default function Chatbot() {
     }
   };
 
-  const handleScriptedClick = async (userText: string, assistantText: string) => {
+  const handleScriptedClick = async (
+    userText: string,
+    assistantText: string
+  ) => {
     setIsLoading(true);
 
     let currentChatId = selectedChatId;
@@ -442,7 +459,6 @@ export default function Chatbot() {
     setIsLoading(false);
   };
 
-
   const handleIntroClick = () => {
     const userText =
       "Could you briefly introduce what this Moodtrip website does?";
@@ -498,6 +514,83 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
     handleScriptedClick(userText, assistantText);
   };
 
+  const handleRenameChat = (id: string, currentTitle: string) => {
+    const chat = chats.find((c) => c.id === id) || { id, title: currentTitle };
+    setChatToRename(chat as ChatSummary);
+    setRenameDialogOpen(true);
+  };
+
+  const handleConfirmRenameChat = async (newTitle: string) => {
+    if (!chatToRename) return;
+    setIsRenaming(true);
+    try {
+      const updated = await renameConversation(
+        Number(chatToRename.id),
+        newTitle
+      );
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === chatToRename.id ? { ...c, title: updated.title } : c
+        )
+      );
+    } catch (e) {
+      console.error("Failed to rename chat", e);
+    } finally {
+      setIsRenaming(false);
+      setRenameDialogOpen(false);
+      setChatToRename(null);
+    }
+  };
+
+  const handleDeleteChat = (id: string) => {
+    const chat = chats.find((c) => c.id === id) || null;
+    setChatToDelete(chat || ({ id, title: "This chat" } as ChatSummary));
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteChat = async () => {
+    if (!chatToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteConversation(Number(chatToDelete.id));
+      setChats((prev) => prev.filter((c) => c.id !== chatToDelete.id));
+      if (selectedChatId === chatToDelete.id) {
+        setSelectedChatId(null);
+        setMessages([]);
+        setEmotionExtracted(false);
+        setRouteGeoJson(null);
+      }
+    } catch (e) {
+      console.error("Failed to delete chat", e);
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setChatToDelete(null);
+    }
+  };
+
+  const handleShareChat = async (id: string) => {
+    const baseUrl = window.location.origin;
+    const url = `${baseUrl}/chat/${id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Moodtrip Chat",
+          text: "Check out this Moodtrip conversation.",
+          url,
+        });
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        window.alert("Chat link copied to clipboard.");
+      } else {
+        window.prompt("Copy this link:", url);
+      }
+    } catch (e) {
+      console.error("Failed to share chat", e);
+    }
+  };
+
   return (
     <SidebarProvider>
       <AppSidebar
@@ -508,6 +601,9 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
         selectedChatId={selectedChatId}
         onNewChat={handleNewChat}
         onSelectChat={handleSelectChat}
+        onRenameChat={handleRenameChat}
+        onDeleteChat={handleDeleteChat}
+        onShareChat={handleShareChat}
         onIntroductionClick={handleIntroClick}
         onQuickStartClick={handleQuickStartClick}
         onRefreshChats={loadChats}
@@ -535,13 +631,59 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
               routeGeoJson={routeGeoJson}
               onSurveySubmit={async (data: SurveyData) => {
                 if (!selectedChatId) return;
+                const conversationId = Number(selectedChatId);
+                const appendRecovery = async (messageText: string) => {
+                  const triggerPayload = "[SURVEY_FORM_TRIGGER]";
+
+                  const errorMsg: UIMessage = {
+                    id: Date.now().toString(),
+                    role: "assistant",
+                    parts: [{ type: "text", text: messageText }],
+                  };
+                  const triggerMsg: UIMessage = {
+                    id: (Date.now() + 1).toString(),
+                    role: "assistant",
+                    parts: [{ type: "text", text: triggerPayload }],
+                  };
+                  setMessages((prev) => [...prev, errorMsg, triggerMsg]);
+
+                  try {
+                    await apiSendMessage(conversationId, messageText, false);
+                    await apiSendMessage(conversationId, triggerPayload, false);
+                  } catch (err) {
+                    console.error("Failed to persist recovery messages", err);
+                  }
+                };
+
+                let handledFailure = false;
+                setIsLoading(true);
                 try {
-                  const res = await submitSurvey(Number(selectedChatId), data);
-                  setRouteGeoJson(res.route as FeatureCollection);
+                  const res = await submitSurvey(conversationId, data);
+
+                  if (res.routeStatus === "FAILED") {
+                    const errorMessage =
+                      res.userMessage ??
+                      "I couldn't generate a route due to a routing service error. Please try again.";
+                    await appendRecovery(errorMessage);
+                    setRouteGeoJson(null);
+                    handledFailure = true;
+                    throw new Error(errorMessage);
+                  }
+
+                  const routeData = res.route as FeatureCollection | undefined;
+                  if (!routeData) {
+                    const message =
+                      "The route data was missing or malformed. Please try again.";
+                    await appendRecovery(message);
+                    handledFailure = true;
+                    throw new Error(message);
+                  }
+
+                  setRouteGeoJson(routeData);
 
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(data)}`;
                   await apiSendMessage(
-                    Number(selectedChatId),
+                    conversationId,
                     surveyContent,
                     true
                   );
@@ -556,10 +698,10 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                   let botText =
                     "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
                   if (res.spotifyPlaylistLink) {
-                    botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: ${res.spotifyPlaylistLink}`;
+                    botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${res.spotifyPlaylistLink})`;
                   }
 
-                  await apiSendMessage(Number(selectedChatId), botText, false);
+                  await apiSendMessage(conversationId, botText, false);
 
                   const successMsg: UIMessage = {
                     id: (Date.now() + 1).toString(),
@@ -569,16 +711,12 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                   setMessages((prev) => [...prev, successMsg]);
 
                   // Send and display the route map as a bot message
-                  if (res.route) {
+                  try {
                     const mapPayload = `[ROUTE_MAP] ${JSON.stringify(
-                      res.route
+                      routeData
                     )}`;
-                    setRouteGeoJson(res.route);
-                    await apiSendMessage(
-                      Number(selectedChatId),
-                      mapPayload,
-                      false
-                    );
+                    setRouteGeoJson(routeData);
+                    await apiSendMessage(conversationId, mapPayload, false);
                     const mapMsg: UIMessage = {
                       id: (Date.now() + 2).toString(),
                       role: "assistant",
@@ -586,30 +724,21 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                     };
                     setMessages((prev) => [...prev, mapMsg]);
 
-                    // Append Cards
-                    // TODO: This logic currently duplicates the single route response into 3 mock cards.
-                    // Ideally, the backend should return a list of recommendations.
-                    const routeFc = res.route as FeatureCollection;
+                    const routeFc = routeData as FeatureCollection;
                     const props = routeFc.features?.[0]?.properties || {};
 
-                    // Create 3 mock cards based on the single real result for demo purposes
                     const cardDataList = Array.from({ length: 3 }).map((_, i) => ({
                       id: `${i + 1}`,
                       title: props.name || `Recommended Route ${i + 1}`,
                       description: props.description || "A personalized route based on your mood.",
                       imageUrl: props.image || "/placeholder-route.jpg",
-                      distanceMeters: (props.distance || 5000) + (i * 500), // minor variation
-                      durationSeconds: (props.duration || 3600) + (i * 300), // minor variation
-                      geoJson: res.route
+                      distanceMeters: (props.distance || 5000) + (i * 500),
+                      durationSeconds: (props.duration || 3600) + (i * 300),
+                      geoJson: routeData
                     }));
 
                     const cardsPayload = `[ROUTE_CARDS] ${JSON.stringify(cardDataList)}`;
-                    // We don't necessarily need to send this to backend as a separate message if we don't want to persist it as "cards", 
-                    // but for consistency with history let's send it or just add to local state. 
-                    // Let's just add to local state to avoid cluttering backend history if not needed, 
-                    // OR send it if we want it to persist. 
-                    // Decision: Send it so it persists on reload.
-                    await apiSendMessage(Number(selectedChatId), cardsPayload, false);
+                    await apiSendMessage(conversationId, cardsPayload, false);
 
                     const cardsMsg: UIMessage = {
                       id: (Date.now() + 3).toString(),
@@ -617,19 +746,65 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                       parts: [{ type: "text", text: cardsPayload }],
                     };
                     setMessages((prev) => [...prev, cardsMsg]);
-                  } else {
-                    console.warn(
-                      "Received route but could not convert to GeoJSON"
-                    );
+                  } catch (mapErr) {
+                    console.error("Failed to persist or render route map", mapErr);
+                    const message =
+                      "I generated a route but couldn't render the map. Please try again.";
+                    await appendRecovery(message);
+                    handledFailure = true;
+                    throw mapErr instanceof Error ? mapErr : new Error(message);
                   }
                 } catch (e) {
+                  if (!handledFailure) {
+                    setRouteGeoJson(null);
+                    const fallbackMessage =
+                      e instanceof Error && e.message
+                        ? e.message
+                        : "I couldn't generate a route due to an unexpected error. Please try again.";
+                    await appendRecovery(fallbackMessage);
+                  }
                   console.error("Failed to submit survey", e);
+                } finally {
+                  setIsLoading(false);
                 }
               }}
             />
           )}
         </div>
       </SidebarInset>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setChatToDelete(null);
+          }
+        }}
+        title="Delete this chat?"
+        description={
+          chatToDelete
+            ? `“${chatToDelete.title}” and all its messages will be permanently deleted.`
+            : "This chat and all its messages will be permanently deleted."
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        loading={isDeleting}
+        onConfirm={handleConfirmDeleteChat}
+      />
+
+      <RenameChatDialog
+        open={renameDialogOpen}
+        onOpenChange={(open) => {
+          setRenameDialogOpen(open);
+          if (!open) {
+            setChatToRename(null);
+          }
+        }}
+        initialTitle={chatToRename?.title ?? ""}
+        loading={isRenaming}
+        onConfirm={handleConfirmRenameChat}
+      />
     </SidebarProvider>
   );
 }
