@@ -140,6 +140,8 @@ export default function Chatbot() {
   const [routeGeoJson, setRouteGeoJson] = useState<FeatureCollection | null>(
     null
   );
+  const [currentEmotion, setCurrentEmotion] = useState<string | null>(null);
+
   const skipLoadRef = useRef(false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -197,6 +199,7 @@ export default function Chatbot() {
         id: c.id.toString(),
         title: c.title,
         icon: getEmotionIcon(c.emotion),
+        emotion: c.emotion,
       }));
       setChats(mapped);
     } catch (e) {
@@ -239,7 +242,11 @@ export default function Chatbot() {
     }
 
     loadMessages(selectedChatId);
-  }, [selectedChatId, loadMessages]);
+    const chat = chats.find(c => c.id === selectedChatId);
+    if (chat) {
+      setCurrentEmotion(chat.emotion || null);
+    }
+  }, [selectedChatId, loadMessages, chats]);
 
   const handleNewChat = async () => {
     setSelectedChatId(null);
@@ -279,6 +286,9 @@ export default function Chatbot() {
         const res = await apiExtractEmotion(Number(selectedChatId), text);
         if (res.success) {
           setEmotionExtracted(true);
+          if (res.topLabel) {
+            setCurrentEmotion(res.topLabel);
+          }
         } else {
           setEmotionExtracted(false);
         }
@@ -355,6 +365,9 @@ export default function Chatbot() {
       const res = await apiExtractEmotion(Number(chatId), text);
       if (res.success) {
         setEmotionExtracted(true);
+        if (res.topLabel) {
+          setCurrentEmotion(res.topLabel);
+        }
       } else {
         setEmotionExtracted(false);
       }
@@ -617,6 +630,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
               handleSubmit={handleSubmit}
               isLoading={isLoading}
               routeGeoJson={routeGeoJson}
+              currentEmotion={currentEmotion}
               onSurveySubmit={async (data: SurveyData) => {
                 if (!selectedChatId) return;
                 const conversationId = Number(selectedChatId);

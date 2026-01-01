@@ -1,10 +1,9 @@
-// src/api/emotion.ts
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+import { authFetch, BASE } from "./auth";
 
 export type EmotionResultDto = {
   scores: Record<string, number>;
-  top_label: string;
-  top_score: number;
+  topLabel: string;
+  topScore: number;
 };
 
 export async function analyzeEmotion(
@@ -26,9 +25,65 @@ export async function analyzeEmotion(
     }
 
     const data = (await res.json()) as EmotionResultDto;
-    if (!data || !data.top_label) return null;
+    if (!data || !data.topLabel) return null;
     return data;
   } catch {
+    return null;
+  }
+}
+
+export interface PoiRatingRequest {
+  poiId: string;
+  category: string;
+  emotion: string;
+  rating: number;
+}
+
+export async function submitPoiRating(data: PoiRatingRequest): Promise<boolean> {
+  console.log("Submitting POI rating:", data, "to", `${BASE}/api/ratings`);
+  try {
+    const res = await authFetch(`${BASE}/api/ratings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) {
+      console.error("Submission failed with status:", res.status);
+    }
+    return res.ok;
+  } catch (err) {
+    console.error("Failed to submit POI rating error:", err);
+    return false;
+  }
+}
+
+export interface PoiRating {
+  id: number;
+  userId: number;
+  poiId: string;
+  category: string;
+  emotion: string;
+  rating: number;
+  createdAt: string;
+}
+
+export async function fetchPoiRating(poiId: string, emotion: string): Promise<PoiRating | null> {
+  const url = `${BASE}/api/ratings?poiId=${encodeURIComponent(poiId)}&emotion=${encodeURIComponent(emotion)}`;
+  console.log("Fetching POI rating from:", url);
+  try {
+    const res = await authFetch(url);
+    if (!res.ok) {
+      console.log("No existing rating found (status:", res.status, ")");
+      return null;
+    }
+    const data = await res.json();
+    console.log("Fetched existing rating:", data);
+    return data;
+  } catch (err) {
+    console.error("Failed to fetch POI rating error:", err);
     return null;
   }
 }

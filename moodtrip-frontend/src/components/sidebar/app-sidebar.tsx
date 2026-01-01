@@ -22,6 +22,7 @@ export type ChatSummary = {
   title: string;
   icon?: React.ComponentType<{ className?: string }>;
   preview?: string;
+  emotion?: string;
 };
 
 type NavMainProps = React.ComponentProps<typeof NavMain>;

@@ -116,7 +116,8 @@ public class SurveyController {
 
                                 return routeResultMono.flatMap(result -> {
                                     if (result.status() == RouteStatus.SUCCEEDED && result.route() != null) {
-                                        FeatureCollection routeCollection = geoJsonRouteMapper.toFeatureCollection(result.route());
+                                        String emotionStr = conversation.emotion().name();
+                                        FeatureCollection routeCollection = geoJsonRouteMapper.toFeatureCollection(result.route(), emotionStr);
                                         return spotifyMono.defaultIfEmpty("")
                                                 .map(link -> SurveyResponse.success(routeCollection, link.isEmpty() ? null : link));
                                     }

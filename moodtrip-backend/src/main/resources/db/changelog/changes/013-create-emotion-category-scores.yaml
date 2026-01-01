@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-create-emotion-category-scores
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: emotion_category_scores
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: emotion
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: score
+                  type: double
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rating_count
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: emotion_category_scores
+            columnNames: emotion, category
+            constraintName: uq_emotion_category

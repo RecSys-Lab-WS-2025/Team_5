@@ -87,7 +87,7 @@ public class RouteService {
                                     String displayName = PoiDescriptionBuilder.buildDisplayName(poi);
                                     String description = PoiDescriptionBuilder.buildShortDescription(poi, summary);
 
-                                    return new EnrichedPoi(poi, displayName, description, imageUrl);
+                                    return new EnrichedPoi(poi, displayName, description, imageUrl, poi.category());
                                 })
                 )
                 .collectList()

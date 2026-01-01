@@ -8,6 +8,7 @@ public record Poi(
         double latitude,
         double longitude,
         String name,
+        PoiCategory category,
         Map<String, String> tags
 ) {
     public enum OsmType {

@@ -4,6 +4,7 @@ public record EnrichedPoi(
         Poi poi,
         String displayName,
         String description,
-        String imageUrl
+        String imageUrl,
+        PoiCategory category
 ) {
 }

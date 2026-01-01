@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+import { BASE } from "./auth";
 
 export type UserProfile = {
   id: number | string;

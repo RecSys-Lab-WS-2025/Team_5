@@ -1,8 +1,5 @@
-// src/api/conversation.ts
-import { authFetch } from "./auth";
+import { authFetch, BASE } from "./auth";
 import type { FeatureCollection } from "geojson";
-
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
 export type ConversationDto = {
   id: number;
@@ -158,16 +155,16 @@ export interface SurveyData {
 
 export type SurveyResponse =
   | {
-      routeStatus: "SUCCEEDED";
-      route: FeatureCollection;
-      spotifyPlaylistLink: string | null;
-    }
+    routeStatus: "SUCCEEDED";
+    route: FeatureCollection;
+    spotifyPlaylistLink: string | null;
+  }
   | {
-      routeStatus: "FAILED";
-      userMessage?: string;
-      route?: FeatureCollection | null;
-      spotifyPlaylistLink?: string | null;
-    };
+    routeStatus: "FAILED";
+    userMessage?: string;
+    route?: FeatureCollection | null;
+    spotifyPlaylistLink?: string | null;
+  };
 
 export async function submitSurvey(
   conversationId: number,
