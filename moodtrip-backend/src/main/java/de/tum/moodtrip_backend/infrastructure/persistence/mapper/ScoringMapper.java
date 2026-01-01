@@ -27,7 +27,7 @@ public class ScoringMapper {
                 domain.emotion().name(),
                 domain.category().name(),
                 domain.score(),
-                domain.count()
+                domain.ratingCount()
         );
     }
 

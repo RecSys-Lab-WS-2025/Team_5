@@ -76,7 +76,7 @@ public class PoiRatingService {
                     return Mono.just(new EmotionCategoryScore(null, emotion, category, 3.5, 50L));
                 }))
                 .flatMap(scoreObj -> {
-                    long oldCount = scoreObj.count();
+                    long oldCount = scoreObj.ratingCount();
                     double oldAvg = scoreObj.score();
                     double newAvg;
                     long newCount;
@@ -95,7 +95,7 @@ public class PoiRatingService {
                     return scorePort.save(scoreObj.withScore(newAvg).withCount(newCount));
                 })
                 .doOnSuccess(s -> LOGGER.info("The new score for category [{}] under emotion [{}] is [{}] (based on [{}] ratings)", 
-                        category, emotion, s.score(), s.count()))
+                        category, emotion, s.score(), s.ratingCount()))
                 .then();
     }
 }
