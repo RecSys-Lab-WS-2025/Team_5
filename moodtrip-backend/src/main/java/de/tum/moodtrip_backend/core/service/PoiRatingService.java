@@ -82,7 +82,7 @@ public class PoiRatingService {
                     long newCount;
 
                     if (isUpdate) {
-                        newAvg = (oldAvg * oldCount - oldRating + newRating) / oldCount;
+                        newAvg = oldAvg + (newRating - oldRating) / oldCount;
                         newCount = oldCount;
                     } else {
                         newAvg = (oldAvg * oldCount + newRating) / (oldCount + 1);
