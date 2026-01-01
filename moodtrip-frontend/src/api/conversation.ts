@@ -1,8 +1,5 @@
-// src/api/conversation.ts
-import { authFetch } from "./auth";
+import { authFetch, BASE } from "./auth";
 import type { FeatureCollection } from "geojson";
-
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
 export type ConversationDto = {
   id: number;

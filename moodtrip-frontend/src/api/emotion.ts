@@ -1,6 +1,4 @@
-// src/api/emotion.ts
-import { authFetch } from "./auth";
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+import { authFetch, BASE } from "./auth";
 
 export type EmotionResultDto = {
   scores: Record<string, number>;
