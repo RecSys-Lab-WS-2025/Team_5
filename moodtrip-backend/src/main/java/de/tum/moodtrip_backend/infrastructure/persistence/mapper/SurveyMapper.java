@@ -70,6 +70,7 @@ public class SurveyMapper {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .map(PoiCategory::fromDisplayName)
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
     }
 

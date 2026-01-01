@@ -38,11 +38,11 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort {
         if (historyAndNewMessage != null && historyAndNewMessage.toLowerCase().contains("mock123321")) {
             // Mock response JSON structure must match what EmotionMapper expects (assuming standard JSON format)
             String mockJson = """
-                    {"scores":{"JOYFUL":0.900,"ENERGIZED":0.050,"CALM":0.010,"CONTENT":0.010,"HOPEFUL":0.010,"GRATEFUL":0.010,"CURIOUS":0.000,"NOSTALGIC":0.000,"NEUTRAL":0.000,"CONFUSED":0.000,"BORED":0.000,"TIRED":0.000,"LONELY":0.000,"SAD":0.000,"ANXIOUS":0.000,"STRESSED":0.000,"FRUSTRATED":0.000,"ANGRY":0.000,"OVERWHELMED":0.000},
+                    {"scores":{"JOYFUL":0.900,"CALM":0.100},
                     "top_label":"JOYFUL",
                     "top_score":0.900,
                     "success":true,
-                    "content":"I noticed you are feeling joyful! If you answer a few questions, I can plan something wonderful for you."
+                    "content":"{THIS IS A MOCK RESPONSE} I noticed you are feeling joyful! If you answer a few questions, I can plan something wonderful for you."
                     }
                     """;
 

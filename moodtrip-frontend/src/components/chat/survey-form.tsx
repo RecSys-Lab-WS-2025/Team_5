@@ -40,11 +40,7 @@ const POI_CATEGORIES = [
     "Adventure",
     "Relaxation",
     "Food & Culinary",
-    "Nightlife",
-    "Art & Museums",
     "Shopping",
-    "Beach & Coast",
-    "City Exploration",
 ];
 
 const RANGE_OPTIONS = [

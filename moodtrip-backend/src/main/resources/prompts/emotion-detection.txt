@@ -38,28 +38,18 @@ Output keys
     - if success = false: short follow-up message to the user asking for more input
 
 Tie-break precedence (from strongest to weakest when scores are equal):
-OVERWHELMED > ANXIOUS > STRESSED > ANGRY > FRUSTRATED > SAD > LONELY > TIRED > BORED > CONFUSED > NEUTRAL > CURIOUS > NOSTALGIC > HOPEFUL > GRATEFUL > CONTENT > CALM > ENERGIZED > JOYFUL.
+STRESSED > SAD > TIRED > NEUTRAL > CURIOUS > NOSTALGIC > CALM > ENERGIZED > JOYFUL.
 
 Mood Spectrum (label → what ideas to look for → example keywords/phrases)
-JOYFUL → high-energy positive affect, celebration, delight → happy, joyful, thrilled, ecstatic, delighted, amazing, great news
+JOYFUL → high-energy positive affect, celebration, delight, satisfaction, gratitude → happy, joyful, thrilled, ecstatic, delighted, amazing, great news, content, satisfied, thankful, blessed
 ENERGIZED → activation/motivation to act → energized, pumped, motivated, ready, fired up, productive
 CALM → low-arousal positive/peaceful state → calm, relaxed, peaceful, serene, at ease, unwinding, tranquil
-CONTENT → quiet satisfaction/okayness → content, satisfied, fine, okay, all good, can’t complain
-HOPEFUL → optimism about future outcomes → hopeful, optimistic, looking forward, confident it will work out
-GRATEFUL → appreciation/thankfulness → grateful, thankful, blessed, appreciate, lucky
 CURIOUS → seeking to know/explore → curious, interested, wondering, exploring, want to learn
 NOSTALGIC → longing for the past/bittersweet memories → nostalgic, reminisce, miss the old days, memories, bittersweet
-NEUTRAL → factual/impersonal/no clear affect → just info, matter-of-fact, schedule details, no feelings indicated
-CONFUSED → uncertainty/lack of understanding → confused, unsure, don’t understand, unclear, mixed up
-BORED → low interest/stimulation → bored, meh, dull, monotonous, nothing to do
-TIRED → fatigue/low energy → tired, exhausted, sleepy, drained, burnt out, need rest
-LONELY → social disconnection → lonely, alone, isolated, nobody, miss people
-SAD → low mood/grief → sad, down, blue, unhappy, heartbroken, crying
-ANXIOUS → fear/worry/unease → anxious, worried, nervous, panic, dread, on edge
-STRESSED → pressure/strain/tension (often work/time) → stressed, under pressure, tense, too many deadlines
-FRUSTRATED → blocked/irritated by obstacles → frustrated, annoyed, irritated, fed up, stuck
-ANGRY → strong displeasure/resentment/injustice → angry, mad, pissed, furious, rage, unfair, hate
-OVERWHELMED → “too much to handle”/cognitive-emotional overload → overwhelmed, can’t cope, too much, drowning, everything at once, meltdown
+NEUTRAL → factual/impersonal/no clear affect, uncertainty → just info, matter-of-fact, schedule details, no feelings indicated, confused, unsure
+STRESSED → pressure, fear, worry, tension, cognitive overload, frustration, anger → stressed, anxious, worried, nervous, panic, overwhelmed, under pressure, tense, frustrated, annoyed, angry, mad
+SAD → low mood, grief, social disconnection → sad, down, blue, unhappy, heartbroken, lonely, alone, isolated
+TIRED → fatigue, low energy, low interest → tired, exhausted, sleepy, drained, burnt out, bored, meh, dull
 
 Output format (single line JSON):
 - When the model is confident (success = true), for example:

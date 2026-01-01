@@ -4,22 +4,12 @@ public enum Emotion {
     JOYFUL,
     ENERGIZED,
     CALM,
-    CONTENT,
-    HOPEFUL,
-    GRATEFUL,
     CURIOUS,
     NOSTALGIC,
     NEUTRAL,
-    CONFUSED,
-    BORED,
-    TIRED,
-    LONELY,
-    SAD,
-    ANXIOUS,
     STRESSED,
-    FRUSTRATED,
-    ANGRY,
-    OVERWHELMED;
+    SAD,
+    TIRED;
     public static Emotion fromString(String text) {
         if (text == null) return NEUTRAL;
         try {
