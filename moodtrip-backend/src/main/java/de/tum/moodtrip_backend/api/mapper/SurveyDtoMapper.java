@@ -43,6 +43,7 @@ public class SurveyDtoMapper {
         
         return poiCategories.stream()
                 .map(PoiCategory::fromDisplayName)
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
     }
 }

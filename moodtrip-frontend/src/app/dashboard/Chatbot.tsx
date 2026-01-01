@@ -167,35 +167,23 @@ export default function Chatbot() {
     const e = emotion.toUpperCase();
     switch (e) {
       case "JOYFUL":
-      case "EXCITED":
+        return Laugh;
       case "ENERGIZED":
         return Laugh;
-      case "CONTENT":
       case "CALM":
-      case "RELAXED":
-      case "GRATEFUL":
-      case "HOPEFUL":
-      case "TRUSTING":
         return Smile;
-      case "NEUTRAL":
-      case "BORED":
-      case "TIRED":
       case "CURIOUS":
-      case "ANTICIPATING":
-      case "SAD":
-      case "LONELY":
-      case "NOSTALGIC":
-      case "CONFUSED":
         return Meh;
-      case "ANGRY":
-      case "FRUSTRATED":
-      case "DISGUSTED":
-        return Angry;
+      case "NOSTALGIC":
+        return Meh;
+      case "NEUTRAL":
+        return Meh;
       case "STRESSED":
-      case "ANXIOUS":
-      case "OVERWHELMED":
-      case "FEARFUL":
         return Annoyed;
+      case "SAD":
+        return Meh;
+      case "TIRED":
+        return Meh;
       default:
         return undefined;
     }

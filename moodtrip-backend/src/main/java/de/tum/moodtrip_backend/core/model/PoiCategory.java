@@ -7,24 +7,20 @@ public enum PoiCategory {
     ADVENTURE("Adventure"),
     RELAXATION("Relaxation"),
     FOOD_AND_CULINARY("Food & Culinary"),
-    NIGHTLIFE("Nightlife"),
-    ART_AND_MUSEUMS("Art & Museums"),
-    SHOPPING("Shopping"),
-    BEACH_AND_COAST("Beach & Coast"),
-    CITY_EXPLORATION("City Exploration");
+    SHOPPING("Shopping");
 
     private final String displayName;
 
     public static PoiCategory fromDisplayName(String displayName) {
         if (displayName == null) {
-            throw new IllegalArgumentException("displayName must not be null");
+            return null;
         }
         for (PoiCategory c : PoiCategory.values()) {
             if (c.displayName.equalsIgnoreCase(displayName)) {
                 return c;
             }
         }
-        throw new IllegalArgumentException("Unknown POI category display name: " + displayName);
+        return null;
     }
 
     PoiCategory(String displayName) {

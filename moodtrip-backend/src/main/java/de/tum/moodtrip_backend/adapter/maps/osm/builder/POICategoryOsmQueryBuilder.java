@@ -46,35 +46,10 @@ public final class POICategoryOsmQueryBuilder {
                             "nwr[\"shop\"~\"bakery|confectionery|deli|butcher\"]"
                     ),
 
-                    PoiCategory.NIGHTLIFE, List.of(
-                            "nwr[\"amenity\"~\"bar|pub|biergarten|nightclub|casino|music_venue\"]"
-                    ),
-
-                    PoiCategory.ART_AND_MUSEUMS, List.of(
-                            "nwr[\"tourism\"~\"museum|gallery|artwork\"]",
-                            "nwr[\"amenity\"~\"arts_centre|theatre|cinema\"]",
-                            "nwr[\"historic\"=\"artwork\"]"
-                    ),
-
                     PoiCategory.SHOPPING, List.of(
                             "nwr[\"shop\"~\"mall|department_store|supermarket|clothes|shoes|electronics|books|gift|boutique\"]",
                             "nwr[\"amenity\"=\"marketplace\"]",
                             "nwr[\"landuse\"=\"retail\"]"
-                    ),
-
-                    PoiCategory.BEACH_AND_COAST, List.of(
-                            "nwr[\"natural\"~\"beach|coastline|bay|dune\"]",
-                            "nwr[\"tourism\"=\"beach_resort\"]",
-                            "nwr[\"leisure\"=\"beach_resort\"]",
-                            "nwr[\"place\"~\"island|islet\"]"
-                    ),
-
-                    PoiCategory.CITY_EXPLORATION, List.of(
-                            "nwr[\"tourism\"~\"attraction|information|viewpoint\"]",
-                            "nwr[\"place\"=\"square\"]",
-                            "way[\"highway\"=\"pedestrian\"]",
-                            "nwr[\"historic\"~\"townhall|citywalls\"]",
-                            "nwr[\"amenity\"=\"townhall\"]"
                     )
             );
 
