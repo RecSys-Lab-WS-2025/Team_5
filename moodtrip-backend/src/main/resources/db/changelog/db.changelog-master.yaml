@@ -23,3 +23,9 @@ databaseChangeLog:
       file: db/changelog/changes/011-add-location-name-to-surveys.yaml
   - include:
       file: db/changelog/changes/012-drop-survey-conversation-unique.yaml
+  - include:
+      file: db/changelog/changes/013-create-emotion-category-scores.yaml
+  - include:
+      file: db/changelog/changes/014-create-poi-ratings.yaml
+  - include:
+      file: db/changelog/changes/015-init-emotion-category-scores.yaml

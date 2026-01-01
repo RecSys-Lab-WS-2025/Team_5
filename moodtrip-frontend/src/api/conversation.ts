@@ -158,16 +158,16 @@ export interface SurveyData {
 
 export type SurveyResponse =
   | {
-      routeStatus: "SUCCEEDED";
-      route: FeatureCollection;
-      spotifyPlaylistLink: string | null;
-    }
+    routeStatus: "SUCCEEDED";
+    route: FeatureCollection;
+    spotifyPlaylistLink: string | null;
+  }
   | {
-      routeStatus: "FAILED";
-      userMessage?: string;
-      route?: FeatureCollection | null;
-      spotifyPlaylistLink?: string | null;
-    };
+    routeStatus: "FAILED";
+    userMessage?: string;
+    route?: FeatureCollection | null;
+    spotifyPlaylistLink?: string | null;
+  };
 
 export async function submitSurvey(
   conversationId: number,

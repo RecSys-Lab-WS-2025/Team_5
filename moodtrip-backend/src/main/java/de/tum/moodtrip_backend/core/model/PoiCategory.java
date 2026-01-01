@@ -11,6 +11,16 @@ public enum PoiCategory {
 
     private final String displayName;
 
+    public static PoiCategory fromString(String text) {
+        if (text == null) return null;
+        String normalized = text.toUpperCase().trim().replace(" ", "_");
+        try {
+            return PoiCategory.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            return fromDisplayName(text);
+        }
+    }
+
     public static PoiCategory fromDisplayName(String displayName) {
         if (displayName == null) {
             return null;

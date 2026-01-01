@@ -23,6 +23,7 @@ interface ChatInterfaceProps {
   isLoading: boolean;
   routeGeoJson?: FeatureCollection | null;
   onSurveySubmit?: (data: SurveyData) => Promise<void> | void;
+  currentEmotion?: string | null;
 }
 
 export function ChatInterface({
@@ -33,6 +34,7 @@ export function ChatInterface({
   isLoading,
   routeGeoJson,
   onSurveySubmit,
+  currentEmotion,
 }: ChatInterfaceProps) {
   const bottomRef = React.useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
@@ -190,7 +192,7 @@ export function ChatInterface({
           const mapData = dataFromMessage || routeGeoJson || null;
 
           return mapData ? (
-            <RecommendedRouteMap data={mapData} />
+            <RecommendedRouteMap data={mapData} emotion={currentEmotion ?? undefined} />
           ) : (
             <div className="rounded-lg border bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
               We couldn't display the route map. Please try submitting the survey
@@ -266,10 +268,9 @@ export function ChatInterface({
   const { state, isMobile } = useSidebar();
   const fixedBarStyle = !isMobile
     ? {
-        left: `var(${
-          state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"
+      left: `var(${state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"
         })`,
-      }
+    }
     : undefined;
 
   return (
@@ -298,7 +299,7 @@ export function ChatInterface({
                     } rounded-lg px-4 py-3 text-base ${isUser
                       ? "!bg-blue-100 !text-black"
                       : "border bg-muted text-foreground"
-                  } `}
+                    } `}
                 >
                   <div className="space-y-1">{renderedParts}</div>
                 </div>
@@ -329,9 +330,8 @@ export function ChatInterface({
       </ScrollArea>
 
       <div
-        className={`fixed bottom-10 z-50 flex justify-center transition-all duration-320 ease-in-out ${
-          isMobile ? "left-3 right-3" : "right-4"
-        }`}
+        className={`fixed bottom-10 z-50 flex justify-center transition-all duration-320 ease-in-out ${isMobile ? "left-3 right-3" : "right-4"
+          }`}
         style={fixedBarStyle}
       >
         <form onSubmit={handleSubmit} className="w-full max-w-3xl">

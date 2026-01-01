@@ -1,0 +1,392 @@
+databaseChangeLog:
+  - changeSet:
+      id: 015-init-emotion-category-scores
+      author: antigravity
+      changes:
+        # JOYFUL
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: JOYFUL}
+              - column: {name: category, value: NATURE}
+              - column: {name: score, valueNumeric: 4.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: JOYFUL}
+              - column: {name: category, value: HISTORY_AND_CULTURE}
+              - column: {name: score, valueNumeric: 4.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: JOYFUL}
+              - column: {name: category, value: ADVENTURE}
+              - column: {name: score, valueNumeric: 4.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: JOYFUL}
+              - column: {name: category, value: RELAXATION}
+              - column: {name: score, valueNumeric: 3.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: JOYFUL}
+              - column: {name: category, value: FOOD_AND_CULINARY}
+              - column: {name: score, valueNumeric: 4.8}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: JOYFUL}
+              - column: {name: category, value: SHOPPING}
+              - column: {name: score, valueNumeric: 4.2}
+              - column: {name: rating_count, valueNumeric: 50}
+        # ENERGIZED
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: ENERGIZED}
+              - column: {name: category, value: NATURE}
+              - column: {name: score, valueNumeric: 4.2}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: ENERGIZED}
+              - column: {name: category, value: HISTORY_AND_CULTURE}
+              - column: {name: score, valueNumeric: 3.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: ENERGIZED}
+              - column: {name: category, value: ADVENTURE}
+              - column: {name: score, valueNumeric: 5.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: ENERGIZED}
+              - column: {name: category, value: RELAXATION}
+              - column: {name: score, valueNumeric: 2.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: ENERGIZED}
+              - column: {name: category, value: FOOD_AND_CULINARY}
+              - column: {name: score, valueNumeric: 4.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: ENERGIZED}
+              - column: {name: category, value: SHOPPING}
+              - column: {name: score, valueNumeric: 3.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        # CALM
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CALM}
+              - column: {name: category, value: NATURE}
+              - column: {name: score, valueNumeric: 4.8}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CALM}
+              - column: {name: category, value: HISTORY_AND_CULTURE}
+              - column: {name: score, valueNumeric: 3.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CALM}
+              - column: {name: category, value: ADVENTURE}
+              - column: {name: score, valueNumeric: 2.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CALM}
+              - column: {name: category, value: RELAXATION}
+              - column: {name: score, valueNumeric: 5.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CALM}
+              - column: {name: category, value: FOOD_AND_CULINARY}
+              - column: {name: score, valueNumeric: 4.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CALM}
+              - column: {name: category, value: SHOPPING}
+              - column: {name: score, valueNumeric: 2.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        # CURIOUS
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CURIOUS}
+              - column: {name: category, value: NATURE}
+              - column: {name: score, valueNumeric: 4.2}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CURIOUS}
+              - column: {name: category, value: HISTORY_AND_CULTURE}
+              - column: {name: score, valueNumeric: 5.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CURIOUS}
+              - column: {name: category, value: ADVENTURE}
+              - column: {name: score, valueNumeric: 4.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CURIOUS}
+              - column: {name: category, value: RELAXATION}
+              - column: {name: score, valueNumeric: 3.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CURIOUS}
+              - column: {name: category, value: FOOD_AND_CULINARY}
+              - column: {name: score, valueNumeric: 4.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: CURIOUS}
+              - column: {name: category, value: SHOPPING}
+              - column: {name: score, valueNumeric: 3.8}
+              - column: {name: rating_count, valueNumeric: 50}
+        # NOSTALGIC
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NOSTALGIC}
+              - column: {name: category, value: NATURE}
+              - column: {name: score, valueNumeric: 3.8}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NOSTALGIC}
+              - column: {name: category, value: HISTORY_AND_CULTURE}
+              - column: {name: score, valueNumeric: 4.8}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NOSTALGIC}
+              - column: {name: category, value: ADVENTURE}
+              - column: {name: score, valueNumeric: 2.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NOSTALGIC}
+              - column: {name: category, value: RELAXATION}
+              - column: {name: score, valueNumeric: 3.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NOSTALGIC}
+              - column: {name: category, value: FOOD_AND_CULINARY}
+              - column: {name: score, valueNumeric: 4.2}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NOSTALGIC}
+              - column: {name: category, value: SHOPPING}
+              - column: {name: score, valueNumeric: 3.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        # STRESSED
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: STRESSED}
+              - column: {name: category, value: NATURE}
+              - column: {name: score, valueNumeric: 4.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: STRESSED}
+              - column: {name: category, value: HISTORY_AND_CULTURE}
+              - column: {name: score, valueNumeric: 2.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: STRESSED}
+              - column: {name: category, value: ADVENTURE}
+              - column: {name: score, valueNumeric: 2.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: STRESSED}
+              - column: {name: category, value: RELAXATION}
+              - column: {name: score, valueNumeric: 4.8}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: STRESSED}
+              - column: {name: category, value: FOOD_AND_CULINARY}
+              - column: {name: score, valueNumeric: 3.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: STRESSED}
+              - column: {name: category, value: SHOPPING}
+              - column: {name: score, valueNumeric: 2.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        # SAD
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: SAD}
+              - column: {name: category, value: NATURE}
+              - column: {name: score, valueNumeric: 4.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: SAD}
+              - column: {name: category, value: HISTORY_AND_CULTURE}
+              - column: {name: score, valueNumeric: 3.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: SAD}
+              - column: {name: category, value: ADVENTURE}
+              - column: {name: score, valueNumeric: 2.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: SAD}
+              - column: {name: category, value: RELAXATION}
+              - column: {name: score, valueNumeric: 4.2}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: SAD}
+              - column: {name: category, value: FOOD_AND_CULINARY}
+              - column: {name: score, valueNumeric: 3.8}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: SAD}
+              - column: {name: category, value: SHOPPING}
+              - column: {name: score, valueNumeric: 2.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        # TIRED
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: TIRED}
+              - column: {name: category, value: NATURE}
+              - column: {name: score, valueNumeric: 3.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: TIRED}
+              - column: {name: category, value: HISTORY_AND_CULTURE}
+              - column: {name: score, valueNumeric: 2.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: TIRED}
+              - column: {name: category, value: ADVENTURE}
+              - column: {name: score, valueNumeric: 1.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: TIRED}
+              - column: {name: category, value: RELAXATION}
+              - column: {name: score, valueNumeric: 4.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: TIRED}
+              - column: {name: category, value: FOOD_AND_CULINARY}
+              - column: {name: score, valueNumeric: 4.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: TIRED}
+              - column: {name: category, value: SHOPPING}
+              - column: {name: score, valueNumeric: 2.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        # NEUTRAL
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NEUTRAL}
+              - column: {name: category, value: NATURE}
+              - column: {name: score, valueNumeric: 3.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NEUTRAL}
+              - column: {name: category, value: HISTORY_AND_CULTURE}
+              - column: {name: score, valueNumeric: 3.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NEUTRAL}
+              - column: {name: category, value: ADVENTURE}
+              - column: {name: score, valueNumeric: 3.0}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NEUTRAL}
+              - column: {name: category, value: RELAXATION}
+              - column: {name: score, valueNumeric: 3.5}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NEUTRAL}
+              - column: {name: category, value: FOOD_AND_CULINARY}
+              - column: {name: score, valueNumeric: 3.8}
+              - column: {name: rating_count, valueNumeric: 50}
+        - insert:
+            tableName: emotion_category_scores
+            columns:
+              - column: {name: emotion, value: NEUTRAL}
+              - column: {name: category, value: SHOPPING}
+              - column: {name: score, valueNumeric: 3.5}
+              - column: {name: rating_count, valueNumeric: 50}

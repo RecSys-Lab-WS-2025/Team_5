@@ -1,0 +1,46 @@
+databaseChangeLog:
+  - changeSet:
+      id: 014-create-poi-ratings
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: poi_ratings
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: poi_id
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: emotion
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rating
+                  type: double
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false

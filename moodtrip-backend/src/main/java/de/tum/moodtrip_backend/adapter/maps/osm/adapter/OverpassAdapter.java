@@ -41,26 +41,29 @@ public class OverpassAdapter implements OsmPort {
 
     @Override
     public Flux<Poi> findAmenitiesAround(double lat, double lon, List<PoiCategory> poiCategories, int radiusMeters) {
-        String query = POICategoryOsmQueryBuilder.buildAroundQuery(poiCategories, lat, lon, radiusMeters);
-        LOGGER.info("Sending Overpass query: {}", query);
+        return Flux.fromIterable(poiCategories)
+                .flatMap(category -> {
+                    String query = POICategoryOsmQueryBuilder.buildAroundQuery(category, lat, lon, radiusMeters);
+                    LOGGER.info("Sending Overpass query for category {}: {}", category, query);
 
-        return webClient.post()
-                .uri("/api/interpreter")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .accept(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromFormData("data", query))
-                .retrieve()
-                .bodyToMono(OverpassResponse.class)
-                .doOnSuccess(response -> {
-                   if (response != null && response.elements() != null) {
-                       LOGGER.info("Overpass returned {} elements", response.elements().size());
-                   } else {
-                       LOGGER.info("Overpass returned empty response");
-                   }
+                    return webClient.post()
+                            .uri("/api/interpreter")
+                            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                            .accept(MediaType.APPLICATION_JSON)
+                            .body(BodyInserters.fromFormData("data", query))
+                            .retrieve()
+                            .bodyToMono(OverpassResponse.class)
+                            .doOnSuccess(response -> {
+                                if (response != null && response.elements() != null) {
+                                    LOGGER.info("Overpass returned {} elements for category {}", response.elements().size(), category);
+                                } else {
+                                    LOGGER.info("Overpass returned empty response for category {}", category);
+                                }
+                            })
+                            .doOnError(e -> LOGGER.error("Overpass query failed for category {}", category, e))
+                            .map(response -> OverpassResponsePOIMapper.toPois(response, category))
+                            .flatMapMany(Flux::fromIterable);
                 })
-                .doOnError(e -> LOGGER.error("Overpass query failed", e))
-                .map(OverpassResponsePOIMapper::toPois)
-                .flatMapMany(Flux::fromIterable)
-                .retryWhen(Retry.fixedDelay(5, Duration.ofMillis(10)));
+                .retryWhen(Retry.fixedDelay(3, Duration.ofMillis(500)));
     }
 }

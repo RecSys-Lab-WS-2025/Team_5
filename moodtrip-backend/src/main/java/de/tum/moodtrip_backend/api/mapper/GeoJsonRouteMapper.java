@@ -22,7 +22,7 @@ public final class GeoJsonRouteMapper {
      * @param poiRouteResult domain object containing enriched POIs and the route
      * @return GeoJSON FeatureCollection
      */
-    public FeatureCollection toFeatureCollection(PoiRouteResult poiRouteResult) {
+    public FeatureCollection toFeatureCollection(PoiRouteResult poiRouteResult, String emotion) {
         FeatureCollection featureCollection = new FeatureCollection();
 
         if (poiRouteResult == null) {
@@ -44,6 +44,7 @@ public final class GeoJsonRouteMapper {
                 poiFeature.setProperty("osmId", poi.osmId());
                 poiFeature.setProperty("osmType", poi.osmType().name());
                 poiFeature.setProperty("name", poi.name());
+                poiFeature.setProperty("category", poi.category().name());
 
                 // Display name, description, image
                 poiFeature.setProperty("displayName", enrichedPoi.displayName());
@@ -75,6 +76,7 @@ public final class GeoJsonRouteMapper {
             routeFeature.setProperty("type", "route");
             routeFeature.setProperty("distanceMeters", route.distanceMeters());
             routeFeature.setProperty("durationSeconds", route.durationSeconds());
+            routeFeature.setProperty("emotion", emotion);
 
             featureCollection.add(routeFeature);
         }

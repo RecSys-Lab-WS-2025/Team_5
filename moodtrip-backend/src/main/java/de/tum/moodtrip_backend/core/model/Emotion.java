@@ -13,7 +13,7 @@ public enum Emotion {
     public static Emotion fromString(String text) {
         if (text == null) return NEUTRAL;
         try {
-            return Emotion.valueOf(text.toUpperCase());
+            return Emotion.valueOf(text.toUpperCase().trim());
         } catch (IllegalArgumentException e) {
             return NEUTRAL;
         }
