@@ -5,12 +5,12 @@ public record EmotionCategoryScore(
         Emotion emotion,
         PoiCategory category,
         Double score,
-        Long count
+        Long ratingCount
 ) {
     public EmotionCategoryScore withScore(Double newScore) {
-        return new EmotionCategoryScore(id, emotion, category, newScore, count);
+        return new EmotionCategoryScore(id, emotion, category, newScore, ratingCount);
     }
-    public EmotionCategoryScore withCount(Long newCount) {
-        return new EmotionCategoryScore(id, emotion, category, score, newCount);
+    public EmotionCategoryScore withCount(Long newRatingCount) {
+        return new EmotionCategoryScore(id, emotion, category, score, newRatingCount);
     }
 }
