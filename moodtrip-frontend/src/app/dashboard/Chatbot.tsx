@@ -21,7 +21,7 @@ import {
   Smile,
   Meh,
   Annoyed,
-  Angry,
+  // Angry,
   LifeBuoy,
   Send,
   Heart,
