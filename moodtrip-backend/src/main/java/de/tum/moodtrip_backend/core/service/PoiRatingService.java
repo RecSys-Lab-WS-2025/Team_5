@@ -63,6 +63,7 @@ public class PoiRatingService {
                 }));
     }
 
+    //update the average score for the given category and emotion
     private Mono<Void> updateCategoryScore(Emotion emotion, PoiCategory category, Double newRating, Double oldRating) {
         boolean isUpdate = oldRating != null;
         String actionType = isUpdate ? "Updating" : "Adding";

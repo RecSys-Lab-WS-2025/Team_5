@@ -64,6 +64,6 @@ public class OverpassAdapter implements OsmPort {
                             .map(response -> OverpassResponsePOIMapper.toPois(response, category))
                             .flatMapMany(Flux::fromIterable);
                 })
-                .retryWhen(Retry.fixedDelay(3, Duration.ofMillis(500)));
+                .retryWhen(Retry.fixedDelay(3, Duration.ofMillis(10)));
     }
 }
