@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: 016-create-user-preference-offsets
+      author: xu
+      changes:
+        - createTable:
+            tableName: user_preference_offsets
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_user_preference_offsets
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: emotion
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: preference_offset
+                  type: double
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: count
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: user_preference_offsets
+            columnNames: user_id, emotion, category
+            constraintName: uq_user_preference_offset
+        - addForeignKeyConstraint:
+            baseTableName: user_preference_offsets
+            baseColumnNames: user_id
+            referencedTableName: user_profile
+            referencedColumnNames: id
+            constraintName: fk_user_preference_offset_user
