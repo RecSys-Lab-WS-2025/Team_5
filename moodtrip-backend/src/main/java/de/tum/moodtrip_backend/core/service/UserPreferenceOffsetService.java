@@ -109,15 +109,25 @@ public class UserPreferenceOffsetService {
                                           double globalScore,
                                           LocalDateTime now,
                                           boolean incrementCount) {
+        // Use the current interaction count to compute alpha for prediction.
+        // The predicted rating is the global baseline score plus a user-specific offset.
         double alphaPred = computeAlpha(current.count());
         double predicted = globalScore + alphaPred * current.userPreferenceOffset();
+        // Error is the residual between the observed rating and the current prediction.
         double error = rating - predicted;
 
         long newCount = current.count() + (incrementCount ? 1 : 0);
+        // For the update we recompute alpha based on the (possibly) incremented count
+        // so that the step size can depend on how many observations we have.
         double alphaUpdate = computeAlpha(newCount);
 
         double delta = current.userPreferenceOffset();
+        // Gradient-like update of the user preference offset:
+        //   alphaUpdate * error     -> error-driven term (pushes offset to better fit the rating)
+        //   regularization * delta  -> L2-style shrinkage (pulls offset back towards 0 to avoid overfitting)
+        // The net update is scaled by the global learningRate.
         double updatedDelta = delta + learningRate * (alphaUpdate * error - regularization * delta);
+        // Ensure the learned offset stays within the configured [offsetMin, offsetMax] range.
         updatedDelta = clampOffset(updatedDelta);
 
         UserPreferenceOffset updated = new UserPreferenceOffset(
