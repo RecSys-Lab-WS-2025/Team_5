@@ -16,6 +16,8 @@ public class ConversationEntity {
     
     private String title;
     private String emotion;
+    @Column("emotion_result_json")
+    private String emotionResultJson;
     
     @Column("created_at")
     private LocalDateTime createdAt;
@@ -23,11 +25,12 @@ public class ConversationEntity {
     public ConversationEntity() {
     }
 
-    public ConversationEntity(Long id, Long userId, String title, String emotion, LocalDateTime createdAt) {
+    public ConversationEntity(Long id, Long userId, String title, String emotion, String emotionResultJson, LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.title = title;
         this.emotion = emotion;
+        this.emotionResultJson = emotionResultJson;
         this.createdAt = createdAt;
     }
 
@@ -61,6 +64,14 @@ public class ConversationEntity {
 
     public void setEmotion(String emotion) {
         this.emotion = emotion;
+    }
+
+    public String getEmotionResultJson() {
+        return emotionResultJson;
+    }
+
+    public void setEmotionResultJson(String emotionResultJson) {
+        this.emotionResultJson = emotionResultJson;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -8,6 +8,7 @@ import de.tum.moodtrip_backend.core.model.EmotionResult;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class EmotionMapper {
@@ -43,6 +44,22 @@ public class EmotionMapper {
             return new EmotionResult(scores, topLabel, topScore, content, success);
         } catch (IOException e) {
             throw new RuntimeException("Failed to parse emotion JSON", e);
+        }
+    }
+
+    public static String toJson(EmotionResult emotionResult) {
+        try {
+            Map<String, Object> root = new LinkedHashMap<>();
+            Map<String, Double> scores = new LinkedHashMap<>();
+            emotionResult.scores().forEach((emotion, value) -> scores.put(emotion.name(), value));
+            root.put("scores", scores);
+            root.put("top_label", emotionResult.topLabel().name());
+            root.put("top_score", emotionResult.topScore());
+            root.put("success", emotionResult.success());
+            root.put("content", emotionResult.content());
+            return mapper.writeValueAsString(root);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to serialize emotion result", e);
         }
     }
 }

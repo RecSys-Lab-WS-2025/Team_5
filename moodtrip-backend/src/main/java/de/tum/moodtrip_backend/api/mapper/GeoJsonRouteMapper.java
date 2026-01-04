@@ -3,6 +3,7 @@ package de.tum.moodtrip_backend.api.mapper;
 import de.tum.moodtrip_backend.core.model.EnrichedPoi;
 import de.tum.moodtrip_backend.core.model.PoiRouteResult;
 import de.tum.moodtrip_backend.core.model.Poi;
+import de.tum.moodtrip_backend.core.model.PoiScore;
 import de.tum.moodtrip_backend.core.model.Route;
 import de.tum.moodtrip_backend.core.model.RouteCoordinate;
 import org.geojson.Feature;
@@ -50,6 +51,16 @@ public final class GeoJsonRouteMapper {
                 poiFeature.setProperty("displayName", enrichedPoi.displayName());
                 poiFeature.setProperty("description", enrichedPoi.description());
                 poiFeature.setProperty("imageUrl", enrichedPoi.imageUrl());
+
+                PoiScore score = enrichedPoi.score();
+                if (score != null) {
+                    poiFeature.setProperty("finalScore", score.finalScore());
+                    poiFeature.setProperty("categoryScore", score.categoryScore());
+                    poiFeature.setProperty("tagScore", score.tagScore());
+                    poiFeature.setProperty("distanceScore", score.distanceScore());
+                    poiFeature.setProperty("distanceMeters", score.distanceMeters());
+                    poiFeature.setProperty("emotionContributions", score.emotionContributions());
+                }
 
                 // All original OSM tags as nested object
                 Map<String, String> tags = poi.tags();

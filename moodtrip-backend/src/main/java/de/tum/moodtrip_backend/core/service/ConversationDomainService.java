@@ -1,6 +1,7 @@
 package de.tum.moodtrip_backend.core.service;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import de.tum.moodtrip_backend.core.model.ConversationDomain;
 import de.tum.moodtrip_backend.core.model.MessageDomain;
@@ -82,6 +83,7 @@ public class ConversationDomainService {
                 userId,
                 title,
                 Emotion.NEUTRAL,
+                null,
                 LocalDateTime.now()
         );
         return conversationPort.save(conversation)
@@ -167,10 +169,12 @@ public class ConversationDomainService {
                                             .then(emotionPort.extractEmotion(historyAndNewMessage))
                                             .flatMap(emotionResult -> {
                                                 LOGGER.info("Emotion extracted: {}, Score: {}", emotionResult.topLabel(), emotionResult.topScore());
-                                                return saveEmotionResult(conversationId, emotionResult)
-                                                        .then(updateConversationEmotion(conversation, emotionResult))
-                                                        .then(generateConversationTitle(conversationId, userId))
-                                                        .thenReturn(emotionResult);
+                                                return saveEmotionResult(conversation, emotionResult)
+                                                        .flatMap(updated ->
+                                                                saveEmotionBotMessage(conversationId, emotionResult)
+                                                                        .then(generateConversationTitle(conversationId, userId))
+                                                                        .thenReturn(emotionResult)
+                                                        );
                                             })
                             );
                 });
@@ -234,9 +238,18 @@ public class ConversationDomainService {
     }
 
     /**
-     * Persist the emotion result as a bot message.
+     * Persist the emotion result directly on the conversation.
      */
-    private Mono<MessageDomain> saveEmotionResult(Long conversationId, EmotionResult emotionResult) {
+    private Mono<ConversationDomain> saveEmotionResult(ConversationDomain conversation, EmotionResult emotionResult) {
+        String topLabel = emotionResult.topLabel().toString();
+        Emotion emotion = Emotion.fromString(topLabel);
+        ConversationDomain updated = conversation
+                .withEmotion(emotion)
+                .withEmotionResult(emotionResult);
+        return conversationPort.save(updated);
+    }
+
+    private Mono<MessageDomain> saveEmotionBotMessage(Long conversationId, EmotionResult emotionResult) {
         MessageDomain botMessage = new MessageDomain(
                 null,
                 conversationId,
@@ -247,15 +260,15 @@ public class ConversationDomainService {
         return conversationPort.saveMessage(botMessage);
     }
 
-    /**
-     * Update the stored emotion of the conversation based on the LLM result.
-     */
-    private Mono<Void> updateConversationEmotion(ConversationDomain conversation,
-                                                 EmotionResult emotionResult) {
-        String topLabel = emotionResult.topLabel().toString();
-        Emotion emotion = Emotion.fromString(topLabel);
-        ConversationDomain updated = conversation.withEmotion(emotion);
-        return conversationPort.save(updated).then();
+    public Mono<Map<Emotion, Double>> getLatestEmotionWeights(Long conversationId) {
+        return getConversationById(conversationId)
+                .flatMap(conv -> {
+                    EmotionResult result = conv.emotionResult();
+                    if (result == null) {
+                        return Mono.empty();
+                    }
+                    return Mono.justOrEmpty(result.scores());
+                });
     }
 
     /**

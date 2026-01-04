@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: 017-add-emotion-result-to-conversation
+      author: xu
+      changes:
+        - addColumn:
+            tableName: conversation
+            columns:
+              - column:
+                  name: emotion_result_json
+                  type: TEXT

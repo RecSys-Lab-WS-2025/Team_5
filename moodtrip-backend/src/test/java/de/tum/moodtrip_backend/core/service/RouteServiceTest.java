@@ -9,15 +9,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,19 +38,25 @@ class RouteServiceTest {
     @Mock
     private RouteRecommendationPort routeRecommendationPort;
 
+    @Mock
+    private PoiScoringService poiScoringService;
+
     @Test
     void returnsFailureWithoutPersistingWhenRouteGenerationErrors() {
         RouteService routeService = new RouteService(
                 osmPort,
                 wikipediaPort,
                 routingPort,
-                routeRecommendationPort
+                routeRecommendationPort,
+                poiScoringService
         );
 
-        when(osmPort.findAmenitiesAround(anyDouble(), anyDouble(), anyList(), anyInt()))
-                .thenReturn(Flux.error(new RuntimeException("Overpass failure")));
+        when(poiScoringService.scoreAndRank(any(), any(), any(), anyDouble(), anyDouble(), anyInt()))
+                .thenReturn(Mono.error(new RuntimeException("Overpass failure")));
+        when(osmPort.findAmenitiesAround(anyDouble(), anyDouble(), any(), anyInt()))
+                .thenReturn(Flux.empty());
 
-        StepVerifier.create(routeService.getRoute(1L, 0.0, 0.0, List.of(), 1000))
+        StepVerifier.create(routeService.getRoute(1L, 2L, 0.0, 0.0, List.of(), 1000, Map.of()))
                 .assertNext(result -> {
                     assertThat(result.status()).isEqualTo(de.tum.moodtrip_backend.core.model.RouteStatus.FAILED);
                     assertThat(result.userMessage()).isNotBlank();

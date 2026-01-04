@@ -55,7 +55,21 @@ public final class WikipediaMediaMapper {
 
         String filename = extractFilename(trimmed, wikiIndex);
 
-        return "https://commons.wikimedia.org/wiki/Special:FilePath/" + filename;
+        String filePath = "https://commons.wikimedia.org/wiki/Special:FilePath/" + filename;
+        return appendDefaultExtensionIfMissing(filePath);
+    }
+    
+    private static String appendDefaultExtensionIfMissing(String url) {
+        int slash = url.lastIndexOf('/');
+        if (slash == -1 || slash == url.length() - 1) {
+            return url;
+        }
+        String basename = url.substring(slash + 1);
+        // If there is already a dot after the last slash, assume an extension is present.
+        if (basename.contains(".")) {
+            return url;
+        }
+        return url + ".jpg";
     }
 
     private static String extractFilename(String trimmed, int wikiIndex) {
