@@ -29,3 +29,5 @@ databaseChangeLog:
       file: db/changelog/changes/014-create-poi-ratings.yaml
   - include:
       file: db/changelog/changes/015-init-emotion-category-scores.yaml
+  - include:
+      file: db/changelog/changes/016-create-user-preference-residuals.yaml

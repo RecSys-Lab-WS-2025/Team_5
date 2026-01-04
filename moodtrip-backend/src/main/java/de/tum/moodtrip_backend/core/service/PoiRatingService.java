@@ -19,10 +19,14 @@ public class PoiRatingService {
     private static final Logger LOGGER = LoggerFactory.getLogger(PoiRatingService.class);
     private final PoiRatingPort poiRatingPort;
     private final EmotionCategoryScorePort scorePort;
+    private final UserPreferenceOffsetService offsetService;
 
-    public PoiRatingService(PoiRatingPort poiRatingPort, EmotionCategoryScorePort scorePort) {
+    public PoiRatingService(PoiRatingPort poiRatingPort,
+                            EmotionCategoryScorePort scorePort,
+                            UserPreferenceOffsetService offsetService) {
         this.poiRatingPort = poiRatingPort;
         this.scorePort = scorePort;
+        this.offsetService = offsetService;
     }
 
     public Mono<PoiRating> getRating(Long userId, String poiId, Emotion emotion) {
@@ -31,6 +35,10 @@ public class PoiRatingService {
 
     public Mono<PoiRating> submitRating(Long userId, String poiId, PoiCategory category, Emotion emotion, Double rating) {
         LOGGER.info("Processing rating submission: userId={}, poiId={}, category={}, emotion={}, rating={}", userId, poiId, category, emotion, rating);
+
+        if (rating == null || rating < 0.5 || rating > 5.0) {
+            return Mono.error(new IllegalArgumentException("Rating must be between 0.5 and 5"));
+        }
 
         return poiRatingPort.findByUserPoiAndEmotion(userId, poiId, emotion)
                 .flatMap(existingRating -> {
@@ -49,6 +57,7 @@ public class PoiRatingService {
                     
                     return poiRatingPort.save(updatedRating)
                             .flatMap(saved -> updateCategoryScore(emotion, category, rating, existingRating.rating())
+                                    .then(offsetService.updateUserPreferenceOffset(userId, emotion, category, rating, false))
                                     .thenReturn(saved));
                 })
                 .switchIfEmpty(Mono.defer(() -> {
@@ -59,6 +68,7 @@ public class PoiRatingService {
                     
                     return poiRatingPort.save(newRating)
                             .flatMap(saved -> updateCategoryScore(emotion, category, rating, null)
+                                    .then(offsetService.updateUserPreferenceOffset(userId, emotion, category, rating, true))
                                     .thenReturn(saved));
                 }));
     }
