@@ -72,9 +72,12 @@ public class UserPreferenceOffsetService {
         return userPreferenceOffsetPort.insertIfAbsent(computation.updatedOffset())
                 .flatMap(saved -> Mono.just(buildResult(saved, computation.predicted(), computation.error())))
                 .switchIfEmpty(Mono.defer(() -> {
-                    // Another transaction inserted concurrently; retry with the latest row locked.
+                    // Another transaction may have inserted concurrently; retry with the latest row locked.
                     return userPreferenceOffsetPort.findByUserEmotionAndCategoryForUpdate(userId, emotion, category)
-                            .flatMap(existing -> updateExistingOffset(existing, rating, globalScore, incrementCount));
+                            .flatMap(existing -> updateExistingOffset(existing, rating, globalScore, incrementCount))
+                            .switchIfEmpty(Mono.error(new IllegalStateException(
+                                    "Failed to insert or find UserPreferenceOffset for userId=%d, emotion=%s, category=%s"
+                                            .formatted(userId, emotion, category))));
                 }));
     }
 
