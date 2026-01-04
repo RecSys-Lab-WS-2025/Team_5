@@ -10,7 +10,7 @@ public record PoiRatingRequest(
         @NotBlank(message = "Emotion cannot be blank")
         String emotion,
         @DecimalMin(value = "0.5", message = "Rating must be at least 0.5")
-        @Max(value = 5, message = "Rating cannot exceed 5.0")
+        @DecimalMax(value = "5.0", message = "Rating cannot exceed 5.0")
         Double rating
 ) {
 }
