@@ -38,6 +38,7 @@ databaseChangeLog:
               - column:
                   name: count
                   type: bigint
+                  defaultValueNumeric: 0
                   constraints:
                     nullable: false
               - column:
