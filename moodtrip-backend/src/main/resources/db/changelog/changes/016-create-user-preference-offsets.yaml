@@ -32,7 +32,7 @@ databaseChangeLog:
               - column:
                   name: preference_offset
                   type: double
-                  defaultValueNumeric: 0.0
+                  defaultValueNumeric: 0
                   constraints:
                     nullable: false
               - column:
