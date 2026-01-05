@@ -3,6 +3,7 @@ package de.tum.moodtrip_backend.adapter.maps.osm.adapter;
 import de.tum.moodtrip_backend.adapter.maps.osm.builder.OverpassQueryBuilder;
 import de.tum.moodtrip_backend.adapter.maps.osm.mapper.OverpassResponsePOIMapper;
 import de.tum.moodtrip_backend.adapter.maps.osm.model.OverpassResponse;
+import de.tum.moodtrip_backend.core.exception.MapProviderUnavailableException;
 import de.tum.moodtrip_backend.core.model.Poi;
 import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.port.OsmPort;
@@ -68,13 +69,7 @@ public class OverpassAdapter implements OsmPort {
                 .retryWhen(Retry.backoff(5, Duration.ofSeconds(1)))
                 .onErrorResume(e -> {
                     LOGGER.error("Overpass unavailable after retries", e);
-                    return Flux.error(new OverpassUnavailableException(e));
+                    return Flux.error(new MapProviderUnavailableException(e));
                 });
-    }
-
-    public static class OverpassUnavailableException extends RuntimeException {
-        public OverpassUnavailableException(Throwable cause) {
-            super("Overpass unavailable", cause);
-        }
     }
 }

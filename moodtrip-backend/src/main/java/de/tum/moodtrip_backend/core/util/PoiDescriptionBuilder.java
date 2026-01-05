@@ -1,4 +1,4 @@
-package de.tum.moodtrip_backend.adapter.maps.osm.builder;
+package de.tum.moodtrip_backend.core.util;
 
 import de.tum.moodtrip_backend.core.model.Poi;
 import org.apache.commons.lang3.StringUtils;

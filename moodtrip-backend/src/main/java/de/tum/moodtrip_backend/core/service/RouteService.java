@@ -1,7 +1,6 @@
 package de.tum.moodtrip_backend.core.service;
 
-import de.tum.moodtrip_backend.adapter.maps.osm.adapter.OverpassAdapter;
-import de.tum.moodtrip_backend.adapter.maps.osm.builder.PoiDescriptionBuilder;
+import de.tum.moodtrip_backend.core.exception.MapProviderUnavailableException;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteCoordinatesMapper;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteResultRouteRecommendationMapper;
 import de.tum.moodtrip_backend.core.model.Emotion;
@@ -15,6 +14,7 @@ import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.RouteRecommendationPort;
 import de.tum.moodtrip_backend.core.port.RoutingPort;
 import de.tum.moodtrip_backend.core.port.WikipediaPort;
+import de.tum.moodtrip_backend.core.util.PoiDescriptionBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -136,7 +136,6 @@ public class RouteService {
                                 LOGGER.warn("Failed to enrich POI {} (id={}): {}", poi.tags(), poi.osmId(), error.toString());
                                 String displayName = PoiDescriptionBuilder.buildDisplayName(poi);
                                 String description = PoiDescriptionBuilder.buildShortDescription(poi, "");
-                                String description = PoiDescriptionBuilder.buildShortDescription(poi, "");
                                 return Mono.just(new EnrichedPoi(
                                         poi,
                                         displayName,
@@ -156,7 +155,7 @@ public class RouteService {
         if (hasCause(error, NotEnoughPoisException.class)) {
             return "I couldn't find enough interesting places nearby to build a route. Please try a larger radius or a different area.";
         }
-        if (hasCause(error, OverpassAdapter.OverpassUnavailableException.class)) {
+        if (hasCause(error, MapProviderUnavailableException.class)) {
             return "The map service timed out while fetching places. Please try again in a moment.";
         }
         if (isTimeout(error)) {
