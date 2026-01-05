@@ -133,9 +133,9 @@ public class RouteService {
                                 return new EnrichedPoi(poi, displayName, description, imageUrl, poi.category(), scoredPoi.score());
                             })
                             .onErrorResume(error -> {
-                                LoggerFactory.getLogger(RouteService.class)
-                                        .warn("Failed to enrich POI {} (id={}): {}", poi.tags(), poi.osmId(), error.toString());
+                                LOGGER.warn("Failed to enrich POI {} (id={}): {}", poi.tags(), poi.osmId(), error.toString());
                                 String displayName = PoiDescriptionBuilder.buildDisplayName(poi);
+                                String description = PoiDescriptionBuilder.buildShortDescription(poi, "");
                                 String description = PoiDescriptionBuilder.buildShortDescription(poi, "");
                                 return Mono.just(new EnrichedPoi(
                                         poi,
