@@ -65,7 +65,7 @@ public class OverpassAdapter implements OsmPort {
                 .doOnError(e -> LOGGER.error("Overpass query failed", e))
                 .map(OverpassResponsePOIMapper::toPois)
                 .flatMapMany(Flux::fromIterable)
-                .retryWhen(Retry.fixedDelay(5, Duration.ofMillis(50)))
+                .retryWhen(Retry.backoff(5, Duration.ofSeconds(1)))
                 .onErrorResume(e -> {
                     LOGGER.error("Overpass unavailable after retries", e);
                     return Flux.error(new OverpassUnavailableException(e));
