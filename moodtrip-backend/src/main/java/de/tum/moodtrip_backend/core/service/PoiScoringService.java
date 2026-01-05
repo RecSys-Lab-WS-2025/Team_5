@@ -222,7 +222,7 @@ public class PoiScoringService {
     }
 
     private double computeAlpha(long count) {
-        return count / (count + shrinkageK);
+        return (double) count / (count + shrinkageK);
     }
 
     private double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
