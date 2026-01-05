@@ -102,10 +102,11 @@ public class PoiScoringService {
         return categoryScoresMono.flatMap(categoryScores ->
                 pois.flatMap(poi -> scorePoi(poi, categoryScores, originLat, originLon))
                         .collectList()
-                        .map(list -> list.stream()
-                                .sorted(Comparator.comparingDouble(sp -> -sp.score().finalScore()))
-                                .limit(limit)
-                                .toList())
+                .map(list -> list.stream()
+                        .sorted(Comparator.comparingDouble(sp -> -sp.score().finalScore()))
+                        .limit(limit)
+                        .peek(this::logTopPoi)
+                        .toList())
         );
     }
 
@@ -238,6 +239,52 @@ public class PoiScoringService {
                         Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
+    }
+
+    private void logTopPoi(ScoredPoi scoredPoi) {
+        if (scoredPoi == null || scoredPoi.poi() == null || scoredPoi.score() == null) {
+            return;
+        }
+        Poi poi = scoredPoi.poi();
+        PoiScore score = scoredPoi.score();
+        Map<String, String> tags = poi.tags() == null ? Map.of() : poi.tags();
+
+        boolean hasWikipedia = hasNonBlank(tags, "wikipedia");
+        boolean hasWikidata = hasNonBlank(tags, "wikidata");
+        boolean hasCommons = hasNonBlank(tags, "wikimedia_commons");
+        boolean hasWebsite = hasNonBlank(tags, "website");
+        boolean hasImage = hasNonBlank(tags, "image");
+        boolean hasOpeningHours = hasNonBlank(tags, "opening_hours");
+        boolean hasPhone = hasNonBlank(tags, "phone");
+        boolean hasNameTag = hasNonBlank(tags, "name");
+        boolean hasTrustMarker = hasWikipedia || hasWikidata || hasCommons || hasWebsite;
+
+        String emotionBreakdown = score.emotionContributions() == null ? "" :
+                score.emotionContributions().entrySet().stream()
+                        .sorted(Map.Entry.<Emotion, Double>comparingByValue().reversed())
+                        .limit(3)
+                        .map(e -> e.getKey() + "=" + String.format("%.3f", e.getValue()))
+                        .collect(Collectors.joining(", "));
+
+        LOGGER.info("Top10 POI -> id={}, name='{}', category={}, finalScore={}, categoryScore={}, tagScore={}, distanceScore={}, distanceMeters={}, emotions=[{}], signals={{nameTag={}, wikipedia={}, wikidata={}, commons={}, website={}, image={}, opening_hours={}, phone={}, trustMarker={}}}",
+                poi.osmId(),
+                poi.name(),
+                poi.category(),
+                String.format("%.3f", score.finalScore()),
+                String.format("%.3f", score.categoryScore()),
+                String.format("%.3f", score.tagScore()),
+                String.format("%.3f", score.distanceScore()),
+                String.format("%.1f", score.distanceMeters()),
+                emotionBreakdown,
+                hasNameTag,
+                hasWikipedia,
+                hasWikidata,
+                hasCommons,
+                hasWebsite,
+                hasImage,
+                hasOpeningHours,
+                hasPhone,
+                hasTrustMarker);
     }
 
     private record TagWeights(double name,

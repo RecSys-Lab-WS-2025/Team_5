@@ -44,14 +44,14 @@ public final class OverpassQueryBuilder {
               nwr["amenity"="marketplace"](around:%2$d,%3$.6f,%4$.6f);
             )->.candidates;
 
-            /* Keep if it has wikipedia/website/wikimedia_commons/image */
+            /* Keep if it has wikipedia/website/wikimedia_commons/image/name */
             (
               nwr.candidates(if:
-                t["wikipedia"] || t["wikidata"] || t["wikimedia_commons"] || t["website"] || t["image"]
+                t["wikipedia"] || t["wikidata"] || t["wikimedia_commons"] || t["website"] || t["image"] || t["name"]
               );
             )->.filtered;
 
-            out center tags qt 2000;
+            out center tags qt 100000;
             """;
 
     private OverpassQueryBuilder() {
