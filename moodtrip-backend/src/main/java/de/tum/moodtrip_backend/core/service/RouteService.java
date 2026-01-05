@@ -131,6 +131,20 @@ public class RouteService {
                                 String description = PoiDescriptionBuilder.buildShortDescription(poi, summary);
 
                                 return new EnrichedPoi(poi, displayName, description, imageUrl, poi.category(), scoredPoi.score());
+                            })
+                            .onErrorResume(error -> {
+                                LoggerFactory.getLogger(RouteService.class)
+                                        .warn("Failed to enrich POI {} (id={}): {}", poi.tags(), poi.id(), error.toString());
+                                String displayName = PoiDescriptionBuilder.buildDisplayName(poi);
+                                String description = PoiDescriptionBuilder.buildShortDescription(poi, "");
+                                return Mono.just(new EnrichedPoi(
+                                        poi,
+                                        displayName,
+                                        description,
+                                        "",
+                                        poi.category(),
+                                        scoredPoi.score()
+                                ));
                             });
                 });
     }
