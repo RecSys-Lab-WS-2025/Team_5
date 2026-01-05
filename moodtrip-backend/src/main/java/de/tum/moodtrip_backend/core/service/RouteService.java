@@ -134,7 +134,7 @@ public class RouteService {
                             })
                             .onErrorResume(error -> {
                                 LoggerFactory.getLogger(RouteService.class)
-                                        .warn("Failed to enrich POI {} (id={}): {}", poi.tags(), poi.id(), error.toString());
+                                        .warn("Failed to enrich POI {} (id={}): {}", poi.tags(), poi.osmId(), error.toString());
                                 String displayName = PoiDescriptionBuilder.buildDisplayName(poi);
                                 String description = PoiDescriptionBuilder.buildShortDescription(poi, "");
                                 return Mono.just(new EnrichedPoi(
