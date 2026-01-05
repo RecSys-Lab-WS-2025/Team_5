@@ -179,7 +179,11 @@ public class PoiScoringService {
                     double weightedScore = weight * combined;
                     return new EmotionContribution(emotion, weightedScore);
                 })
-                .doOnError(e -> LOGGER.error("Failed to compute emotion contribution for emotion={}, category={}", emotion, category, e));
+                .doOnError(e -> LOGGER.error("Failed to compute emotion contribution for emotion={}, category={}", emotion, category, e))
+                .onErrorResume(e -> {
+                    LOGGER.warn("Using fallback neutral emotion contribution for emotion={}, category={} due to error", emotion, category, e);
+                    return Mono.just(new EmotionContribution(emotion, 0.0));
+                });
     }
 
     private double computeTagScore(Map<String, String> tags) {
