@@ -33,7 +33,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import de.tum.moodtrip_backend.core.model.RouteStatus;
 import de.tum.moodtrip_backend.core.model.RouteGenerationResult;
+import de.tum.moodtrip_backend.core.model.Emotion;
 
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/surveys")
@@ -87,9 +89,17 @@ public class SurveyController {
                             .flatMap(surveyPort::save)
                             .doOnNext(s -> logger.info("Survey saved successfully for conversationId: {}", conversationId))
                             .flatMap(surveyDomain -> {
-                                Mono<RouteGenerationResult> routeResultMono = routeService.getRoute(conversationId,
-                                                surveyDomain.latitude(), surveyDomain.longitude(), surveyDomain.poiCategories(),
-                                                surveyDomain.rangeMeters())
+                                Emotion fallbackEmotion = conversation.emotion() != null ? conversation.emotion() : Emotion.NEUTRAL;
+                                Mono<Map<Emotion, Double>> emotionWeightsMono = conversationDomainService.getLatestEmotionWeights(conversationId)
+                                        .map(weights -> weights.isEmpty() ? Map.of(fallbackEmotion, 1.0) : weights)
+                                        .defaultIfEmpty(Map.of(fallbackEmotion, 1.0));
+
+                                Mono<RouteGenerationResult> routeResultMono = emotionWeightsMono.flatMap(emotionWeights ->
+                                                routeService.getRoute(conversationId,
+                                                        userId,
+                                                        surveyDomain.latitude(), surveyDomain.longitude(), surveyDomain.poiCategories(),
+                                                        surveyDomain.rangeMeters(),
+                                                        emotionWeights))
                                         .cache();
 
                                 Mono<String> spotifyMono = routeResultMono

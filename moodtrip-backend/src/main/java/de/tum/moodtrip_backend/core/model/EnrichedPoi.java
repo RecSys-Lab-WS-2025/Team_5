@@ -5,6 +5,7 @@ public record EnrichedPoi(
         String displayName,
         String description,
         String imageUrl,
-        PoiCategory category
+        PoiCategory category,
+        PoiScore score
 ) {
 }

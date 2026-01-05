@@ -14,18 +14,18 @@ public final class OverpassResponsePOIMapper {
     private OverpassResponsePOIMapper() {
     }
 
-    public static List<Poi> toPois(OverpassResponse response, PoiCategory category) {
+    public static List<Poi> toPois(OverpassResponse response) {
         if (response == null || response.elements() == null) {
             return List.of();
         }
 
         return response.elements().stream()
-                .map(element -> toPoi(element, category))
+                .map(OverpassResponsePOIMapper::toPoi)
                 .flatMap(Optional::stream)
                 .toList();
     }
 
-    private static Optional<Poi> toPoi(OverpassResponse.Element element, PoiCategory category) {
+    private static Optional<Poi> toPoi(OverpassResponse.Element element) {
         if (element == null) {
             return Optional.empty();
         }
@@ -34,13 +34,8 @@ public final class OverpassResponsePOIMapper {
         Double lon = element.lon();
 
         if (lat == null || lon == null) {
-            if (element.geometry() != null && !element.geometry().isEmpty()) {
-                OverpassResponse.Point p = element.geometry().getFirst();
-                lat = p.lat();
-                lon = p.lon();
-            } else {
-                return Optional.empty();
-            }
+            // Drop POIs that do not provide explicit lat/lon.
+            return Optional.empty();
         }
 
         Map<String, String> tags = element.tags() != null
@@ -48,6 +43,11 @@ public final class OverpassResponsePOIMapper {
                 : Collections.emptyMap();
 
         String name = tags.get("name");
+
+        PoiCategory category = OsmTagCategoryMapper.map(tags).orElse(null);
+        if (category == null) {
+            return Optional.empty();
+        }
 
         Poi.OsmType osmType;
         try {
