@@ -70,28 +70,7 @@ const navData = {
         { title: "Wishlists", url: "#" },
         { title: "Pinned Ideas", url: "#" },
       ],
-    },
-    {
-      title: "My Spotify",
-      url: "#",
-      icon: Music,
-      items: [
-        { title: "Playlists", url: "#" },
-        { title: "Settings", url: "#" },
-      ],
-    },
-    {
-      title: "Community",
-      url: "#",
-      icon: Users,
-      items: [
-        { title: "Travel Feed", url: "#" },
-        { title: "My Stories", url: "#" },
-        { title: "My Journeys", url: "#" },
-        { title: "Insights Dashboard", url: "#" },
-        { title: "Topics & Boards", url: "#" },
-      ],
-    },
+    }
   ],
   navSecondary: [
     { title: "Support", url: "#", icon: LifeBuoy },
@@ -696,7 +675,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                   setMessages((prev) => [...prev, persistedSurveyMsg]);
 
                   let botText =
-                    "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
+                    "Thank you! I've received your preferences. I'll now generate some personalized trips for you.";
                   if (res.spotifyPlaylistLink) {
                     botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${res.spotifyPlaylistLink})`;
                   }
