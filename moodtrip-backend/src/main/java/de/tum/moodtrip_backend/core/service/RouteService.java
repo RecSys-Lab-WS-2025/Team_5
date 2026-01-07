@@ -30,7 +30,7 @@ import java.util.concurrent.TimeoutException;
 public class RouteService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RouteService.class);
-    private static final Duration ROUTE_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration ROUTE_TIMEOUT = Duration.ofSeconds(60);
     private static final String GENERIC_ERROR_MESSAGE = "I couldn't generate a route due to a routing service error. Please try again.";
     private static final int MAX_POI_RESULTS = 10;
 
