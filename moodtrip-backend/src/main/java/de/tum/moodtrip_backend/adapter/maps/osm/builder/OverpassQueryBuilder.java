@@ -51,7 +51,7 @@ public final class OverpassQueryBuilder {
               );
             )->.filtered;
 
-            out center tags qt 100000;
+            out center tags qt 10000;
             """;
 
     private OverpassQueryBuilder() {
