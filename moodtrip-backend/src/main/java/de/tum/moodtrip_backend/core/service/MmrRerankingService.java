@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -69,7 +70,7 @@ public class MmrRerankingService {
         double maxRel = candidates.stream().mapToDouble(sp -> sp.score().finalScore()).max().orElse(minRel);
         boolean flat = Double.compare(minRel, maxRel) == 0;
 
-        List<ScoredPoi> remaining = new ArrayList<>(candidates);
+        Set<ScoredPoi> remaining = new LinkedHashSet<>(candidates);
         List<ScoredPoi> selected = new ArrayList<>();
         Map<PoiCategory, Integer> categoryCounts = new HashMap<>();
 
