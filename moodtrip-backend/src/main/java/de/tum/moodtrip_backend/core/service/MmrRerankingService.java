@@ -43,6 +43,21 @@ public class MmrRerankingService {
         this.maxPerCategory = maxPerCategory;
     }
 
+    /**
+     * Re-ranks a list of candidate POIs using Maximal Marginal Relevance (MMR) to
+     * balance relevance and diversity.
+     * <p>
+     * If {@code candidates} is {@code null} or empty, or if {@code k} is less than
+     * or equal to zero, this method returns an empty list. Otherwise, it returns
+     * at most {@code min(k, candidates.size())} POIs.
+     *
+     * @param candidates the list of candidate {@link ScoredPoi} to re-rank; may be
+     *                   {@code null} or empty, in which case an empty list is returned
+     * @param k          the maximum number of POIs to return; if {@code k <= 0},
+     *                   an empty list is returned
+     * @return a list of re-ranked {@link ScoredPoi}, possibly empty but never
+     *         {@code null}
+     */
     public List<ScoredPoi> rerank(List<ScoredPoi> candidates, int k) {
         if (candidates == null || candidates.isEmpty() || k <= 0) {
             return List.of();
