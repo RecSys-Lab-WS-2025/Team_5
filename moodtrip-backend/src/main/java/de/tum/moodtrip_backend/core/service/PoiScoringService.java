@@ -8,9 +8,11 @@ import de.tum.moodtrip_backend.core.model.ScoredPoi;
 import de.tum.moodtrip_backend.core.model.UserPreferenceOffset;
 import de.tum.moodtrip_backend.core.port.GlobalMappingRepository;
 import de.tum.moodtrip_backend.core.port.UserPreferenceOffsetPort;
+import de.tum.moodtrip_backend.core.util.PoiScoringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -124,13 +126,20 @@ public class PoiScoringService {
         }
 
         double tagScore = computeTagScore(poi.tags());
-        double distanceMeters = haversineDistance(originLat, originLon, poi.latitude(), poi.longitude());
+        double distanceMeters = PoiScoringUtils.haversineDistance(originLat, originLon, poi.latitude(), poi.longitude());
+        PoiScore poiScore = getPoiScore(distanceMeters, categoryScore, tagScore);
+
+        return Mono.just(new ScoredPoi(poi, poiScore));
+    }
+
+    @NonNull
+    private PoiScore getPoiScore(double distanceMeters, CategoryScore categoryScore, double tagScore) {
         double distanceScore = lambdaDistance > 0 && distanceSigmaMeters > 0
                 ? Math.exp(-distanceMeters / distanceSigmaMeters)
                 : 0.0;
 
         double finalScore = categoryScore.score() + lambdaTag * tagScore + lambdaDistance * distanceScore;
-        PoiScore poiScore = new PoiScore(
+        return new PoiScore(
                 finalScore,
                 categoryScore.score(),
                 tagScore,
@@ -138,8 +147,6 @@ public class PoiScoringService {
                 distanceMeters,
                 categoryScore.emotionContributions()
         );
-
-        return Mono.just(new ScoredPoi(poi, poiScore));
     }
 
     private Mono<Map<PoiCategory, CategoryScore>> computeCategoryScores(Long userId,
@@ -232,17 +239,6 @@ public class PoiScoringService {
 
     private double computeAlpha(long count) {
         return (double) count / (count + shrinkageK);
-    }
-
-    private double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
-        double R = 6371000; // meters
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
-                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
     }
 
     private void logTopPoi(ScoredPoi scoredPoi) {
