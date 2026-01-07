@@ -36,6 +36,7 @@ public class PoiScoringService {
     private final double distanceSigmaMeters;
     private final TagWeights tagWeights;
     private final int tagCountMax;
+    private final MmrRerankingService mmrRerankingService;
 
     public PoiScoringService(GlobalMappingRepository globalMappingRepository,
                              UserPreferenceOffsetPort userPreferenceOffsetPort,
@@ -52,7 +53,8 @@ public class PoiScoringService {
                              @Value("${app.poi-scoring.tag.weight-opening-hours:0.3}") double weightOpeningHours,
                              @Value("${app.poi-scoring.tag.weight-phone:0.3}") double weightPhone,
                              @Value("${app.poi-scoring.tag.weight-tag-count:0.7}") double weightTagCount,
-                             @Value("${app.poi-scoring.tag.max-count:20}") int tagCountMax) {
+                             @Value("${app.poi-scoring.tag.max-count:20}") int tagCountMax,
+                             MmrRerankingService mmrRerankingService) {
         this.globalMappingRepository = globalMappingRepository;
         this.userPreferenceOffsetPort = userPreferenceOffsetPort;
         this.shrinkageK = shrinkageK;
@@ -61,6 +63,7 @@ public class PoiScoringService {
         this.distanceSigmaMeters = distanceSigmaMeters;
         this.tagWeights = new TagWeights(weightName, weightWikipedia, weightWikidata, weightWikimediaCommons, weightWebsite, weightImage, weightOpeningHours, weightPhone, weightTagCount);
         this.tagCountMax = tagCountMax;
+        this.mmrRerankingService = mmrRerankingService;
     }
 
     public Map<Emotion, Double> normalizeEmotionWeights(Map<Emotion, Double> rawWeights) {
@@ -102,11 +105,12 @@ public class PoiScoringService {
         return categoryScoresMono.flatMap(categoryScores ->
                 pois.flatMap(poi -> scorePoi(poi, categoryScores, originLat, originLon))
                         .collectList()
-                .map(list -> list.stream()
-                        .sorted(Comparator.comparingDouble(sp -> -sp.score().finalScore()))
-                        .limit(limit)
-                        .peek(this::logTopPoi)
-                        .toList())
+                        .map(candidates -> mmrRerankingService.rerank(
+                                candidates.stream()
+                                        .sorted(Comparator.comparingDouble(sp -> -sp.score().finalScore()))
+                                        .toList(),
+                                limit))
+                        .doOnNext(list -> list.forEach(this::logTopPoi))
         );
     }
 
