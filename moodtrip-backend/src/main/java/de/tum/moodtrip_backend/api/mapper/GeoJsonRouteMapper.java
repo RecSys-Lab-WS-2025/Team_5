@@ -110,22 +110,24 @@ public final class GeoJsonRouteMapper {
             
             for (int d = 1; d <= tripDays; d++) {
                 double dayDistance = 0;
+                double dayDuration = 0;
                 int dayPoisCount = 0;
 
                 for (int i = 0; i < totalPois; i++) {
                     int poiDay = (int) Math.floor((double) i * tripDays / totalPois) + 1;
                     if (poiDay == d) {
                         dayPoisCount++;
-                        if (i > 0 && i <= route.legDistances().size()) {
-                            dayDistance += route.legDistances().get(i - 1);
+                        if (i < route.legDistances().size()) {
+                            dayDistance += route.legDistances().get(i);
+                            dayDuration += route.legDurations().get(i);
                         }
                     }
                 }
-                
+
                 Map<String, Object> dayStat = new HashMap<>();
                 dayStat.put("day", d);
                 dayStat.put("distanceMeters", Math.round(dayDistance));
-                dayStat.put("durationSeconds", Math.round((dayDistance / WALKING_SPEED_MPS) + (dayPoisCount * POI_VISITING_TIME_SECONDS)));
+                dayStat.put("durationSeconds", Math.round(dayDuration + (dayPoisCount * POI_VISITING_TIME_SECONDS)));
                 dailyStats.add(dayStat);
             }
             routeFeature.setProperty("dailyStats", dailyStats);

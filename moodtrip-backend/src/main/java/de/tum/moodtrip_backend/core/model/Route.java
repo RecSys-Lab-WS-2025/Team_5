@@ -7,6 +7,7 @@ public record Route(
         double durationSeconds,
         List<RouteCoordinate> geometry,
         List<Double> legDistances,
+        List<Double> legDurations,
         List<Integer> waypointOrder
 ) {
 }

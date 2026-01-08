@@ -117,9 +117,8 @@ public class RouteService {
                                                 reorderedInputPois.stream().map(EnrichedPoi::poi).toList()
                                         ))
                                         .map(route -> {
-
-                                            double travelTimeSeconds = route.distanceMeters() / WALKING_SPEED_MPS;
-                                            double totalDuration = travelTimeSeconds + (enrichedPois.size() * POI_VISITING_TIME_SECONDS);
+                                            // Use OSRM's duration as travel time, then add POI visiting time
+                                            double totalDuration = route.durationSeconds() + (enrichedPois.size() * POI_VISITING_TIME_SECONDS);
 
                                             // Reorder POIs based on the optimized route order from OSRM
                                             // waypointOrder refers to indices in reorderedInputPois (which was sent to OSRM)
@@ -133,6 +132,7 @@ public class RouteService {
                                                     totalDuration, 
                                                     route.geometry(),
                                                     route.legDistances(),
+                                                    route.legDurations(),
                                                     route.waypointOrder()
                                             ));
                                         });
@@ -224,14 +224,15 @@ public class RouteService {
         }
     }
 
+    //helper method to calculate nearest POI to given coordinates
     private double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371; // Earth radius in km
+        final int R = 6371;
         double latDistance = Math.toRadians(lat2 - lat1);
         double lonDistance = Math.toRadians(lon2 - lon1);
         double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
                 * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c * 1000; // convert to meters
+        return R * c * 1000;
     }
 }

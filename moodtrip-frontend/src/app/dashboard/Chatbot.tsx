@@ -731,15 +731,35 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                     const routeFeature = routeFc.features.find((f) => f.properties?.type === "route") as RouteFeature | undefined;
                     const routeProps = routeFeature?.properties;
 
-                    const cardDataList: RouteRecommendation[] = [{
-                      id: "1",
-                      title: routeProps?.name || `Your Personalized Trip`,
-                      description: routeProps?.description || "A personalized route based on your mood.",
-                      imageUrl: routeProps?.image || "/placeholder-route.jpg",
-                      distanceMeters: routeProps?.distanceMeters || 0,
-                      durationSeconds: routeProps?.durationSeconds || 0,
-                      geoJson: routeData
-                    }];
+                    const cardDataList: RouteRecommendation[] = [
+                      {
+                        id: "1",
+                        title: routeProps?.name || `Your Personalized Trip`,
+                        description: routeProps?.description || "A personalized route based on your mood.",
+                        imageUrl: routeProps?.image || "/placeholder.png",
+                        distanceMeters: routeProps?.distanceMeters || 0,
+                        durationSeconds: routeProps?.durationSeconds || 0,
+                        geoJson: routeFc
+                      },
+                      {
+                        id: "2",
+                        title: routeProps?.name || `Your Personalized Trip`,
+                        description: routeProps?.description || "A personalized route based on your mood.",
+                        imageUrl: routeProps?.image || "/placeholder.png",
+                        distanceMeters: routeProps?.distanceMeters || 0,
+                        durationSeconds: routeProps?.durationSeconds || 0,
+                        geoJson: routeFc
+                      },
+                      {
+                        id: "3",
+                        title: routeProps?.name || `Your Personalized Trip`,
+                        description: routeProps?.description || "A personalized route based on your mood.",
+                        imageUrl: routeProps?.image || "/placeholder.png",
+                        distanceMeters: routeProps?.distanceMeters || 0,
+                        durationSeconds: routeProps?.durationSeconds || 0,
+                        geoJson: routeFc
+                      }
+                    ];
 
                     const cardsPayload = `[ROUTE_CARDS] ${JSON.stringify(cardDataList)}`;
                     await apiSendMessage(conversationId, cardsPayload, false);
