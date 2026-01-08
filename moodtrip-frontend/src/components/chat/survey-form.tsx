@@ -44,11 +44,11 @@ const POI_CATEGORIES = [
 ];
 
 const RANGE_OPTIONS = [
-    { label: "500 m", value: 500 },
-    { label: "1 km", value: 1000 },
-    { label: "2 km", value: 2000 },
+    { label: "3 km", value: 3000 },
     { label: "5 km", value: 5000 },
     { label: "10 km", value: 10000 },
+    { label: "20 km", value: 20000 },
+    { label: "50 km", value: 50000 },
 ];
 
 import type { SurveyData } from "@/api/conversation";

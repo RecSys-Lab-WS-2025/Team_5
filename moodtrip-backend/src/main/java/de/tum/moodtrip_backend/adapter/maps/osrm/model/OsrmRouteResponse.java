@@ -50,6 +50,8 @@ public record OsrmRouteResponse(
             String name,
             List<Double> location, // [lon, lat]
             double distance,
-            String hint
+            String hint,
+            @JsonProperty("waypoint_index") int waypointIndex,
+            @JsonProperty("trips_index") int tripsIndex
     ) {}
 }

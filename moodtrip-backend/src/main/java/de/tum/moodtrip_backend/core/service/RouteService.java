@@ -3,13 +3,7 @@ package de.tum.moodtrip_backend.core.service;
 import de.tum.moodtrip_backend.core.exception.MapProviderUnavailableException;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteCoordinatesMapper;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteResultRouteRecommendationMapper;
-import de.tum.moodtrip_backend.core.model.Emotion;
-import de.tum.moodtrip_backend.core.model.EnrichedPoi;
-import de.tum.moodtrip_backend.core.model.PoiCategory;
-import de.tum.moodtrip_backend.core.model.PoiRouteResult;
-import de.tum.moodtrip_backend.core.model.Poi;
-import de.tum.moodtrip_backend.core.model.RouteGenerationResult;
-import de.tum.moodtrip_backend.core.model.ScoredPoi;
+import de.tum.moodtrip_backend.core.model.*;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.RouteRecommendationPort;
 import de.tum.moodtrip_backend.core.port.RoutingPort;
@@ -34,6 +28,8 @@ public class RouteService {
     private static final String GENERIC_ERROR_MESSAGE = "I couldn't generate a route due to a routing service error. Please try again.";
     private static final int MAX_POI_RESULTS = 15;
     private static final int MIN_POI_RESULTS = 2;
+    public static final int POI_VISITING_TIME_SECONDS = 45 * 60;
+    public static final double WALKING_SPEED_MPS = 5000.0 / 3600.0;
 
     private final OsmPort osmPort;
     private final WikipediaPort wikipediaPort;
@@ -106,10 +102,40 @@ public class RouteService {
                                 if (enrichedPois.size() < 2) {
                                     return Mono.error(new NotEnoughPoisException("Not enough POIs to build a route"));
                                 }
+
+                                // Reorder enrichedPois to start with the one closest to the user's survey coordinate
+                                List<EnrichedPoi> reorderedInputPois = new java.util.ArrayList<>(enrichedPois);
+                                reorderedInputPois.sort((p1, p2) -> {
+                                    double dist1 = calculateHaversineDistance(lat, lon, p1.poi().latitude(), p1.poi().longitude());
+                                    double dist2 = calculateHaversineDistance(lat, lon, p2.poi().latitude(), p2.poi().longitude());
+                                    return Double.compare(dist1, dist2);
+                                });
+
+                                // Move the closest POI to the first position, keep others.
+                                // OSRM 'source=first' will force the route to start at this closest POI.
                                 return routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(
-                                                enrichedPois.stream().map(EnrichedPoi::poi).toList()
+                                                reorderedInputPois.stream().map(EnrichedPoi::poi).toList()
                                         ))
-                                        .map(route -> new PoiRouteResult(enrichedPois, route));
+                                        .map(route -> {
+                                            // Use OSRM's duration as travel time, then add POI visiting time
+                                            double totalDuration = route.durationSeconds() + (enrichedPois.size() * POI_VISITING_TIME_SECONDS);
+
+                                            // Reorder POIs based on the optimized route order from OSRM
+                                            // waypointOrder refers to indices in reorderedInputPois (which was sent to OSRM)
+                                            List<EnrichedPoi> orderedPOIs = route.waypointOrder().stream()
+                                                    .filter(index -> index >= 0 && index < reorderedInputPois.size())
+                                                    .map(reorderedInputPois::get)
+                                                    .toList();
+
+                                            return new PoiRouteResult(orderedPOIs, new Route(
+                                                    route.distanceMeters(), 
+                                                    totalDuration, 
+                                                    route.geometry(),
+                                                    route.legDistances(),
+                                                    route.legDurations(),
+                                                    route.waypointOrder()
+                                            ));
+                                        });
                             });
                 });
     }
@@ -196,5 +222,17 @@ public class RouteService {
         NotEnoughPoisException(String message) {
             super(message);
         }
+    }
+
+    //helper method to calculate nearest POI to given coordinates
+    private double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371;
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c * 1000;
     }
 }

@@ -35,12 +35,10 @@ export function RouteCard({
     // TODO: Use a proper localization/formatting library or backend string
     // Format Duration
     const formatDuration = (seconds: number) => {
-        const hours = seconds / 3600;
-        const min = Math.floor(hours * 0.7); // Mock range
-        const max = Math.ceil(hours * 1.3);
-        if (max < 1) return "< 1 hour";
-        if (min === max) return `${min} hours`;
-        return `${min}-${max} hours`;
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.round((seconds % 3600) / 60);
+        if (hours === 0) return `${mins} min`;
+        return `${hours} h ${mins} min`;
     };
 
     const durationText = formatDuration(durationSeconds);
@@ -83,6 +81,9 @@ export function RouteCard({
                     src={imageUrl}
                     alt={title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.png";
+                    }}
                 />
             </div>
 

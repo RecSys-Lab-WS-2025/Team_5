@@ -37,6 +37,8 @@ public class OsrmAdapter implements RoutingPort {
                 .uri(uriBuilder -> uriBuilder
                         .path("/trip/v1/walking/{coords}")
                         .queryParam("geometries", "geojson")
+                        .queryParam("source", "first")
+                        .queryParam("roundtrip", "false")
                         .build(coordinatesPath))
                 .retrieve()
                 .bodyToMono(OsrmRouteResponse.class)
