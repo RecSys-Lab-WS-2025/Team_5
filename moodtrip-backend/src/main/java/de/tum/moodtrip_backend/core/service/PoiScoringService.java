@@ -266,7 +266,7 @@ public class PoiScoringService {
                         .map(e -> e.getKey() + "=" + String.format("%.3f", e.getValue()))
                         .collect(Collectors.joining(", "));
 
-        LOGGER.info("Top10 POI -> id={}, name='{}', category={}, finalScore={}, categoryScore={}, tagScore={}, distanceScore={}, distanceMeters={}, emotions=[{}], signals={{nameTag={}, wikipedia={}, wikidata={}, commons={}, website={}, image={}, opening_hours={}, phone={}, trustMarker={}}}",
+        LOGGER.info("Ranked POI -> id={}, name='{}', category={}, finalScore={}, categoryScore={}, tagScore={}, distanceScore={}, distanceMeters={}, emotions=[{}], signals={{nameTag={}, wikipedia={}, wikidata={}, commons={}, website={}, image={}, opening_hours={}, phone={}, trustMarker={}}}",
                 poi.osmId(),
                 poi.name(),
                 poi.category(),

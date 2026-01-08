@@ -36,6 +36,7 @@ import de.tum.moodtrip_backend.core.model.RouteGenerationResult;
 import de.tum.moodtrip_backend.core.model.Emotion;
 
 import java.util.Map;
+import static java.time.temporal.ChronoUnit.DAYS;
 
 @RestController
 @RequestMapping("/api/surveys")
@@ -94,12 +95,33 @@ public class SurveyController {
                                         .map(weights -> weights.isEmpty() ? Map.of(fallbackEmotion, 1.0) : weights)
                                         .defaultIfEmpty(Map.of(fallbackEmotion, 1.0));
 
-                                Mono<RouteGenerationResult> routeResultMono = emotionWeightsMono.flatMap(emotionWeights ->
-                                                routeService.getRoute(conversationId,
+                                 Mono<RouteGenerationResult> routeResultMono = emotionWeightsMono.flatMap(emotionWeights -> {
+                                                long days = DAYS.between(surveyDomain.startDate(), surveyDomain.endDate()) + 1;
+
+                                                double energyScore = emotionWeights.entrySet().stream()
+                                                        .mapToDouble(entry -> {
+                                                            double factor = switch (entry.getKey()) {
+                                                                case ENERGIZED, JOYFUL, CURIOUS -> 1.2;
+                                                                case NEUTRAL, NOSTALGIC -> 1.0;
+                                                                case TIRED, SAD, STRESSED, CALM -> 0.7;
+                                                                default -> 1.0;
+                                                            };
+                                                            return entry.getValue() * factor;
+                                                        })
+                                                        .sum();
+
+
+                                                int dynamicLimit = (int) Math.round((3 + (days - 1) * 2) * energyScore);
+                                                logger.info("Trip duration: {} days, Mood energy score: {}. Set dynamic POI limit to: {}", 
+                                                        days, String.format("%.2f", energyScore), dynamicLimit);
+
+                                                return routeService.getRoute(conversationId,
                                                         userId,
                                                         surveyDomain.latitude(), surveyDomain.longitude(), surveyDomain.poiCategories(),
                                                         surveyDomain.rangeMeters(),
-                                                        emotionWeights))
+                                                        emotionWeights,
+                                                        dynamicLimit);
+                                            })
                                         .cache();
 
                                 Mono<String> spotifyMono = routeResultMono
