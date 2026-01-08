@@ -113,8 +113,6 @@ public class RouteService {
 
                                 // Move the closest POI to the first position, keep others.
                                 // OSRM 'source=first' will force the route to start at this closest POI.
-
-                                
                                 return routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(
                                                 reorderedInputPois.stream().map(EnrichedPoi::poi).toList()
                                         ))
