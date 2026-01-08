@@ -104,11 +104,17 @@ public class RouteService {
                                                 enrichedPois.stream().map(EnrichedPoi::poi).toList()
                                         ))
                                         .map(route -> {
-                                            double walkingSpeedMps = 5000.0 / 3600.0; // 5 km/h in m/s
+                                             double walkingSpeedMps = 5000.0 / 3600.0; // 5 km/h in m/s
                                             double travelTimeSeconds = route.distanceMeters() / walkingSpeedMps;
                                             double totalDuration = travelTimeSeconds + (enrichedPois.size() * 45 * 60);
 
-                                            return new PoiRouteResult(enrichedPois, new Route(
+                                            // Reorder POIs based on the optimized route order from OSRM
+                                            List<EnrichedPoi> orderedPOIs = route.waypointOrder().stream()
+                                                    .filter(index -> index >= 0 && index < enrichedPois.size())
+                                                    .map(enrichedPois::get)
+                                                    .toList();
+
+                                            return new PoiRouteResult(orderedPOIs, new Route(
                                                     route.distanceMeters(), 
                                                     totalDuration, 
                                                     route.geometry(),

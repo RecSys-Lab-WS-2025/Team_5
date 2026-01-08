@@ -110,14 +110,13 @@ public final class GeoJsonRouteMapper {
             for (int d = 1; d <= tripDays; d++) {
                 double dayDistance = 0;
                 int dayPoisCount = 0;
-                
-                // Leg i leads to POI i. POI i is poiRouteResult.pois().get(i)
+
                 for (int i = 0; i < totalPois; i++) {
                     int poiDay = (int) Math.floor((double) i * tripDays / totalPois) + 1;
                     if (poiDay == d) {
                         dayPoisCount++;
-                        if (i < route.legDistances().size()) {
-                            dayDistance += route.legDistances().get(i);
+                        if (i > 0 && i <= route.legDistances().size()) {
+                            dayDistance += route.legDistances().get(i - 1);
                         }
                     }
                 }
