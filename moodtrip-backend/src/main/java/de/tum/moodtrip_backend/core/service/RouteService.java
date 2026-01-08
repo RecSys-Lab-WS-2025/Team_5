@@ -3,13 +3,7 @@ package de.tum.moodtrip_backend.core.service;
 import de.tum.moodtrip_backend.core.exception.MapProviderUnavailableException;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteCoordinatesMapper;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteResultRouteRecommendationMapper;
-import de.tum.moodtrip_backend.core.model.Emotion;
-import de.tum.moodtrip_backend.core.model.EnrichedPoi;
-import de.tum.moodtrip_backend.core.model.PoiCategory;
-import de.tum.moodtrip_backend.core.model.PoiRouteResult;
-import de.tum.moodtrip_backend.core.model.Poi;
-import de.tum.moodtrip_backend.core.model.RouteGenerationResult;
-import de.tum.moodtrip_backend.core.model.ScoredPoi;
+import de.tum.moodtrip_backend.core.model.*;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.RouteRecommendationPort;
 import de.tum.moodtrip_backend.core.port.RoutingPort;
@@ -109,7 +103,19 @@ public class RouteService {
                                 return routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(
                                                 enrichedPois.stream().map(EnrichedPoi::poi).toList()
                                         ))
-                                        .map(route -> new PoiRouteResult(enrichedPois, route));
+                                        .map(route -> {
+                                            double walkingSpeedMps = 5000.0 / 3600.0; // 5 km/h in m/s
+                                            double travelTimeSeconds = route.distanceMeters() / walkingSpeedMps;
+                                            double totalDuration = travelTimeSeconds + (enrichedPois.size() * 45 * 60);
+
+                                            return new PoiRouteResult(enrichedPois, new Route(
+                                                    route.distanceMeters(), 
+                                                    totalDuration, 
+                                                    route.geometry(),
+                                                    route.legDistances(),
+                                                    route.waypointOrder()
+                                            ));
+                                        });
                             });
                 });
     }

@@ -166,6 +166,56 @@ export type SurveyResponse =
     spotifyPlaylistLink?: string | null;
   };
 
+export interface RouteRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  distanceMeters: number;
+  durationSeconds: number;
+  geoJson: FeatureCollection;
+}
+
+export interface PoiFeature {
+  type: "Feature";
+  geometry: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+  properties: {
+    type: "poi";
+    osmId: number;
+    name: string;
+    category: string;
+    displayName: string;
+    description: string;
+    imageUrl: string;
+    day: number;
+  };
+}
+
+export interface RouteFeature {
+  type: "Feature";
+  geometry: {
+    type: "LineString";
+    coordinates: [number, number][];
+  };
+  properties: {
+    type: "route";
+    distanceMeters: number;
+    durationSeconds: number;
+    tripDays: number;
+    name?: string;
+    description?: string;
+    image?: string;
+    dailyStats: Array<{
+      day: number;
+      distanceMeters: number;
+      durationSeconds: number;
+    }>;
+  };
+}
+
 export async function submitSurvey(
   conversationId: number,
   data: SurveyData

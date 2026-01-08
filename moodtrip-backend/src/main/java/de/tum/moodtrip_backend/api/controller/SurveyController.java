@@ -54,7 +54,7 @@ public class SurveyController {
     private final EmotionToFeatureMapper emotionToFeatureMapper;
     private static final Logger logger = LoggerFactory.getLogger(SurveyController.class);
     private static final double DEFAULT_ENERGY_FACTOR = 1.0;
-    private static final double HIGH_ENERGY_FACTOR = 1.2;
+    private static final double HIGH_ENERGY_FACTOR = 1.3;
     private static final double LOW_ENERGY_FACTOR = 0.7;
 
 
@@ -114,7 +114,7 @@ public class SurveyController {
                                                         .sum();
 
 
-                                                int dynamicLimit = (int) Math.round((3 + (days - 1) * 2) * energyScore);
+                                                int dynamicLimit = (int) Math.round((2 + (days - 1) * 3) * energyScore);
                                                 logger.info("Trip duration: {} days, Mood energy score: {}. Set dynamic POI limit to: {}", 
                                                         days, String.format("%.2f", energyScore), dynamicLimit);
 
@@ -151,8 +151,9 @@ public class SurveyController {
 
                                 return routeResultMono.flatMap(result -> {
                                     if (result.status() == RouteStatus.SUCCEEDED && result.route() != null) {
+                                        long days = DAYS.between(surveyDomain.startDate(), surveyDomain.endDate()) + 1;
                                         String emotionStr = conversation.emotion().name();
-                                        FeatureCollection routeCollection = geoJsonRouteMapper.toFeatureCollection(result.route(), emotionStr);
+                                        FeatureCollection routeCollection = geoJsonRouteMapper.toFeatureCollection(result.route(), emotionStr, (int) days);
                                         return spotifyMono.defaultIfEmpty("")
                                                 .map(link -> SurveyResponse.success(routeCollection, link.isEmpty() ? null : link));
                                     }

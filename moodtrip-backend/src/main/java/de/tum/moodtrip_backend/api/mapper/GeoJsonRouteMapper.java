@@ -13,6 +13,9 @@ import org.geojson.LngLatAlt;
 import org.geojson.Point;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -21,18 +24,23 @@ public final class GeoJsonRouteMapper {
      * Build a GeoJSON FeatureCollection from enriched POIs and an optional route.
      *
      * @param poiRouteResult domain object containing enriched POIs and the route
+     * @param emotion current emotion for styling
+     * @param tripDays total duration of the trip in days
      * @return GeoJSON FeatureCollection
      */
-    public FeatureCollection toFeatureCollection(PoiRouteResult poiRouteResult, String emotion) {
+    public FeatureCollection toFeatureCollection(PoiRouteResult poiRouteResult, String emotion, int tripDays) {
         FeatureCollection featureCollection = new FeatureCollection();
 
         if (poiRouteResult == null) {
             return featureCollection;
         }
 
+        int totalPois = poiRouteResult.pois() != null ? poiRouteResult.pois().size() : 0;
+
         // POI features
         if (poiRouteResult.pois() != null) {
-            for (EnrichedPoi enrichedPoi : poiRouteResult.pois()) {
+            for (int i = 0; i < totalPois; i++) {
+                EnrichedPoi enrichedPoi = poiRouteResult.pois().get(i);
                 Poi poi = enrichedPoi.poi();
                 Feature poiFeature = new Feature();
 
@@ -46,6 +54,11 @@ public final class GeoJsonRouteMapper {
                 poiFeature.setProperty("osmType", poi.osmType().name());
                 poiFeature.setProperty("name", poi.name());
                 poiFeature.setProperty("category", poi.category().name());
+
+                // Assign a day based on index
+                // Distribution: Round-robin or chunked. Chunked is better for itinerary.
+                int day = (int) Math.floor((double) i * tripDays / totalPois) + 1;
+                poiFeature.setProperty("day", day);
 
                 // Display name, description, image
                 poiFeature.setProperty("displayName", enrichedPoi.displayName());
@@ -88,6 +101,34 @@ public final class GeoJsonRouteMapper {
             routeFeature.setProperty("distanceMeters", route.distanceMeters());
             routeFeature.setProperty("durationSeconds", route.durationSeconds());
             routeFeature.setProperty("emotion", emotion);
+            routeFeature.setProperty("tripDays", tripDays);
+
+
+            List<Map<String, Object>> dailyStats = new ArrayList<>();
+            double walkingSpeedMps = 5000.0 / 3600.0;
+            
+            for (int d = 1; d <= tripDays; d++) {
+                double dayDistance = 0;
+                int dayPoisCount = 0;
+                
+                // Leg i leads to POI i. POI i is poiRouteResult.pois().get(i)
+                for (int i = 0; i < totalPois; i++) {
+                    int poiDay = (int) Math.floor((double) i * tripDays / totalPois) + 1;
+                    if (poiDay == d) {
+                        dayPoisCount++;
+                        if (i < route.legDistances().size()) {
+                            dayDistance += route.legDistances().get(i);
+                        }
+                    }
+                }
+                
+                Map<String, Object> dayStat = new HashMap<>();
+                dayStat.put("day", d);
+                dayStat.put("distanceMeters", Math.round(dayDistance));
+                dayStat.put("durationSeconds", Math.round((dayDistance / walkingSpeedMps) + (dayPoisCount * 45 * 60)));
+                dailyStats.add(dayStat);
+            }
+            routeFeature.setProperty("dailyStats", dailyStats);
 
             featureCollection.add(routeFeature);
         }

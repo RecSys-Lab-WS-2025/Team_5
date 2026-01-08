@@ -28,10 +28,20 @@ public class OsrmRouteResponseRouteMapper {
                 ))
                 .toList();
 
+        List<Double> legDistances = osrmRoute.legs().stream()
+                .map(OsrmRouteResponse.Leg::distance)
+                .toList();
+
+        List<Integer> waypointOrder = osrm.waypoints().stream()
+                .map(OsrmRouteResponse.Waypoint::waypointIndex)
+                .toList();
+
         Route route = new Route(
                 osrmRoute.distance(),
                 osrmRoute.duration(),
-                geometry
+                geometry,
+                legDistances,
+                waypointOrder
         );
 
         return Mono.just(route);
