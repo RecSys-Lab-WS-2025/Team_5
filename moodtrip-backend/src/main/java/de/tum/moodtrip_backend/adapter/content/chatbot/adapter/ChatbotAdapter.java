@@ -2,6 +2,7 @@ package de.tum.moodtrip_backend.adapter.content.chatbot.adapter;
 
 import de.tum.moodtrip_backend.adapter.content.chatbot.mapper.EmotionMapper;
 import de.tum.moodtrip_backend.adapter.content.chatbot.provider.ChatbotPromptProvider;
+import de.tum.moodtrip_backend.core.model.Emotion;
 import de.tum.moodtrip_backend.core.model.EmotionResult;
 import de.tum.moodtrip_backend.core.port.ConversationTitlePort;
 import de.tum.moodtrip_backend.core.port.EmotionPort;
@@ -36,17 +37,30 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort {
     @Override
     public Mono<EmotionResult> extractEmotion(String historyAndNewMessage) {
         if (historyAndNewMessage != null && historyAndNewMessage.toLowerCase().contains("mock123321")) {
-            // Mock response JSON structure must match what EmotionMapper expects (assuming standard JSON format)
-            String mockJson = """
-                    {"scores":{"JOYFUL":0.900,"CALM":0.100},
-                    "top_label":"JOYFUL",
-                    "top_score":0.900,
-                    "success":true,
-                    "content":"{THIS IS A MOCK RESPONSE} I noticed you are feeling joyful! If you answer a few questions, I can plan something wonderful for you."
-                    }
-                    """;
+            String targetEmotionName = "JOYFUL";
+            if (historyAndNewMessage.contains(":")) {
+                String[] parts = historyAndNewMessage.split(":");
+                if (parts.length > 1) {
+                    targetEmotionName = parts[parts.length-1].trim();
+                }
+            }
 
-            return Mono.just(EmotionMapper.fromJson(mockJson));
+            Emotion emotion = Emotion.fromString(targetEmotionName);
+            
+            java.util.Map<Emotion, Double> scores = new java.util.HashMap<>();
+            for (Emotion e : Emotion.values()) {
+                scores.put(e, e == emotion ? 1.0 : 0.0);
+            }
+
+            EmotionResult mockResult = new EmotionResult(
+                    scores,
+                    emotion,
+                    1.0,
+                    "{THIS IS A MOCK RESPONSE} I noticed you are feeling " + emotion + "! If you answer a few questions, I can plan something wonderful for you.",
+                    true
+            );
+
+            return Mono.just(mockResult);
         }
 
         Prompt prompt = new Prompt(
