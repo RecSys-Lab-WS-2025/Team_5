@@ -33,6 +33,7 @@ public class RouteService {
     private static final Duration ROUTE_TIMEOUT = Duration.ofSeconds(60);
     private static final String GENERIC_ERROR_MESSAGE = "I couldn't generate a route due to a routing service error. Please try again.";
     private static final int MAX_POI_RESULTS = 15;
+    private static final int MIN_POI_RESULTS = 2;
 
     private final OsmPort osmPort;
     private final WikipediaPort wikipediaPort;
@@ -63,6 +64,7 @@ public class RouteService {
             int poiLimit
     ) {
         poiLimit = Math.min(poiLimit, MAX_POI_RESULTS);
+        poiLimit = Math.max(poiLimit, MIN_POI_RESULTS);
         LOGGER.info("Getting route for conversationId: {}, lat: {}, lon: {}, radius: {}, limit: {}", 
                 conversationId, lat, lon, radiusMeters, poiLimit);
 

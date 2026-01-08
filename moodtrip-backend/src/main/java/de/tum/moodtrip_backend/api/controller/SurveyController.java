@@ -53,6 +53,10 @@ public class SurveyController {
     private final MusicRecommendationService musicRecommendationService;
     private final EmotionToFeatureMapper emotionToFeatureMapper;
     private static final Logger logger = LoggerFactory.getLogger(SurveyController.class);
+    private static final double DEFAULT_ENERGY_FACTOR = 1.0;
+    private static final double HIGH_ENERGY_FACTOR = 1.2;
+    private static final double LOW_ENERGY_FACTOR = 0.7;
+
 
     public SurveyController(final SurveyPort surveyPort, final SurveyDtoMapper surveyDtoMapper, final GeoJsonRouteMapper geoJsonRouteMapper, final JwtService jwtService, final ConversationDomainService conversationDomainService, final RouteService routeService, final UserDomainService userDomainService, final MusicRecommendationService musicRecommendationService, final EmotionToFeatureMapper emotionToFeatureMapper) {
         this.surveyPort = surveyPort;
@@ -101,10 +105,9 @@ public class SurveyController {
                                                 double energyScore = emotionWeights.entrySet().stream()
                                                         .mapToDouble(entry -> {
                                                             double factor = switch (entry.getKey()) {
-                                                                case ENERGIZED, JOYFUL, CURIOUS -> 1.2;
-                                                                case NEUTRAL, NOSTALGIC -> 1.0;
-                                                                case TIRED, SAD, STRESSED, CALM -> 0.7;
-                                                                default -> 1.0;
+                                                                case ENERGIZED, JOYFUL, CURIOUS -> HIGH_ENERGY_FACTOR;
+                                                                case NEUTRAL, NOSTALGIC -> DEFAULT_ENERGY_FACTOR;
+                                                                case TIRED, SAD, STRESSED, CALM -> LOW_ENERGY_FACTOR;
                                                             };
                                                             return entry.getValue() * factor;
                                                         })
