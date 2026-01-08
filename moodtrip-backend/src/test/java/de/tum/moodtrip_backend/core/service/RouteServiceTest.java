@@ -56,7 +56,7 @@ class RouteServiceTest {
         when(osmPort.findAmenitiesAround(anyDouble(), anyDouble(), any(), anyInt()))
                 .thenReturn(Flux.empty());
 
-        StepVerifier.create(routeService.getRoute(1L, 2L, 0.0, 0.0, List.of(), 1000, Map.of(),15))
+        StepVerifier.create(routeService.getRoute(1L, 2L, 0.0, 0.0, List.of(), 1000, Map.of(), 15))
                 .assertNext(result -> {
                     assertThat(result.status()).isEqualTo(de.tum.moodtrip_backend.core.model.RouteStatus.FAILED);
                     assertThat(result.userMessage()).isNotBlank();
