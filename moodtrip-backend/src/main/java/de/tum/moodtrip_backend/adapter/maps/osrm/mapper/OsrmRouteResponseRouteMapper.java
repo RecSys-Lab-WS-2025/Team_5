@@ -32,8 +32,12 @@ public class OsrmRouteResponseRouteMapper {
                 .map(OsrmRouteResponse.Leg::distance)
                 .toList();
 
-        List<Integer> waypointOrder = osrm.waypoints().stream()
-                .map(OsrmRouteResponse.Waypoint::waypointIndex)
+        // OSRM /trip waypoints array is in input order. 
+        // waypoint_index is the position of that input point in the optimized trip.
+        // We sort the original indices by their assigned position to get the visitation sequence.
+        List<Integer> waypointOrder = java.util.stream.IntStream.range(0, osrm.waypoints().size())
+                .boxed()
+                .sorted(java.util.Comparator.comparingInt(i -> osrm.waypoints().get(i).waypointIndex()))
                 .toList();
 
         Route route = new Route(

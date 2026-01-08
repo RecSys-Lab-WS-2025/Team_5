@@ -102,8 +102,21 @@ public class RouteService {
                                 if (enrichedPois.size() < 2) {
                                     return Mono.error(new NotEnoughPoisException("Not enough POIs to build a route"));
                                 }
+
+                                // Reorder enrichedPois to start with the one closest to the user's survey coordinate
+                                List<EnrichedPoi> reorderedInputPois = new java.util.ArrayList<>(enrichedPois);
+                                reorderedInputPois.sort((p1, p2) -> {
+                                    double dist1 = calculateHaversineDistance(lat, lon, p1.poi().latitude(), p1.poi().longitude());
+                                    double dist2 = calculateHaversineDistance(lat, lon, p2.poi().latitude(), p2.poi().longitude());
+                                    return Double.compare(dist1, dist2);
+                                });
+
+                                // Move the closest POI to the first position, keep others.
+                                // OSRM 'source=first' will force the route to start at this closest POI.
+
+                                
                                 return routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(
-                                                enrichedPois.stream().map(EnrichedPoi::poi).toList()
+                                                reorderedInputPois.stream().map(EnrichedPoi::poi).toList()
                                         ))
                                         .map(route -> {
 
@@ -111,9 +124,10 @@ public class RouteService {
                                             double totalDuration = travelTimeSeconds + (enrichedPois.size() * POI_VISITING_TIME_SECONDS);
 
                                             // Reorder POIs based on the optimized route order from OSRM
+                                            // waypointOrder refers to indices in reorderedInputPois (which was sent to OSRM)
                                             List<EnrichedPoi> orderedPOIs = route.waypointOrder().stream()
-                                                    .filter(index -> index >= 0 && index < enrichedPois.size())
-                                                    .map(enrichedPois::get)
+                                                    .filter(index -> index >= 0 && index < reorderedInputPois.size())
+                                                    .map(reorderedInputPois::get)
                                                     .toList();
 
                                             return new PoiRouteResult(orderedPOIs, new Route(
@@ -210,5 +224,16 @@ public class RouteService {
         NotEnoughPoisException(String message) {
             super(message);
         }
+    }
+
+    private double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371; // Earth radius in km
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c * 1000; // convert to meters
     }
 }
