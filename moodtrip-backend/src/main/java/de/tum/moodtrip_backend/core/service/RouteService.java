@@ -28,6 +28,8 @@ public class RouteService {
     private static final String GENERIC_ERROR_MESSAGE = "I couldn't generate a route due to a routing service error. Please try again.";
     private static final int MAX_POI_RESULTS = 15;
     private static final int MIN_POI_RESULTS = 2;
+    public static final int POI_VISITING_TIME_SECONDS = 45 * 60;
+    public static final double WALKING_SPEED_MPS = 5000.0 / 3600.0;
 
     private final OsmPort osmPort;
     private final WikipediaPort wikipediaPort;
@@ -104,9 +106,9 @@ public class RouteService {
                                                 enrichedPois.stream().map(EnrichedPoi::poi).toList()
                                         ))
                                         .map(route -> {
-                                             double walkingSpeedMps = 5000.0 / 3600.0; // 5 km/h in m/s
-                                            double travelTimeSeconds = route.distanceMeters() / walkingSpeedMps;
-                                            double totalDuration = travelTimeSeconds + (enrichedPois.size() * 45 * 60);
+
+                                            double travelTimeSeconds = route.distanceMeters() / WALKING_SPEED_MPS;
+                                            double totalDuration = travelTimeSeconds + (enrichedPois.size() * POI_VISITING_TIME_SECONDS);
 
                                             // Reorder POIs based on the optimized route order from OSRM
                                             List<EnrichedPoi> orderedPOIs = route.waypointOrder().stream()

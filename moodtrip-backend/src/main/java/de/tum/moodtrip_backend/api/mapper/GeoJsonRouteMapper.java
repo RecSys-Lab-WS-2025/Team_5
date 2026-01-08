@@ -18,6 +18,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static de.tum.moodtrip_backend.core.service.RouteService.POI_VISITING_TIME_SECONDS;
+import static de.tum.moodtrip_backend.core.service.RouteService.WALKING_SPEED_MPS;
+
 @Component
 public final class GeoJsonRouteMapper {
     /**
@@ -55,8 +58,7 @@ public final class GeoJsonRouteMapper {
                 poiFeature.setProperty("name", poi.name());
                 poiFeature.setProperty("category", poi.category().name());
 
-                // Assign a day based on index
-                // Distribution: Round-robin or chunked. Chunked is better for itinerary.
+                //chunked to evenly spread POIs
                 int day = (int) Math.floor((double) i * tripDays / totalPois) + 1;
                 poiFeature.setProperty("day", day);
 
@@ -105,7 +107,6 @@ public final class GeoJsonRouteMapper {
 
 
             List<Map<String, Object>> dailyStats = new ArrayList<>();
-            double walkingSpeedMps = 5000.0 / 3600.0;
             
             for (int d = 1; d <= tripDays; d++) {
                 double dayDistance = 0;
@@ -124,7 +125,7 @@ public final class GeoJsonRouteMapper {
                 Map<String, Object> dayStat = new HashMap<>();
                 dayStat.put("day", d);
                 dayStat.put("distanceMeters", Math.round(dayDistance));
-                dayStat.put("durationSeconds", Math.round((dayDistance / walkingSpeedMps) + (dayPoisCount * 45 * 60)));
+                dayStat.put("durationSeconds", Math.round((dayDistance / WALKING_SPEED_MPS) + (dayPoisCount * POI_VISITING_TIME_SECONDS)));
                 dailyStats.add(dayStat);
             }
             routeFeature.setProperty("dailyStats", dailyStats);
