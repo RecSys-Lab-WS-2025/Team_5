@@ -731,12 +731,18 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                     const routeFeature = routeFc.features.find((f) => f.properties?.type === "route") as RouteFeature | undefined;
                     const routeProps = routeFeature?.properties;
 
+                    // Find first available POI image as a fallback
+                    const poiFeatures = routeFc.features.filter(f => f.properties?.type === "poi");
+                    const firstPoiWithImage = poiFeatures.find(f => f.properties?.imageUrl);
+                    const fallbackPoiImage = firstPoiWithImage?.properties?.imageUrl;
+                    const finalThumbnail = routeProps?.image || fallbackPoiImage || "/placeholder.png";
+
                     const cardDataList: RouteRecommendation[] = [
                       {
                         id: "1",
                         title: routeProps?.name || `Your Personalized Trip`,
                         description: routeProps?.description || "A personalized route based on your mood.",
-                        imageUrl: routeProps?.image || "/placeholder.png",
+                        imageUrl: finalThumbnail,
                         distanceMeters: routeProps?.distanceMeters || 0,
                         durationSeconds: routeProps?.durationSeconds || 0,
                         geoJson: routeFc
@@ -745,7 +751,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                         id: "2",
                         title: routeProps?.name || `Your Personalized Trip`,
                         description: routeProps?.description || "A personalized route based on your mood.",
-                        imageUrl: routeProps?.image || "/placeholder.png",
+                        imageUrl: finalThumbnail,
                         distanceMeters: routeProps?.distanceMeters || 0,
                         durationSeconds: routeProps?.durationSeconds || 0,
                         geoJson: routeFc
@@ -754,7 +760,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                         id: "3",
                         title: routeProps?.name || `Your Personalized Trip`,
                         description: routeProps?.description || "A personalized route based on your mood.",
-                        imageUrl: routeProps?.image || "/placeholder.png",
+                        imageUrl: finalThumbnail,
                         distanceMeters: routeProps?.distanceMeters || 0,
                         durationSeconds: routeProps?.durationSeconds || 0,
                         geoJson: routeFc

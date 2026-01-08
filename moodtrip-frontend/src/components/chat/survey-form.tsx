@@ -64,15 +64,10 @@ export function SurveyForm({
 }) {
     // Helper to get date string YYYY-MM-DD
     const getTodayString = () => new Date().toISOString().split('T')[0];
-    const getTomorrowString = () => {
-        const d = new Date();
-        d.setDate(d.getDate() + 1);
-        return d.toISOString().split('T')[0];
-    };
 
     const [range, setRange] = React.useState<number>(initialData?.rangeMeters ?? 1000);
     const [startDate, setStartDate] = React.useState<string>(initialData?.startDate ?? getTodayString());
-    const [endDate, setEndDate] = React.useState<string>(initialData?.endDate ?? getTomorrowString());
+    const [endDate, setEndDate] = React.useState<string>(initialData?.endDate ?? getTodayString());
     const [selectedCategories, setSelectedCategories] = React.useState<string[]>(initialData?.poiCategories ?? []);
     const [locationQuery, setLocationQuery] = React.useState<string>("");
     const [selectedLocation, setSelectedLocation] = React.useState<SelectedLocation | null>(null);
@@ -230,7 +225,7 @@ export function SurveyForm({
 
         // Ensure dates are present
         const finalStartDate = startDate || getTodayString();
-        const finalEndDate = endDate || getTomorrowString();
+        const finalEndDate = endDate || getTodayString();
 
         try {
             await onSubmit({
