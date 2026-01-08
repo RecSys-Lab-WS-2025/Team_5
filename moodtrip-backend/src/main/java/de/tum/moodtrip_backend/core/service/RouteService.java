@@ -32,7 +32,8 @@ public class RouteService {
     private static final Logger LOGGER = LoggerFactory.getLogger(RouteService.class);
     private static final Duration ROUTE_TIMEOUT = Duration.ofSeconds(60);
     private static final String GENERIC_ERROR_MESSAGE = "I couldn't generate a route due to a routing service error. Please try again.";
-    private static final int MAX_POI_RESULTS = 10;
+    private static final int MAX_POI_RESULTS = 15;
+    private static final int MIN_POI_RESULTS = 2;
 
     private final OsmPort osmPort;
     private final WikipediaPort wikipediaPort;
@@ -59,11 +60,15 @@ public class RouteService {
             double lon,
             List<PoiCategory> poiCategories,
             int radiusMeters,
-            Map<Emotion, Double> emotionWeights
+            Map<Emotion, Double> emotionWeights,
+            int poiLimit
     ) {
-        LOGGER.info("Getting route for conversationId: {}, lat: {}, lon: {}, radius: {}", conversationId, lat, lon, radiusMeters);
+        poiLimit = Math.min(poiLimit, MAX_POI_RESULTS);
+        poiLimit = Math.max(poiLimit, MIN_POI_RESULTS);
+        LOGGER.info("Getting route for conversationId: {}, lat: {}, lon: {}, radius: {}, limit: {}", 
+                conversationId, lat, lon, radiusMeters, poiLimit);
 
-        return buildRoute(userId, lat, lon, poiCategories, radiusMeters, emotionWeights)
+        return buildRoute(userId, lat, lon, poiCategories, radiusMeters, emotionWeights, poiLimit)
                 .timeout(ROUTE_TIMEOUT)
                 .flatMap(route ->
                         routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(route, conversationId))
@@ -82,14 +87,15 @@ public class RouteService {
             double lon,
             List<PoiCategory> poiCategories,
             int radiusMeters,
-            Map<Emotion, Double> emotionWeights
+            Map<Emotion, Double> emotionWeights,
+            int poiLimit
     ) {
         // Frontend-selected categories are intentionally ignored by the Overpass adapter for now;
         // keep plumbing intact so we can re-enable client-side filtering later.
         Flux<Poi> poiFlux = osmPort.findAmenitiesAround(lat, lon, poiCategories, radiusMeters)
                 .cache();
 
-        return poiScoringService.scoreAndRank(poiFlux, userId, emotionWeights, lat, lon, MAX_POI_RESULTS)
+        return poiScoringService.scoreAndRank(poiFlux, userId, emotionWeights, lat, lon, poiLimit)
                 .flatMap(scoredPois -> {
                     if (scoredPois.isEmpty()) {
                         return Mono.error(new NotEnoughPoisException("No POIs found after categorization and scoring"));
