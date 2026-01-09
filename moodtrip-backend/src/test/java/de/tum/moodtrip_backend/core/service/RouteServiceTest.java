@@ -16,9 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyDouble;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,7 +49,7 @@ class RouteServiceTest {
                 poiScoringService
         );
 
-        when(poiScoringService.scoreAndRank(any(), any(), any(), anyDouble(), anyDouble(), anyInt()))
+        when(poiScoringService.scoreAndRank(any(), any(), any(), anyList(), anyDouble(), anyDouble(), anyInt()))
                 .thenReturn(Mono.error(new RuntimeException("Overpass failure")));
         when(osmPort.findAmenitiesAround(anyDouble(), anyDouble(), any(), anyInt()))
                 .thenReturn(Flux.empty());
