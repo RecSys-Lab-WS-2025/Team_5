@@ -103,30 +103,32 @@ export function clearPendedRequests() {
   isRefreshing = false;
 }
 
-export function notifySessionUpdated() {
+export async function notifySessionUpdated() {
   isRefreshing = false;
   const queue = [...pendedQueue];
   pendedQueue = [];
 
-  queue.forEach(async (req) => {
-    try {
-      const freshHeaders = {
-        ...(req.init.headers || {}),
-        ...authHeaders(),
-      };
+  await Promise.all(
+    queue.map(async (req) => {
+      try {
+        const freshHeaders = {
+          ...(req.init.headers || {}),
+          ...authHeaders(),
+        };
 
-      const updatedInit = {
-        ...req.init,
-        headers: freshHeaders,
-        _retryCount: (req.init._retryCount || 0) + 1
-      };
+        const updatedInit = {
+          ...req.init,
+          headers: freshHeaders,
+          _retryCount: (req.init._retryCount || 0) + 1,
+        };
 
-      const res = await fetch(req.input, updatedInit);
-      req.resolve(res);
-    } catch (err) {
-      req.reject(err);
-    }
-  });
+        const res = await fetch(req.input, updatedInit);
+        req.resolve(res);
+      } catch (err) {
+        req.reject(err);
+      }
+    }),
+  );
 }
 
 /**
