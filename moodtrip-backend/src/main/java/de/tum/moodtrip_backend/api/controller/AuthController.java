@@ -61,17 +61,11 @@ public class AuthController {
                     .subscribeOn(Schedulers.boundedElastic()) 
                     .flatMap(newToken -> {
                         Long userId = jwtService.extractUserId(newToken);
+                        String username = jwtService.extractUsername(newToken);
+                        String email = jwtService.extractEmail(newToken);
                         LOGGER.info("Successfully refreshed token for user ID: {}", userId);
-                        return userService.findById(userId)
-                                .map(userDtoMapper::toResponse)
-                                .map(userResponse -> new LoginResponse(
-                                    newToken, 
-                                    new LoginResponse.UserDto(userResponse.id(), userResponse.username(), userResponse.email())
-                                ))
-                                .switchIfEmpty(Mono.error(new ResponseStatusException(
-                                    HttpStatus.UNAUTHORIZED, 
-                                    "User not found"
-                                )));
+                        LoginResponse.UserDto userDto = new LoginResponse.UserDto(userId, username, email);
+                        return Mono.just(new LoginResponse(newToken, userDto));
                     })
             )
             .onErrorResume(e -> {
