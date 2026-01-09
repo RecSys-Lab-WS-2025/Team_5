@@ -88,7 +88,7 @@ type PendedRequest = {
   input: RequestInfo | URL;
   init: RequestInit & { _retryCount?: number };
   resolve: (res: Response) => void;
-  reject: (err: any) => void;
+  reject: (err: unknown) => void;
 };
 let pendedQueue: PendedRequest[] = [];
 
