@@ -128,6 +128,47 @@ public class JwtService {
     }
 
     /**
+     * Generate a new token based on an old (potentially expired) token.
+     * Only valid if the signature is correct and it was issued by us.
+     */
+    public String refreshCurrentToken(String token) {
+        Claims claims = parseClaimsIgnoreExpiration(token);
+        String userIdStr = claims.getSubject();
+        String username = claims.get("username", String.class);
+        String email = claims.get("email", String.class);
+
+        LOGGER.info("Refreshing JWT token for user ID: {}", userIdStr);
+        
+        Instant now = Instant.now();
+        Instant exp = now.plus(expirationMinutes, ChronoUnit.MINUTES);
+
+        return Jwts.builder()
+                .setSubject(userIdStr)
+                .setIssuer(issuer)
+                .setIssuedAt(Date.from(now))
+                .setExpiration(Date.from(exp))
+                .claim("username", username)
+                .claim("email", email)
+                .signWith(signingKey, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    private Claims parseClaimsIgnoreExpiration(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(signingKey)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return e.getClaims();
+        } catch (JwtException e) {
+            LOGGER.error("Failed to parse token even with expiration ignored: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
      * Validate token (signature + expiry).
      */
     public boolean isTokenValid(String token) {

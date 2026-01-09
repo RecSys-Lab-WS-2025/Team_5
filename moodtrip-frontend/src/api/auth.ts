@@ -21,6 +21,15 @@ export async function login(body: LoginBody) {
   return res.json() as Promise<{ token?: string; user?: AuthUser }>;
 }
 
+export async function refreshToken() {
+  const res = await fetch(`${BASE}/api/auth/refresh`, {
+    method: "POST",
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error(await parseErr(res));
+  return res.json() as Promise<{ token?: string; user?: AuthUser }>;
+}
+
 export async function signup(body: SignupBody) {
   const res = await fetch(`${BASE}/api/users`, {
     method: "POST",
@@ -80,12 +89,16 @@ export async function authFetch(
     ...authHeaders(),
   };
 
-  const res = await fetch(input, { ...init, headers });
-  if (res.status === 401) {
-    // optional: handle global unauthorized, e.g. redirect from a central place
-    // window.location.href = "/login";
+  try {
+    const res = await fetch(input, { ...init, headers });
+    if (res.status === 401) {
+      window.dispatchEvent(new CustomEvent("moodtrip-unauthorized"));
+    }
+    return res;
+  } catch (error) {
+    console.error("Network error during authFetch:", error);
+    throw error;
   }
-  return res;
 }
 
 async function parseErr(res: Response) {

@@ -2,6 +2,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef } from "react";
 import { saveUser, saveToken } from "@/api/auth";
+import { AuthInterceptor } from "@/components/auth/AuthInterceptor";
 
 export function AppLayout() {
   const location = useLocation();
@@ -46,7 +47,7 @@ export function AppLayout() {
           fromLogin: true,
           username: decodedUsername,
         },
-  });
+      });
     } else if (flag === "error") {
       const raw = params.get("msg") || "Spotify Authorization failed";
       const msg = decodeURIComponent(raw);
@@ -65,16 +66,18 @@ export function AppLayout() {
     location.pathname.startsWith("/signup");
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {!hideNavbar && (
-        <header className="fixed top-0 left-0 w-full z-50">
-          <Navbar />
-        </header>
-      )}
+    <AuthInterceptor>
+      <div className="min-h-screen flex flex-col">
+        {!hideNavbar && (
+          <header className="fixed top-0 left-0 w-full z-50">
+            <Navbar />
+          </header>
+        )}
 
-      <main className="flex-1">
-        <Outlet />
-      </main>
-    </div>
+        <main className="flex-1">
+          <Outlet />
+        </main>
+      </div>
+    </AuthInterceptor>
   );
 }
