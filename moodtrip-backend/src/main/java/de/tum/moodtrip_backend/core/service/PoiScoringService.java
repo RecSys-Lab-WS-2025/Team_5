@@ -39,6 +39,7 @@ public class PoiScoringService {
     private final TagWeights tagWeights;
     private final int tagCountMax;
     private final MmrRerankingService mmrRerankingService;
+    private final double weightSelectedCategory;
 
     public PoiScoringService(GlobalMappingRepository globalMappingRepository,
                              UserPreferenceOffsetPort userPreferenceOffsetPort,
@@ -56,6 +57,7 @@ public class PoiScoringService {
                              @Value("${app.poi-scoring.tag.weight-phone:0.3}") double weightPhone,
                              @Value("${app.poi-scoring.tag.weight-tag-count:0.7}") double weightTagCount,
                              @Value("${app.poi-scoring.tag.max-count:20}") int tagCountMax,
+                             @Value("${app.poi-scoring.category.weight:1.5}") double weightSelectedCategory,
                              MmrRerankingService mmrRerankingService) {
         this.globalMappingRepository = globalMappingRepository;
         this.userPreferenceOffsetPort = userPreferenceOffsetPort;
@@ -66,6 +68,7 @@ public class PoiScoringService {
         this.tagWeights = new TagWeights(weightName, weightWikipedia, weightWikidata, weightWikimediaCommons, weightWebsite, weightImage, weightOpeningHours, weightPhone, weightTagCount);
         this.tagCountMax = tagCountMax;
         this.mmrRerankingService = mmrRerankingService;
+        this.weightSelectedCategory = weightSelectedCategory;
     }
 
     public Map<Emotion, Double> normalizeEmotionWeights(Map<Emotion, Double> rawWeights) {
@@ -97,12 +100,13 @@ public class PoiScoringService {
     public Mono<List<ScoredPoi>> scoreAndRank(Flux<Poi> pois,
                                               Long userId,
                                               Map<Emotion, Double> rawEmotionWeights,
+                                              List<PoiCategory> selectedCategories,
                                               double originLat,
                                               double originLon,
                                               int limit) {
         Map<Emotion, Double> emotionWeights = normalizeEmotionWeights(rawEmotionWeights);
 
-        Mono<Map<PoiCategory, CategoryScore>> categoryScoresMono = computeCategoryScores(userId, emotionWeights);
+        Mono<Map<PoiCategory, CategoryScore>> categoryScoresMono = computeCategoryScores(userId, emotionWeights, selectedCategories);
 
         return categoryScoresMono.flatMap(categoryScores ->
                 pois.flatMap(poi -> scorePoi(poi, categoryScores, originLat, originLon))
@@ -150,25 +154,35 @@ public class PoiScoringService {
     }
 
     private Mono<Map<PoiCategory, CategoryScore>> computeCategoryScores(Long userId,
-                                                                        Map<Emotion, Double> emotionWeights) {
+                                                                        Map<Emotion, Double> emotionWeights,
+                                                                        List<PoiCategory> selectedCategories) {
         return Flux.fromArray(PoiCategory.values())
-                .flatMap(category -> computeCategoryScore(category, userId, emotionWeights))
+                .flatMap(category -> computeCategoryScore(category, userId, emotionWeights, selectedCategories))
                 .collectMap(CategoryScore::category);
     }
 
     private Mono<CategoryScore> computeCategoryScore(PoiCategory category,
                                                      Long userId,
-                                                     Map<Emotion, Double> emotionWeights) {
+                                                     Map<Emotion, Double> emotionWeights,
+                                                     List<PoiCategory> selectedCategories) {
         return Flux.fromIterable(emotionWeights.entrySet())
                 .flatMap(entry -> computeEmotionContribution(category, userId, entry.getKey(), entry.getValue()))
                 .collectList()
                 .map(contributions -> {
-                    double totalScore = contributions.stream()
+                    double emotionBaseScore = contributions.stream()
                             .mapToDouble(EmotionContribution::weightedScore)
                             .sum();
+
+                    // Intent Confidence Logic:
+                    // If the category was explicitly selected in the survey, boost its score multiplicatively.
+                    // formula: CategoryScore = EmotionScore * (1 + beta * isSelected)
+
+                    boolean isSelected = selectedCategories != null && selectedCategories.contains(category);
+                    double finalCategoryScore = isSelected ? emotionBaseScore * (1 + weightSelectedCategory) : emotionBaseScore;
+
                     Map<Emotion, Double> byEmotion = contributions.stream()
                             .collect(Collectors.toMap(EmotionContribution::emotion, EmotionContribution::weightedScore));
-                    return new CategoryScore(category, totalScore, byEmotion);
+                    return new CategoryScore(category, finalCategoryScore, byEmotion);
                 });
     }
 

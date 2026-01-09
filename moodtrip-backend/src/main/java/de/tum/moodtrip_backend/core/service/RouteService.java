@@ -91,7 +91,7 @@ public class RouteService {
         Flux<Poi> poiFlux = osmPort.findAmenitiesAround(lat, lon, poiCategories, radiusMeters)
                 .cache();
 
-        return poiScoringService.scoreAndRank(poiFlux, userId, emotionWeights, lat, lon, poiLimit)
+        return poiScoringService.scoreAndRank(poiFlux, userId, emotionWeights, poiCategories, lat, lon, poiLimit)
                 .flatMap(scoredPois -> {
                     if (scoredPois.isEmpty()) {
                         return Mono.error(new NotEnoughPoisException("No POIs found after categorization and scoring"));

@@ -65,7 +65,7 @@ export function SurveyForm({
     // Helper to get date string YYYY-MM-DD
     const getTodayString = () => new Date().toISOString().split('T')[0];
 
-    const [range, setRange] = React.useState<number>(initialData?.rangeMeters ?? 1000);
+    const [range, setRange] = React.useState<number>(initialData?.rangeMeters ?? 5000);
     const [startDate, setStartDate] = React.useState<string>(initialData?.startDate ?? getTodayString());
     const [endDate, setEndDate] = React.useState<string>(initialData?.endDate ?? getTodayString());
     const [selectedCategories, setSelectedCategories] = React.useState<string[]>(initialData?.poiCategories ?? []);
@@ -91,6 +91,8 @@ export function SurveyForm({
             locationName: initialData.locationName ?? fallbackLabel,
         });
         setLocationQuery(label);
+        if (initialData.rangeMeters) setRange(initialData.rangeMeters);
+        if (initialData.poiCategories) setSelectedCategories(initialData.poiCategories);
     }, [initialData]);
 
     // Fetch location suggestions (debounced)
@@ -216,7 +218,7 @@ export function SurveyForm({
             return;
         }
 
-        if (!startDate || !endDate || selectedCategories.length === 0) {
+        if (!startDate || !endDate) {
             return;
         }
 
@@ -250,8 +252,7 @@ export function SurveyForm({
     const hasLocation = Boolean(selectedLocation);
     const hasRange = Number.isFinite(range);
     const hasDates = Boolean(startDate) && Boolean(endDate);
-    const hasCategories = selectedCategories.length > 0;
-    const isFormComplete = hasLocation && hasRange && hasDates && hasCategories;
+    const isFormComplete = hasLocation && hasRange && hasDates;
 
     const isDisabled = readOnly || isSubmitting || isSubmitted;
 
@@ -395,7 +396,9 @@ export function SurveyForm({
 
                     {/* POI Categories */}
                     <div className="space-y-3">
-                        <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Interests</Label>
+                        <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Interests <span className="text-[10px] font-normal lowercase italic opacity-70">(Optional)</span>
+                        </Label>
                         <div className="flex flex-wrap gap-2">
                             {POI_CATEGORIES.map((cat) => {
                                 const isSelected = selectedCategories.includes(cat);
