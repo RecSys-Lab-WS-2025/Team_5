@@ -21,7 +21,7 @@ export function AuthInterceptor({ children }: { children: React.ReactNode }) {
             console.log("AuthInterceptor: 401 Unauthorized event received. Has token:", hasToken);
 
             if (!hasToken) {
-                // 如果本地根本没 Token，说明是未登录访问，直接跳登录页，不需要续约弹窗
+                // If there is no token locally, this is an unauthenticated visit; redirect to login directly without showing the renewal dialog.
                 window.location.href = "/login";
                 return;
             }
