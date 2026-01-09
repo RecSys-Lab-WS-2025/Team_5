@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import {
     Dialog,
@@ -7,7 +9,7 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { refreshToken, saveToken, saveUser, logout, getToken } from "@/api/auth";
+import { refreshToken, saveToken, saveUser, logout, getToken, notifySessionUpdated, clearPendedRequests } from "@/api/auth";
 import { Loader2, AlertCircle, Clock, LogOut } from "lucide-react";
 
 export function AuthInterceptor({ children }: { children: React.ReactNode }) {
@@ -56,7 +58,8 @@ export function AuthInterceptor({ children }: { children: React.ReactNode }) {
                 saveToken(data.token);
                 saveUser(data.user);
                 setIsOpen(false);
-                console.log("AuthInterceptor: Session extended successfully.");
+                console.log("AuthInterceptor: Session extended successfully. Retrying failed requests...");
+                notifySessionUpdated();
             } else {
                 console.error("AuthInterceptor: Invalid response data format:", data);
                 setError("Session extension failed. Please log in again.");
@@ -70,7 +73,8 @@ export function AuthInterceptor({ children }: { children: React.ReactNode }) {
     };
 
     const handleLogout = () => {
-        console.log("AuthInterceptor: User chose to sign out.");
+        console.log("AuthInterceptor: User chose to sign out. Clearing pending requests...");
+        clearPendedRequests(); // Reject all waiting promises
         logout();
         window.location.href = "/login";
     };
@@ -78,7 +82,7 @@ export function AuthInterceptor({ children }: { children: React.ReactNode }) {
     return (
         <>
             {children}
-            <Dialog open={isOpen} onOpenChange={(open) => {
+            <Dialog open={isOpen} onOpenChange={(open: boolean) => {
                 // Force user to make a choice if session expired
                 if (!open && isOpen) return;
                 setIsOpen(open);
