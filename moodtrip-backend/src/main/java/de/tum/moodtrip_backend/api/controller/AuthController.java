@@ -32,12 +32,10 @@ public class AuthController {
 
     private final UserDomainService userService;
     private final JwtService jwtService;
-    private final UserDtoMapper userDtoMapper;
 
-    public AuthController(UserDomainService userService, JwtService jwtService, UserDtoMapper userDtoMapper) {
+    public AuthController(UserDomainService userService, JwtService jwtService) {
         this.userService = userService;
         this.jwtService = jwtService;
-        this.userDtoMapper = userDtoMapper;
     }
 
     @PostMapping("/login")
