@@ -27,16 +27,19 @@ public class JwtService {
 
     private final Key signingKey;
     private final long expirationMinutes;
+    private final long refreshGracePeriodMinutes;
     private final String issuer;
 
     public JwtService(
             @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.expiration-minutes:60}") long expirationMinutes,
-            @Value("${app.jwt.issuer:moodtrip-backend}") String issuer
+            @Value("${app.jwt.issuer:moodtrip-backend}") String issuer,
+            @Value("${app.jwt.refresh-grace-period-minutes:10080}") long refreshGracePeriodMinutes
     ) {
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMinutes = expirationMinutes;
         this.issuer = issuer;
+        this.refreshGracePeriodMinutes = refreshGracePeriodMinutes;
     }
 
     /**
@@ -125,6 +128,59 @@ public class JwtService {
             throw new JwtException("Missing or empty 'email' claim in JWT token");
         }
         return email;
+    }
+
+    /**
+     * Generate a new token based on an old (potentially expired) token.
+     * Only valid if the signature is correct and it was issued by us.
+     */
+    public String refreshCurrentToken(String token) {
+        Claims claims = parseClaimsIgnoreExpiration(token);
+        
+        // Security Check: Only allow refresh within a grace period (e.g. 7 days) from original issuance
+        Date issuedAt = claims.getIssuedAt();
+        if (issuedAt != null) {
+            Instant maxRefreshTime = issuedAt.toInstant().plus(refreshGracePeriodMinutes, ChronoUnit.MINUTES);
+            if (Instant.now().isAfter(maxRefreshTime)) {
+                LOGGER.warn("Refresh rejected: Token issued at {} is beyond the grace period of {} minutes", 
+                        issuedAt, refreshGracePeriodMinutes);
+                throw new JwtException("Session is too old to be extended. Please sign in again.");
+            }
+        }
+
+        String userIdStr = claims.getSubject();
+        String username = claims.get("username", String.class);
+        String email = claims.get("email", String.class);
+
+        LOGGER.info("Refreshing JWT token for user ID: {}", userIdStr);
+        
+        Instant now = Instant.now();
+        Instant exp = now.plus(expirationMinutes, ChronoUnit.MINUTES);
+
+        return Jwts.builder()
+                .setSubject(userIdStr)
+                .setIssuer(issuer)
+                .setIssuedAt(Date.from(now))
+                .setExpiration(Date.from(exp))
+                .claim("username", username)
+                .claim("email", email)
+                .signWith(signingKey, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    private Claims parseClaimsIgnoreExpiration(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(signingKey)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return e.getClaims();
+        } catch (JwtException e) {
+            LOGGER.error("Failed to parse token even with expiration ignored: {}", e.getMessage());
+            throw e;
+        }
     }
 
     /**
