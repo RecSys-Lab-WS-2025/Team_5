@@ -49,7 +49,7 @@ class RouteServiceTest {
                 poiScoringService
         );
 
-        when(poiScoringService.scoreAndRank(any(), any(), any(),anyList() ,anyDouble(), anyDouble(), anyInt()))
+        when(poiScoringService.scoreAndRank(any(), any(), any(), anyList(), anyDouble(), anyDouble(), anyInt()))
                 .thenReturn(Mono.error(new RuntimeException("Overpass failure")));
         when(osmPort.findAmenitiesAround(anyDouble(), anyDouble(), any(), anyInt()))
                 .thenReturn(Flux.empty());
