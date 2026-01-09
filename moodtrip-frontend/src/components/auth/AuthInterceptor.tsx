@@ -63,7 +63,7 @@ export function AuthInterceptor({ children }: { children: React.ReactNode }) {
                 console.error("AuthInterceptor: Invalid response data format:", data);
                 setError("Session extension failed. Please log in again.");
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("AuthInterceptor: Extension request failed:", err);
             setError("Your session has expired completely (or server error). Please sign out and sign in again.");
         } finally {
