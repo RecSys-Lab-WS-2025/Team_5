@@ -91,7 +91,7 @@ public class PoiRatingService {
 
     private Mono<EmotionCategoryScore> initGlobalScore(Emotion emotion, PoiCategory category) {
         return scorePort.findByEmotionAndCategory(emotion, category)
-                .defaultIfEmpty(new EmotionCategoryScore(null, emotion, category, 3.5, 50L));
+                .defaultIfEmpty(new EmotionCategoryScore(null, emotion, category, 3.5, 0L));
     }
 
     private Mono<Void> updateGlobalScore(EmotionCategoryScore mapping, UserPreferenceOffsetUpdateResult offsetResult, boolean incrementCount) {
