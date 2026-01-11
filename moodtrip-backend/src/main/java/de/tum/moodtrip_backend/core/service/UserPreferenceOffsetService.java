@@ -109,16 +109,13 @@ public class UserPreferenceOffsetService {
         double error = rating - predicted;
 
         long newCount = current.count() + (incrementCount ? 1 : 0);
-        // For the update we recompute alpha based on the (possibly) incremented count
-        // so that the step size can depend on how many observations we have.
-        double alphaUpdate = computeAlpha(newCount);
 
         double delta = current.userPreferenceOffset();
         // Gradient-like update of the user preference offset:
-        //   alphaUpdate * error     -> error-driven term (pushes offset to better fit the rating)
+        //   alphaPred * error     -> error-driven term (pushes offset to better fit the rating)
         //   regularization * delta  -> L2-style shrinkage (pulls offset back towards 0 to avoid overfitting)
         // The net update is scaled by the global learningRate.
-        double updatedDelta = delta + learningRate * (alphaUpdate * error - regularization * delta);
+        double updatedDelta = delta + learningRate * (alphaPred * error - regularization * delta);
         // Ensure the learned offset stays within the configured [offsetMin, offsetMax] range.
         updatedDelta = clampOffset(updatedDelta);
 
