@@ -5,7 +5,6 @@ import de.tum.moodtrip_backend.core.model.EmotionCategoryScore;
 import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.model.PoiRating;
 import de.tum.moodtrip_backend.core.port.EmotionCategoryScorePort;
-import de.tum.moodtrip_backend.core.port.GlobalMappingRepository;
 import de.tum.moodtrip_backend.core.port.PoiRatingPort;
 import de.tum.moodtrip_backend.infrastructure.persistence.mapper.ScoringMapper;
 import de.tum.moodtrip_backend.infrastructure.persistence.repository.R2dbcEmotionCategoryScoreRepository;
@@ -16,10 +15,9 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 @Component
-public class ScoringPersistenceAdapter implements EmotionCategoryScorePort, PoiRatingPort, GlobalMappingRepository {
+public class ScoringPersistenceAdapter implements EmotionCategoryScorePort, PoiRatingPort {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScoringPersistenceAdapter.class);
-    private static final double DEFAULT_GLOBAL_SCORE = 3.5;
     private final R2dbcEmotionCategoryScoreRepository scoreRepository;
     private final R2dbcPoiRatingRepository ratingRepository;
 
@@ -41,13 +39,6 @@ public class ScoringPersistenceAdapter implements EmotionCategoryScorePort, PoiR
         LOGGER.debug("Saving emotion_category_score: emotion={}, category={}, score={}", score.emotion(), score.category(), score.score());
         return scoreRepository.save(ScoringMapper.toEntity(score))
                 .map(ScoringMapper::toDomain);
-    }
-
-    @Override
-    public Mono<Double> getScore(Emotion emotion, PoiCategory category) {
-        return findByEmotionAndCategory(emotion, category)
-                .map(EmotionCategoryScore::score)
-                .switchIfEmpty(Mono.just(DEFAULT_GLOBAL_SCORE));
     }
 
     @Override

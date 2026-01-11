@@ -4,11 +4,14 @@ import de.tum.moodtrip_backend.core.model.Emotion;
 import de.tum.moodtrip_backend.core.model.EmotionCategoryScore;
 import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.model.PoiRating;
-import de.tum.moodtrip_backend.core.port.EmotionCategoryScorePort;
+import de.tum.moodtrip_backend.core.model.UserPreferenceOffsetUpdateResult;
 import de.tum.moodtrip_backend.core.port.PoiRatingPort;
+import de.tum.moodtrip_backend.core.port.EmotionCategoryScorePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
@@ -20,13 +23,22 @@ public class PoiRatingService {
     private final PoiRatingPort poiRatingPort;
     private final EmotionCategoryScorePort scorePort;
     private final UserPreferenceOffsetService offsetService;
+    private final TransactionalOperator transactionalOperator;
+    private final double globalLearningRate;
+    private final double globalRegularization;
 
     public PoiRatingService(PoiRatingPort poiRatingPort,
                             EmotionCategoryScorePort scorePort,
-                            UserPreferenceOffsetService offsetService) {
+                            UserPreferenceOffsetService offsetService,
+                            TransactionalOperator transactionalOperator,
+                            @Value("${app.global-mapping.learning-rate:0.01}") double globalLearningRate,
+                            @Value("${app.global-mapping.regularization:0.001}") double globalRegularization) {
         this.poiRatingPort = poiRatingPort;
         this.scorePort = scorePort;
         this.offsetService = offsetService;
+        this.transactionalOperator = transactionalOperator;
+        this.globalLearningRate = globalLearningRate;
+        this.globalRegularization = globalRegularization;
     }
 
     public Mono<PoiRating> getRating(Long userId, String poiId, Emotion emotion) {
@@ -40,7 +52,8 @@ public class PoiRatingService {
             return Mono.error(new IllegalArgumentException("Rating must be between 0.5 and 5"));
         }
 
-        return poiRatingPort.findByUserPoiAndEmotion(userId, poiId, emotion)
+        return transactionalOperator.transactional(
+                poiRatingPort.findByUserPoiAndEmotion(userId, poiId, emotion)
                 .flatMap(existingRating -> {
                     LOGGER.info("Updating existing rating for userId={}, poiId={}, emotion={}. Old rating: {}, New rating: {}", 
                             userId, poiId, emotion, existingRating.rating(), rating);
@@ -55,10 +68,11 @@ public class PoiRatingService {
                             LocalDateTime.now()
                     );
                     
-                    return poiRatingPort.save(updatedRating)
-                            .flatMap(saved -> updateCategoryScore(emotion, category, rating, existingRating.rating())
-                                    .then(offsetService.updateUserPreferenceOffset(userId, emotion, category, rating, false))
-                                    .thenReturn(saved));
+                    return initGlobalScore(emotion, category)
+                            .flatMap(mapping -> poiRatingPort.save(updatedRating)
+                                    .flatMap(saved -> offsetService.updateUserPreferenceOffsetWithGlobal(userId, emotion, category, rating, mapping.score(), false)
+                                            .flatMap(offsetResult -> updateGlobalScore(mapping, offsetResult, false)
+                                                    .thenReturn(saved))));
                 })
                 .switchIfEmpty(Mono.defer(() -> {
                     LOGGER.info("Creating new rating for userId={}, poiId={}, emotion={}. Rating: {}", 
@@ -66,46 +80,29 @@ public class PoiRatingService {
                     
                     PoiRating newRating = new PoiRating(null, userId, poiId, category, emotion, rating, LocalDateTime.now());
                     
-                    return poiRatingPort.save(newRating)
-                            .flatMap(saved -> updateCategoryScore(emotion, category, rating, null)
-                                    .then(offsetService.updateUserPreferenceOffset(userId, emotion, category, rating, true))
-                                    .thenReturn(saved));
-                }));
+                    return initGlobalScore(emotion, category)
+                            .flatMap(mapping -> poiRatingPort.save(newRating)
+                                    .flatMap(saved -> offsetService.updateUserPreferenceOffsetWithGlobal(userId, emotion, category, rating, mapping.score(), true)
+                                            .flatMap(offsetResult -> updateGlobalScore(mapping, offsetResult, true)
+                                                    .thenReturn(saved))));
+                }))
+        );
     }
 
-    //update the average score for the given category and emotion
-    private Mono<Void> updateCategoryScore(Emotion emotion, PoiCategory category, Double newRating, Double oldRating) {
-        boolean isUpdate = oldRating != null;
-        String actionType = isUpdate ? "Updating" : "Adding";
-        
-        LOGGER.info("{} score for category [{}] under emotion [{}]", actionType, category, emotion);
-
+    private Mono<EmotionCategoryScore> initGlobalScore(Emotion emotion, PoiCategory category) {
         return scorePort.findByEmotionAndCategory(emotion, category)
-                .switchIfEmpty(Mono.defer(() -> {
-                    LOGGER.info("No existing score found for emotion={} and category={}. Initializing with default values.", emotion, category);
-                    return Mono.just(new EmotionCategoryScore(null, emotion, category, 3.5, 50L));
-                }))
-                .flatMap(scoreObj -> {
-                    long oldCount = scoreObj.ratingCount();
-                    double oldAvg = scoreObj.score();
-                    double newAvg;
-                    long newCount;
+                .defaultIfEmpty(new EmotionCategoryScore(null, emotion, category, 3.5, 50L));
+    }
 
-                    if (isUpdate) {
-                        newAvg = oldAvg + (newRating - oldRating) / oldCount;
-                        newCount = oldCount;
-                    } else {
-                        newAvg = (oldAvg * oldCount + newRating) / (oldCount + 1);
-                        newCount = oldCount + 1;
-                    }
+    private Mono<Void> updateGlobalScore(EmotionCategoryScore mapping, UserPreferenceOffsetUpdateResult offsetResult, boolean isUpdate) {
+        double wOld = mapping.score();
+        double error = offsetResult.error();
+        double wNew = wOld + globalLearningRate * (error - globalRegularization * wOld);
 
-                    LOGGER.debug("Calculating new score: emotion={}, category={}, oldAvg={}, newAvg={}, oldCount={}, newCount={}", 
-                            emotion, category, oldAvg, newAvg, oldCount, newCount);
-                    
-                    return scorePort.save(scoreObj.withScore(newAvg).withCount(newCount));
-                })
-                .doOnSuccess(s -> LOGGER.info("The new score for category [{}] under emotion [{}] is [{}] (based on [{}] ratings)", 
-                        category, emotion, s.score(), s.ratingCount()))
-                .then();
+        long currentCount = mapping.ratingCount() == null ? 0L : mapping.ratingCount();
+        long newCount = currentCount + (isUpdate ? 0 : 1);
+
+        EmotionCategoryScore updated = mapping.withScore(wNew).withCount(newCount);
+        return scorePort.save(updated).then();
     }
 }

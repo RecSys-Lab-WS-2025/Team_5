@@ -4,13 +4,11 @@ import de.tum.moodtrip_backend.core.model.Emotion;
 import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.model.UserPreferenceOffset;
 import de.tum.moodtrip_backend.core.model.UserPreferenceOffsetUpdateResult;
-import de.tum.moodtrip_backend.core.port.GlobalMappingRepository;
 import de.tum.moodtrip_backend.core.port.UserPreferenceOffsetPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
@@ -21,8 +19,6 @@ public class UserPreferenceOffsetService {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserPreferenceOffsetService.class);
 
     private final UserPreferenceOffsetPort userPreferenceOffsetPort;
-    private final GlobalMappingRepository globalMappingRepository;
-    private final TransactionalOperator transactionalOperator;
     private final double learningRate;
     private final double regularization;
     private final double shrinkageK;
@@ -30,16 +26,12 @@ public class UserPreferenceOffsetService {
     private final double offsetMax;
 
     public UserPreferenceOffsetService(UserPreferenceOffsetPort userPreferenceOffsetPort,
-                                       GlobalMappingRepository globalMappingRepository,
-                                       TransactionalOperator transactionalOperator,
                                        @Value("${app.user-preference-offset.learning-rate:0.05}") double learningRate,
                                        @Value("${app.user-preference-offset.regularization:0.001}") double regularization,
                                        @Value("${app.user-preference-offset.shrinkage-k:20.0}") double shrinkageK,
                                        @Value("${app.user-preference-offset.offset-min:-2.0}") double offsetMin,
                                        @Value("${app.user-preference-offset.offset-max:2.0}") double offsetMax) {
         this.userPreferenceOffsetPort = userPreferenceOffsetPort;
-        this.globalMappingRepository = globalMappingRepository;
-        this.transactionalOperator = transactionalOperator;
         this.learningRate = learningRate;
         this.regularization = regularization;
         this.shrinkageK = shrinkageK;
@@ -47,19 +39,19 @@ public class UserPreferenceOffsetService {
         this.offsetMax = offsetMax;
     }
 
-    public Mono<UserPreferenceOffsetUpdateResult> updateUserPreferenceOffset(Long userId, Emotion emotion, PoiCategory category, double rating, boolean incrementCount) {
+    public Mono<UserPreferenceOffsetUpdateResult> updateUserPreferenceOffsetWithGlobal(Long userId,
+                                                                                       Emotion emotion,
+                                                                                       PoiCategory category,
+                                                                                       double rating,
+                                                                                       double globalScore,
+                                                                                       boolean incrementCount) {
         if (rating < 0.5 || rating > 5.0) {
             return Mono.error(new IllegalArgumentException("Rating must be between 0.5 and 5"));
         }
-
-        return transactionalOperator.transactional(
-                globalMappingRepository.getScore(emotion, category)
-                        .switchIfEmpty(Mono.error(new IllegalStateException("Global mapping missing for " + emotion + "/" + category)))
-                        .flatMap(globalScore -> applyUpdate(userId, emotion, category, rating, globalScore, incrementCount))
-        );
+        return updateUserPreferenceOffsetInternal(userId, emotion, category, rating, globalScore, incrementCount);
     }
 
-    private Mono<UserPreferenceOffsetUpdateResult> applyUpdate(Long userId, Emotion emotion, PoiCategory category, double rating, double globalScore, boolean incrementCount) {
+    private Mono<UserPreferenceOffsetUpdateResult> updateUserPreferenceOffsetInternal(Long userId, Emotion emotion, PoiCategory category, double rating, double globalScore, boolean incrementCount) {
         return userPreferenceOffsetPort.findByUserEmotionAndCategoryForUpdate(userId, emotion, category)
                 .flatMap(existing -> updateExistingOffset(existing, rating, globalScore, incrementCount))
                 .switchIfEmpty(Mono.defer(() -> insertFirstOffset(userId, emotion, category, rating, globalScore, incrementCount)));
