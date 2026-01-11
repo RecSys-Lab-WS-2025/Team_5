@@ -94,13 +94,13 @@ public class PoiRatingService {
                 .defaultIfEmpty(new EmotionCategoryScore(null, emotion, category, 3.5, 50L));
     }
 
-    private Mono<Void> updateGlobalScore(EmotionCategoryScore mapping, UserPreferenceOffsetUpdateResult offsetResult, boolean isUpdate) {
+    private Mono<Void> updateGlobalScore(EmotionCategoryScore mapping, UserPreferenceOffsetUpdateResult offsetResult, boolean incrementCount) {
         double wOld = mapping.score();
         double error = offsetResult.error();
         double wNew = wOld + globalLearningRate * (error - globalRegularization * wOld);
 
         long currentCount = mapping.ratingCount() == null ? 0L : mapping.ratingCount();
-        long newCount = currentCount + (isUpdate ? 0 : 1);
+        long newCount = currentCount + (incrementCount ? 1 : 0);
 
         EmotionCategoryScore updated = mapping.withScore(wNew).withCount(newCount);
         return scorePort.save(updated).then();
