@@ -20,6 +20,8 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+import { Slider } from "@/components/ui/slider";
+
 type LocationSuggestion = {
     place_id: number;
     display_name: string;
@@ -43,13 +45,7 @@ const POI_CATEGORIES = [
     "Shopping",
 ];
 
-const RANGE_OPTIONS = [
-    { label: "3 km", value: 3000 },
-    { label: "5 km", value: 5000 },
-    { label: "10 km", value: 10000 },
-    { label: "20 km", value: 20000 },
-    { label: "50 km", value: 50000 },
-];
+
 
 import type { SurveyData } from "@/api/conversation";
 
@@ -66,6 +62,9 @@ export function SurveyForm({
     const getTodayString = () => new Date().toISOString().split('T')[0];
 
     const [range, setRange] = React.useState<number>(initialData?.rangeMeters ?? 5000);
+    // Local string state for input to allow empty/typing states
+    const [rangeInput, setRangeInput] = React.useState<string>((initialData?.rangeMeters ? initialData.rangeMeters / 1000 : 5).toString());
+
     const [startDate, setStartDate] = React.useState<string>(initialData?.startDate ?? getTodayString());
     const [endDate, setEndDate] = React.useState<string>(initialData?.endDate ?? getTodayString());
     const [selectedCategories, setSelectedCategories] = React.useState<string[]>(initialData?.poiCategories ?? []);
@@ -257,7 +256,7 @@ export function SurveyForm({
     const isDisabled = readOnly || isSubmitting || isSubmitted;
 
     return (
-        <Card className="w-full max-w-lg mx-auto border border-gray-200 shadow-sm bg-white rounded-xl overflow-hidden">
+        <Card className="w-full max-w-lg mx-auto border border-gray-200 shadow-sm bg-white rounded-xl">
             <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
                 <CardTitle className="text-lg font-semibold text-gray-800">Trip Preferences</CardTitle>
                 <CardDescription className="text-gray-500 text-sm">
@@ -349,21 +348,52 @@ export function SurveyForm({
                     </div>
 
                     {/* Range */}
-                    <div className="space-y-2">
-                        <Label htmlFor="range" className="text-xs font-medium text-gray-500 uppercase tracking-wider">Search Range</Label>
-                        <select
-                            id="range"
-                            className="flex h-10 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all hover:border-gray-300"
-                            value={range}
-                            onChange={(e) => setRange(Number(e.target.value))}
-                            disabled={isDisabled}
-                        >
-                            {RANGE_OPTIONS.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                </option>
-                            ))}
-                        </select>
+                    <div className="space-y-4">
+                        <Label htmlFor="range-input" className="text-xs font-medium text-gray-500 uppercase tracking-wider">Search Range</Label>
+                        <div className="flex items-center gap-4">
+                            <Slider
+                                className="flex-1"
+                                value={[range / 1000]}
+                                onValueChange={(vals) => {
+                                    const km = vals[0];
+                                    setRange(km * 1000);
+                                    setRangeInput(km.toString());
+                                }}
+                                max={100}
+                                min={1}
+                                step={1}
+                                disabled={isDisabled}
+                            />
+                            <Input
+                                id="range-input"
+                                type="number"
+                                className="w-24 rounded-lg border-gray-200 focus-visible:ring-gray-900"
+                                value={rangeInput}
+                                onChange={(e) => {
+                                    const valStr = e.target.value;
+                                    setRangeInput(valStr);
+                                    const val = parseFloat(valStr);
+                                    if (!isNaN(val) && val >= 1 && val <= 100) {
+                                        setRange(val * 1000);
+                                    }
+                                }}
+                                onBlur={() => {
+                                    const val = parseFloat(rangeInput);
+                                    if (isNaN(val) || val < 1 || val > 100) {
+                                        // Reset to last valid range if input is invalid/empty on blur
+                                        setRangeInput((range / 1000).toString());
+                                    } else {
+                                        // Format nicely (e.g. remove leading zeros)
+                                        setRangeInput(val.toString());
+                                    }
+                                }}
+                                disabled={isDisabled}
+                                min={1}
+                                max={100}
+                                step={1}
+                            />
+                            <span className="text-sm font-medium text-gray-700">km</span>
+                        </div>
                     </div>
 
                     {/* Dates */}
