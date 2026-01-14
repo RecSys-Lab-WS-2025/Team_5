@@ -256,7 +256,7 @@ export function SurveyForm({
     const isDisabled = readOnly || isSubmitting || isSubmitted;
 
     return (
-        <Card className="w-full max-w-lg mx-auto border border-gray-200 shadow-sm bg-white rounded-xl">
+        <Card className="w-full max-w-lg mx-auto border border-gray-200 shadow-sm bg-white rounded-xl overflow-hidden">
             <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
                 <CardTitle className="text-lg font-semibold text-gray-800">Trip Preferences</CardTitle>
                 <CardDescription className="text-gray-500 text-sm">
