@@ -84,7 +84,13 @@ public class RouteService {
                     String mood = getTopEmotion(emotionWeights);
                     
                     // Use the actual city name passed as parameter
-                    String cityName = city != null && !city.trim().isEmpty() ? city.trim() : "Unknown City";
+                    String cityName = "Unknown City";
+                    if (city != null) {
+                        String trimmedCity = city.trim();
+                        if (!trimmedCity.isEmpty()) {
+                            cityName = trimmedCity;
+                        }
+                    }
                     
                     // Generate route title and description using AI
                     return routeDescriptionService.generateRouteText(mood, cityName, route.pois(), isMocked)
