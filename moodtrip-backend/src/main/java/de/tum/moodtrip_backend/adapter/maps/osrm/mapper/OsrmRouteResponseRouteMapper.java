@@ -50,7 +50,9 @@ public class OsrmRouteResponseRouteMapper {
                 geometry,
                 legDistances,
                 legDurations,
-                waypointOrder
+                waypointOrder,
+                null, // title - will be set later by route description service
+                null  // description - will be set later by route description service
         );
 
         return Mono.just(route);

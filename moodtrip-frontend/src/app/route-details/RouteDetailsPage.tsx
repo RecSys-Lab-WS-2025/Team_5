@@ -115,16 +115,18 @@ export const RouteDetailsPage = () => {
                         </div>
                     </div>
 
-                    {/* Daily Summary Placeholder */}
-                    <div className="rounded-xl border bg-slate-50/50 p-4 border-dashed border-slate-300">
-                        <h3 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                            <span className="h-2 w-2 rounded-full bg-slate-900"></span>
-                            Day {selectedDay} Summary
-                        </h3>
-                        <p className="text-sm text-slate-500 italic leading-relaxed">
-                            Generating AI summary for your day {selectedDay} journey... This space will feature a personalized overview of your highlights and travel mood.
-                        </p>
-                    </div>
+                    {/* Unified Route Description */}
+                    {routeData.description && (
+                        <div className="rounded-xl border bg-slate-50/50 p-4 border-dashed border-slate-300">
+                            <h3 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-slate-900"></span>
+                                Route Description
+                            </h3>
+                            <p className="text-sm text-slate-500 italic leading-relaxed">
+                                {routeData.description}
+                            </p>
+                        </div>
+                    )}
 
                     {/* Itinerary */}
                     <div>

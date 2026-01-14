@@ -97,14 +97,20 @@ public final class GeoJsonRouteMapper {
                 // GeoJSON order = (lon, lat)
                 lineString.add(new LngLatAlt(coord.lon(), coord.lat()));
             }
-
             routeFeature.setGeometry(lineString);
             routeFeature.setProperty("type", "route");
             routeFeature.setProperty("distanceMeters", route.distanceMeters());
             routeFeature.setProperty("durationSeconds", route.durationSeconds());
             routeFeature.setProperty("emotion", emotion);
             routeFeature.setProperty("tripDays", tripDays);
-
+            
+            // Add title and description to the route feature
+            if (route.title() != null) {
+                routeFeature.setProperty("name", route.title());
+            }
+            if (route.description() != null) {
+                routeFeature.setProperty("description", route.description());
+            }
 
             List<Map<String, Object>> dailyStats = new ArrayList<>();
             

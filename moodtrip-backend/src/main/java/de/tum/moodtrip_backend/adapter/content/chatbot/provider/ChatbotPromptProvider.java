@@ -12,15 +12,19 @@ public class ChatbotPromptProvider {
 
     private final String emotionPrompt;
     private final String titlePrompt;
+    private final String routeDescriptionPrompt;
 
     public ChatbotPromptProvider(
             @Value("classpath:prompts/emotion-detection.txt")
             Resource emotionPromptResource,
             @Value("classpath:prompts/title-generation.txt")
-            Resource titlePromptResource
+            Resource titlePromptResource,
+            @Value("classpath:prompts/route-description.txt")
+            Resource routeDescriptionResource
     ) throws IOException {
         this.emotionPrompt = readResource(emotionPromptResource);
         this.titlePrompt = readResource(titlePromptResource);
+        this.routeDescriptionPrompt = readResource(routeDescriptionResource);
     }
 
     private String readResource(Resource resource) throws IOException {
@@ -34,5 +38,9 @@ public class ChatbotPromptProvider {
 
     public String getTitlePrompt() {
         return titlePrompt;
+    }
+
+    public String getRouteDescriptionPrompt() {
+        return routeDescriptionPrompt;
     }
 }
