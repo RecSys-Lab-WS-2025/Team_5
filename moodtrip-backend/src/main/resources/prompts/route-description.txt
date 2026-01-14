@@ -53,10 +53,6 @@ Output: {"title":"Berlin Serenity Route","description":"Start with a peaceful mo
 Input: Mood: adventurous, City: Hamburg, POIs: Port of Hamburg (Adventure), Speicherstadt (History & Culture), Elbphilharmonie (Culture)
 Output: {"title":"Hamburg Adventure Quest","description":"Launch your Hamburg expedition at the bustling Port of Hamburg, Germany's largest seaport where massive container ships and maritime activity create an exciting industrial atmosphere. Venture into the atmospheric Speicherstadt, the world's largest warehouse district, navigating narrow canals between red-brick Gothic buildings that house museums and historic trading floors. Culminate your adventure at the striking Elbphilharmonie, ascending to its plaza for panoramic harbor views and exploring the wave-like glass structure that's become Hamburg's architectural icon."}
 
-MOCK MODE DETECTION:
-If the input contains "mock123321", generate mock test data:
-{"title":"Mock Adventure Route","description":"This is a test route for system validation. The journey includes key landmarks designed to verify proper functionality and user experience."}
-
 FINAL OUTPUT RULES:
 - Return ONLY the JSON object
 - Ensure proper JSON syntax with escaped quotes
