@@ -128,7 +128,6 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
         // Normal AI generation flow
         LOGGER.info("Proceeding with LLM-based route text generation.");
         String input = buildAiInput(mood, city, pois);
-        LOGGER.debug("Sending AI request with input: {}", input);
 
         Prompt prompt = new Prompt(
                 List.of(
@@ -144,7 +143,7 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
                 .filter(result -> !result.isBlank())
                 .switchIfEmpty(Mono.error(new RuntimeException("AI returned empty response for route text")))
                 .map(RouteTextMapper::fromAiResponse)
-                .doOnNext(routeText -> LOGGER.info("Successfully generated AI route text - Title: '{}', Description length: {} chars", 
+                .doOnNext(routeText -> LOGGER.info("Successfully generated AI route text - Title: '{}', Description length: {} chars ",
                     routeText.title(), routeText.description().length()))
                 .onErrorResume(error -> {
                     LOGGER.warn("AI generation failed ({}), falling back to mock generation as safety net.", error.getMessage());
@@ -154,17 +153,37 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
     }
 
     /**
-     * Build structured input for AI processing
+     * Build structured input for AI processing with detailed POI information
      */
     private String buildAiInput(String mood, String city, List<EnrichedPoi> pois) {
+        LOGGER.info("Building AI input with {} POIs", pois != null ? pois.size() : 0);
+        
         String poisInfo = pois.stream()
                 .limit(15) // Limit to avoid token overflow
-                .map(poi -> String.format("- %s (%s)", poi.poi().name(), poi.poi().category()))
+                .map(poi -> {
+                    String name = poi.poi().name();
+                    String category = poi.poi().category().toString();
+                    String description = poi.description();
+                    
+                    // Format: - Name (Category): Description
+                    if (description != null && !description.trim().isEmpty()) {
+                        String formatted = String.format("- %s (%s): %s", name, category, description);
+                        LOGGER.debug("POI with description: {}", formatted);
+                        return formatted;
+                    } else {
+                        String formatted = String.format("- %s (%s)", name, category);
+                        LOGGER.debug("POI without description: {}", formatted);
+                        return formatted;
+                    }
+                })
                 .collect(Collectors.joining("\n"));
 
-        return String.format(
+        String fullInput = String.format(
             "Mood: %s\nCity: %s\nPoints of Interest:\n%s",
             mood, city, poisInfo
         );
+        
+        LOGGER.info("Complete AI input:\n{}", fullInput);
+        return fullInput;
     }
 }

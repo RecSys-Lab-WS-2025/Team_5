@@ -21,7 +21,7 @@ public class RouteTextMapper {
      * Supports JSON format, line format, and fallback parsing
      */
     public static RouteText fromAiResponse(String response) {
-        LOGGER.info("Parsing AI response into RouteText");
+        LOGGER.info("Parsing AI response into RouteText, response length: {} chars", response.length());
         
         String cleanedResponse = response.trim();
         
@@ -75,43 +75,43 @@ public class RouteTextMapper {
 
     /**
      * Attempt to parse JSON format: {"title": "...", "description": "..."}
+     * Uses proper JSON parsing to handle commas in description
      */
     private static RouteText tryParseJsonFormat(String response) {
         if (!response.startsWith("{") || !response.endsWith("}")) {
+            LOGGER.debug("Not JSON format (no braces)");
             return null;
         }
 
         try {
-            String innerContent = response.substring(1, response.length() - 1).trim();
-            String[] pairs = innerContent.split(",");
+            // Try to find title and description using regex to handle commas in values
+            String titlePattern = "\"title\"\\s*:\\s*\"([^\"]*)\"|'title'\\s*:\\s*'([^']*)'";
+            String descPattern = "\"description\"\\s*:\\s*\"(.*?)\"(?=\\s*[,}])|'description'\\s*:\\s*'(.*?)'(?=\\s*[,}])";
+            
+            java.util.regex.Pattern titleRe = java.util.regex.Pattern.compile(titlePattern);
+            java.util.regex.Matcher titleMatcher = titleRe.matcher(response);
+            
+            java.util.regex.Pattern descRe = java.util.regex.Pattern.compile(descPattern);
+            java.util.regex.Matcher descMatcher = descRe.matcher(response);
             
             String extractedTitle = null;
             String extractedDescription = null;
             
-            for (String pair : pairs) {
-                String trimmedPair = pair.trim();
-                if (trimmedPair.contains(":")) {
-                    String[] keyValue = trimmedPair.split(":", 2);
-                    if (keyValue.length == 2) {
-                        String key = keyValue[0].trim()
-                            .replaceAll("^\"|\"$", "")
-                            .replaceAll("^'|'$", "");
-                        String value = keyValue[1].trim()
-                            .replaceAll("^\"|\"$", "")
-                            .replaceAll("^'|'$", "");
-                        
-                        if ("title".equalsIgnoreCase(key)) {
-                            extractedTitle = value;
-                        } else if ("description".equalsIgnoreCase(key)) {
-                            extractedDescription = value;
-                        }
-                    }
-                }
+            if (titleMatcher.find()) {
+                extractedTitle = titleMatcher.group(1) != null ? titleMatcher.group(1) : titleMatcher.group(2);
+            }
+            
+            if (descMatcher.find()) {
+                extractedDescription = descMatcher.group(1) != null ? descMatcher.group(1) : descMatcher.group(2);
             }
             
             if (extractedTitle != null && extractedDescription != null) {
-                LOGGER.info("Successfully parsed JSON format");
+                LOGGER.info("Successfully parsed JSON format - Title: '{}', Description length: {} chars", 
+                    extractedTitle, extractedDescription.length());
                 return new RouteText(extractedTitle, extractedDescription);
+            } else {
+                LOGGER.warn("JSON format detected but fields not found - title: {}, description: {}", 
+                    extractedTitle != null, extractedDescription != null);
             }
         } catch (Exception e) {
             LOGGER.warn("Failed to parse as JSON format: {}", e.getMessage());
@@ -186,12 +186,69 @@ public class RouteTextMapper {
     }
 
     /**
-     * Generate detailed mock descriptions with contextual information
+     * Generate detailed mock descriptions with specific POI mentions
      */
     private static String generateMockDescription(String mood, String city, List<EnrichedPoi> pois) {
         String formattedCity = city != null && !city.trim().isEmpty() ? city.trim() : "the test location";
-        int poiCount = pois != null ? Math.min(pois.size(), 5) : 0;
-    
+        
+        // If we have POIs, create a detailed description mentioning each one
+        if (pois != null && !pois.isEmpty()) {
+            StringBuilder description = new StringBuilder();
+            
+            // Intro based on mood
+            String intro = switch (mood.toLowerCase()) {
+                case "joyful", "happy" -> 
+                    String.format("Begin your joyful journey through %s, ", formattedCity);
+                case "relaxed", "calm" -> 
+                    String.format("Start your serene exploration of %s, ", formattedCity);
+                case "adventurous", "bold" -> 
+                    String.format("Launch your exciting adventure across %s, ", formattedCity);
+                case "contemplative", "thoughtful" -> 
+                    String.format("Embark on a mindful journey through %s, ", formattedCity);
+                default -> 
+                    String.format("Discover %s through this carefully curated route, ", formattedCity);
+            };
+            
+            description.append(intro);
+            
+            // Mention each POI with connection words
+            int poiLimit = Math.min(pois.size(), 5);
+            for (int i = 0; i < poiLimit; i++) {
+                EnrichedPoi poi = pois.get(i);
+                String poiName = poi.poi().name();
+                String poiDesc = poi.description();
+                
+                // Connection words based on position
+                String connector = switch (i) {
+                    case 0 -> "visiting ";
+                    case 1 -> "then exploring ";
+                    case 2 -> "followed by ";
+                    default -> i == poiLimit - 1 ? "and concluding at " : "continuing to ";
+                };
+                
+                description.append(connector).append(poiName);
+                
+                // Add brief description if available
+                if (poiDesc != null && !poiDesc.trim().isEmpty()) {
+                    // Truncate long descriptions
+                    String shortDesc = poiDesc.length() > 80 ? 
+                        poiDesc.substring(0, 77) + "..." : poiDesc;
+                    description.append(" - ").append(shortDesc);
+                }
+                
+                // Add punctuation
+                if (i < poiLimit - 1) {
+                    description.append(", ");
+                } else {
+                    description.append(".");
+                }
+            }
+            
+            return description.toString();
+        }
+        
+        // Fallback if no POIs (original behavior)
+        int poiCount = 0;
         String baseTemplate = switch (mood.toLowerCase()) {
             case "joyful", "happy" -> 
                 "Experience pure joy through %s's finest attractions. This curated journey combines %d carefully selected destinations designed to uplift your spirits and create lasting memories.";
