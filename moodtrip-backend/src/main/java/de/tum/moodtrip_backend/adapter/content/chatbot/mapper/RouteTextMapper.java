@@ -172,15 +172,20 @@ public class RouteTextMapper {
         String formattedCity = city != null && !city.trim().isEmpty() ? city.trim() : "Test Location";
     
         return switch (mood.toLowerCase()) {
-            case "joyful", "happy", "excited" -> 
+            // JOYFUL / ENERGIZED and similar upbeat moods
+            case "joyful", "happy", "excited", "energized" ->
                 String.format("%s %s Adventure", formattedMood, formattedCity);
-            case "relaxed", "calm", "peaceful" -> 
+            // CALM / TIRED / STRESSED and similar relaxing/soothing moods
+            case "relaxed", "calm", "peaceful", "tired", "stressed" ->
                 String.format("Serene %s Escape", formattedCity);
-            case "adventurous", "bold", "exploratory" -> 
+            // CURIOUS and other exploratory moods
+            case "adventurous", "bold", "exploratory", "curious" ->
                 String.format("%s Discovery Quest", formattedCity);
-            case "contemplative", "thoughtful", "reflective" -> 
+            // NOSTALGIC / SAD and reflective moods
+            case "contemplative", "thoughtful", "reflective", "nostalgic", "sad" ->
                 String.format("Mindful %s Journey", formattedCity);
-            default -> 
+            // NEUTRAL and anything else fall back to a generic mock route
+            default ->
                 String.format("Mock %s Route in %s", formattedMood, formattedCity);
         };
     }
