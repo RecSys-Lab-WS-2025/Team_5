@@ -12,7 +12,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import de.tum.moodtrip_backend.api.dto.LoginRequest;
 import de.tum.moodtrip_backend.api.dto.LoginResponse;
-import de.tum.moodtrip_backend.api.mapper.UserDtoMapper;
 import de.tum.moodtrip_backend.api.security.JwtService;
 import de.tum.moodtrip_backend.core.service.UserDomainService;
 
