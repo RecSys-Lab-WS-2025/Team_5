@@ -372,20 +372,32 @@ export function SurveyForm({
                                 onChange={(e) => {
                                     const valStr = e.target.value;
                                     setRangeInput(valStr);
+
                                     const val = parseFloat(valStr);
-                                    if (!isNaN(val) && val >= 1 && val <= 100) {
-                                        setRange(val * 1000);
+                                    if (!isNaN(val)) {
+                                        if (val > 100) {
+                                            // Clamp > 100 immediately to 100 for better UX
+                                            setRange(100000);
+                                            setRangeInput("100");
+                                        } else if (val >= 1) {
+                                            // Valid range update
+                                            setRange(val * 1000);
+                                        }
+                                        // If val < 1 (e.g. 0), keep typing but don't update range yet
                                     }
                                 }}
                                 onBlur={() => {
-                                    const val = parseFloat(rangeInput);
-                                    if (isNaN(val) || val < 1 || val > 100) {
-                                        // Reset to last valid range if input is invalid/empty on blur
-                                        setRangeInput((range / 1000).toString());
+                                    let val = parseFloat(rangeInput);
+                                    if (isNaN(val)) {
+                                        // Invalid/Empty -> revert to last valid state
+                                        val = range / 1000;
                                     } else {
-                                        // Format nicely (e.g. remove leading zeros)
-                                        setRangeInput(val.toString());
+                                        // Clamp on blur
+                                        if (val < 1) val = 1;
+                                        if (val > 100) val = 100;
                                     }
+                                    setRange(val * 1000);
+                                    setRangeInput(val.toString());
                                 }}
                                 disabled={isDisabled}
                                 min={1}
