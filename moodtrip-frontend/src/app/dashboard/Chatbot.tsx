@@ -730,7 +730,6 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                     const routeFc = routeData as FeatureCollection;
                     const routeFeature = routeFc.features.find((f) => f.properties?.type === "route") as RouteFeature | undefined;
                     const routeProps = routeFeature?.properties;
-                    console.log("Route feature properties:", routeProps);
 
                     // Find first available POI image as a fallback
                     const poiFeatures = routeFc.features.filter(f => f.properties?.type === "poi");
