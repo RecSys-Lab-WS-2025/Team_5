@@ -150,11 +150,29 @@ export async function authFetch(
       const url = typeof input === 'string' ? input : (input instanceof URL ? input.href : input.url);
 
       // Safety checks: stop if it's the refresh endpoint itself or if we've already retried
-      if (url?.includes('/api/auth/refresh') || (init._retryCount && init._retryCount >= 1)) {
-        console.warn("authFetch: 401 retry limit reached or refresh failed.");
+      if (url?.includes('/api/auth/refresh')) {
+        console.warn("authFetch: 401 from refresh endpoint. Failing all pending requests.");
+
+        // Reject all pending requests waiting on a successful refresh
+        while (pendedQueue.length > 0) {
+          const pending = pendedQueue.shift();
+          try {
+            pending?.reject(new Error("Unauthorized: token refresh failed with 401."));
+          } catch (e) {
+            console.error("authFetch: error rejecting pending request after refresh 401:", e);
+          }
+        }
+
+        // Reset refreshing state so the system can recover / re-initiate auth if needed
+        isRefreshing = false;
+
         return res;
       }
 
+      if (init._retryCount && init._retryCount >= 1) {
+        console.warn("authFetch: 401 retry limit reached for request. Not retrying again.");
+        return res;
+      }
       console.warn("authFetch: 401 received. Pending request and triggering re-auth UI.");
 
       return new Promise<Response>((resolve, reject) => {
