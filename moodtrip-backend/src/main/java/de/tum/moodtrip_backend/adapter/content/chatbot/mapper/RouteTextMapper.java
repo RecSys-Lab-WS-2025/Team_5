@@ -248,23 +248,22 @@ public class RouteTextMapper {
         }
         
         // Fallback if no POIs (original behavior)
-        int poiCount = 0;
         String baseTemplate = switch (mood.toLowerCase()) {
             case "joyful", "happy" -> 
-                "Experience pure joy through %s's finest attractions. This curated journey combines %d carefully selected destinations designed to uplift your spirits and create lasting memories.";
+                "Experience pure joy through %s's finest attractions. This curated journey combines carefully selected destinations designed to uplift your spirits and create lasting memories.";
             case "relaxed", "calm" -> 
-                "Unwind in %s's most tranquil settings. This peaceful itinerary features %d serene locations perfect for rest, reflection, and gentle exploration away from the hustle and bustle.";
+                "Unwind in %s's most tranquil settings. This peaceful itinerary features serene locations perfect for rest, reflection, and gentle exploration away from the hustle and bustle.";
             case "adventurous", "bold" -> 
-                "Embark on an exciting adventure through %s's dynamic landscape. This bold expedition includes %d thrilling destinations that promise discovery, challenge, and unforgettable experiences.";
+                "Embark on an exciting adventure through %s's dynamic landscape. This bold expedition includes thrilling destinations that promise discovery, challenge, and unforgettable experiences.";
             case "contemplative", "thoughtful" -> 
-                "Journey mindfully through %s's culturally rich environment. This thoughtful route connects %d meaningful locations that inspire reflection and deeper appreciation for your surroundings.";
+                "Journey mindfully through %s's culturally rich environment. This thoughtful route connects meaningful locations that inspire reflection and deeper appreciation for your surroundings.";
             default -> 
-                "This is a comprehensive mock route in %s for testing purposes. The carefully planned journey includes %d key locations designed to verify proper functionality, user experience, and system integration.";
+                "This is a comprehensive mock route in %s for testing purposes. The carefully planned journey includes key locations designed to verify proper functionality, user experience, and system integration.";
         };
     
         String testingContext = " Features include automated testing protocols, system validation checkpoints, and quality assurance measures to ensure optimal performance.";
     
-        return String.format(baseTemplate + testingContext, formattedCity, poiCount);
+        return String.format(baseTemplate + testingContext, formattedCity);
     }
 
     // ==================== Helper Methods ====================
