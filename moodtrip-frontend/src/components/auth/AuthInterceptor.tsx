@@ -83,8 +83,11 @@ export function AuthInterceptor({ children }: { children: React.ReactNode }) {
         <>
             {children}
             <Dialog open={isOpen} onOpenChange={(open: boolean) => {
-                // Force user to make a choice if session expired
-                if (!open && isOpen) return;
+                // Force user to make a choice if session expired, but explain why closing is blocked
+                if (!open && isOpen) {
+                    setError("You need to extend your session or sign out before continuing.");
+                    return;
+                }
                 setIsOpen(open);
             }}>
                 <DialogContent className="sm:max-w-[400px]">
