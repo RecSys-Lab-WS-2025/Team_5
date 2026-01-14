@@ -61,7 +61,7 @@ class RouteServiceTest {
         when(osmPort.findAmenitiesAround(anyDouble(), anyDouble(), any(), anyInt()))
                 .thenReturn(Flux.empty());
 
-        // 使用具体的类型参数
+        // Use specific type parameters
         List<de.tum.moodtrip_backend.core.model.PoiCategory> poiCategories = List.of();
         Map<de.tum.moodtrip_backend.core.model.Emotion, Double> emotionWeights = Map.of();
 
