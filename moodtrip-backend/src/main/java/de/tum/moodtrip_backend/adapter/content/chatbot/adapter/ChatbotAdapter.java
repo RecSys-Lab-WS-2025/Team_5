@@ -157,8 +157,11 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
      */
     private String buildAiInput(String mood, String city, List<EnrichedPoi> pois) {
         LOGGER.info("Building AI input with {} POIs", pois != null ? pois.size() : 0);
+
+        // Ensure we never stream over a null list of POIs
+        List<EnrichedPoi> effectivePois = (pois != null) ? pois : List.of();
         
-        String poisInfo = pois.stream()
+        String poisInfo = effectivePois.stream()
                 .limit(15) // Limit to avoid token overflow
                 .map(poi -> {
                     String name = poi.poi().name();
