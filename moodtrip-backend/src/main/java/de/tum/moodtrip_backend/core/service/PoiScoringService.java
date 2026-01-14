@@ -6,7 +6,7 @@ import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.model.PoiScore;
 import de.tum.moodtrip_backend.core.model.ScoredPoi;
 import de.tum.moodtrip_backend.core.model.UserPreferenceOffset;
-import de.tum.moodtrip_backend.core.port.GlobalMappingRepository;
+import de.tum.moodtrip_backend.core.port.EmotionCategoryScorePort;
 import de.tum.moodtrip_backend.core.port.UserPreferenceOffsetPort;
 import de.tum.moodtrip_backend.core.util.PoiScoringUtils;
 import org.slf4j.Logger;
@@ -29,8 +29,9 @@ import java.util.stream.Collectors;
 public class PoiScoringService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PoiScoringService.class);
+    private static final double DEFAULT_GLOBAL_SCORE = 3.5;
 
-    private final GlobalMappingRepository globalMappingRepository;
+    private final EmotionCategoryScorePort emotionCategoryScorePort;
     private final UserPreferenceOffsetPort userPreferenceOffsetPort;
     private final double shrinkageK;
     private final double lambdaTag;
@@ -41,7 +42,7 @@ public class PoiScoringService {
     private final MmrRerankingService mmrRerankingService;
     private final double weightSelectedCategory;
 
-    public PoiScoringService(GlobalMappingRepository globalMappingRepository,
+    public PoiScoringService(EmotionCategoryScorePort emotionCategoryScorePort,
                              UserPreferenceOffsetPort userPreferenceOffsetPort,
                              @Value("${app.poi-scoring.shrinkage-k:20.0}") double shrinkageK,
                              @Value("${app.poi-scoring.lambda-tag:0.4}") double lambdaTag,
@@ -59,7 +60,7 @@ public class PoiScoringService {
                              @Value("${app.poi-scoring.tag.max-count:20}") int tagCountMax,
                              @Value("${app.poi-scoring.category.weight:1.5}") double weightSelectedCategory,
                              MmrRerankingService mmrRerankingService) {
-        this.globalMappingRepository = globalMappingRepository;
+        this.emotionCategoryScorePort = emotionCategoryScorePort;
         this.userPreferenceOffsetPort = userPreferenceOffsetPort;
         this.shrinkageK = shrinkageK;
         this.lambdaTag = lambdaTag;
@@ -190,7 +191,9 @@ public class PoiScoringService {
                                                                  Long userId,
                                                                  Emotion emotion,
                                                                  double weight) {
-        Mono<Double> globalMono = globalMappingRepository.getScore(emotion, category);
+        Mono<Double> globalMono = emotionCategoryScorePort.findByEmotionAndCategory(emotion, category)
+                .map(score -> score.score() == null ? DEFAULT_GLOBAL_SCORE : score.score())
+                .defaultIfEmpty(DEFAULT_GLOBAL_SCORE);
         Mono<UserPreferenceOffset> offsetMono = userPreferenceOffsetPort.findByUserEmotionAndCategory(userId, emotion, category)
                 .switchIfEmpty(Mono.just(UserPreferenceOffset.initial(userId, emotion, category, LocalDateTime.now())));
 
