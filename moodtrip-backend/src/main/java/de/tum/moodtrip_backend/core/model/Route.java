@@ -8,6 +8,8 @@ public record Route(
         List<RouteCoordinate> geometry,
         List<Double> legDistances,
         List<Double> legDurations,
-        List<Integer> waypointOrder
+        List<Integer> waypointOrder,
+        String title,
+        String description
 ) {
 }

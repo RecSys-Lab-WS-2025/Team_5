@@ -1,24 +1,32 @@
 package de.tum.moodtrip_backend.core.service;
 
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeoutException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
 import de.tum.moodtrip_backend.core.exception.MapProviderUnavailableException;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteCoordinatesMapper;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteResultRouteRecommendationMapper;
-import de.tum.moodtrip_backend.core.model.*;
+import de.tum.moodtrip_backend.core.model.Emotion;
+import de.tum.moodtrip_backend.core.model.EnrichedPoi;
+import de.tum.moodtrip_backend.core.model.Poi;
+import de.tum.moodtrip_backend.core.model.PoiCategory;
+import de.tum.moodtrip_backend.core.model.PoiRouteResult;
+import de.tum.moodtrip_backend.core.model.Route;
+import de.tum.moodtrip_backend.core.model.RouteGenerationResult;
+import de.tum.moodtrip_backend.core.model.ScoredPoi;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.RouteRecommendationPort;
 import de.tum.moodtrip_backend.core.port.RoutingPort;
 import de.tum.moodtrip_backend.core.port.WikipediaPort;
 import de.tum.moodtrip_backend.core.util.PoiDescriptionBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeoutException;
 
 @Service
 public class RouteService {
@@ -36,17 +44,20 @@ public class RouteService {
     private final RoutingPort routingPort;
     private final RouteRecommendationPort routeRecommendationPort;
     private final PoiScoringService poiScoringService;
+    private final RouteDescriptionService routeDescriptionService;
 
     public RouteService(OsmPort osmPort,
                         WikipediaPort wikipediaPort,
                         RoutingPort routingPort,
                         RouteRecommendationPort routeRecommendationPort,
-                        PoiScoringService poiScoringService) {
+                        PoiScoringService poiScoringService,
+                        RouteDescriptionService routeDescriptionService) {
         this.osmPort = osmPort;
         this.wikipediaPort = wikipediaPort;
         this.routingPort = routingPort;
         this.routeRecommendationPort = routeRecommendationPort;
         this.poiScoringService = poiScoringService;
+        this.routeDescriptionService = routeDescriptionService;
     }
 
     public Mono<RouteGenerationResult> getRoute(
@@ -57,24 +68,60 @@ public class RouteService {
             List<PoiCategory> poiCategories,
             int radiusMeters,
             Map<Emotion, Double> emotionWeights,
-            int poiLimit
+            int poiLimit,
+            String city,
+            boolean isMocked
     ) {
         poiLimit = Math.min(poiLimit, MAX_POI_RESULTS);
         poiLimit = Math.max(poiLimit, MIN_POI_RESULTS);
-        LOGGER.info("Getting route for conversationId: {}, lat: {}, lon: {}, radius: {}, limit: {}", 
-                conversationId, lat, lon, radiusMeters, poiLimit);
+        LOGGER.info("Getting route for conversationId: {}, lat: {}, lon: {}, radius: {}, limit: {}, city: {}, isMocked: {}", 
+                conversationId, lat, lon, radiusMeters, poiLimit, city, isMocked);
 
         return buildRoute(userId, lat, lon, poiCategories, radiusMeters, emotionWeights, poiLimit)
                 .timeout(ROUTE_TIMEOUT)
-                .flatMap(route ->
-                        routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(route, conversationId))
-                                .doOnNext(saved -> LOGGER.info("Route generated successfully for conversationId: {}", saved.conversationId()))
-                                .map(saved -> RouteGenerationResult.success(route))
-                )
+                .flatMap(route -> {
+                    // Get the top emotion from the weights to use as mood
+                    String mood = getTopEmotion(emotionWeights);
+                    
+                    // Use the actual city name passed as parameter
+                    String cityName = city != null && !city.trim().isEmpty() ? city.trim() : "Unknown City";
+                    
+                    // Generate route title and description using AI
+                    return routeDescriptionService.generateRouteText(mood, cityName, route.pois(), isMocked)
+                            .map(routeText -> {
+                                // Create a new Route object with title and description
+                                Route originalRoute = route.route();
+                                Route routeWithTitleAndDesc = new Route(
+                                    originalRoute.distanceMeters(),
+                                    originalRoute.durationSeconds(),
+                                    originalRoute.geometry(),
+                                    originalRoute.legDistances(),
+                                    originalRoute.legDurations(),
+                                    originalRoute.waypointOrder(),
+                                    routeText.title(),
+                                    routeText.description()
+                                );
+                                
+                                return new PoiRouteResult(route.pois(), routeWithTitleAndDesc);
+                            })
+                            .defaultIfEmpty(route) // Fallback if route text generation fails
+                            .flatMap(processedRoute ->
+                                routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(processedRoute, conversationId))
+                                        .doOnNext(saved -> LOGGER.info("Route generated successfully for conversationId: {}", saved.conversationId()))
+                                        .map(saved -> RouteGenerationResult.success(processedRoute))
+                            );
+                })
                 .onErrorResume(ex -> {
                     LOGGER.error("Unexpected error during route generation for conversationId: {}", conversationId, ex);
                     return Mono.just(RouteGenerationResult.failure(mapErrorToUserMessage(ex)));
                 });
+    }
+
+    private String getTopEmotion(Map<Emotion, Double> emotionWeights) {
+        return emotionWeights.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(entry -> entry.getKey().name())
+                .orElse("NEUTRAL");
     }
 
     private Mono<PoiRouteResult> buildRoute(
@@ -133,7 +180,9 @@ public class RouteService {
                                                     route.geometry(),
                                                     route.legDistances(),
                                                     route.legDurations(),
-                                                    route.waypointOrder()
+                                                    route.waypointOrder(),
+                                                    null, // title placeholder - will be filled later
+                                                    null  // description placeholder - will be filled later
                                             ));
                                         });
                             });

@@ -1,9 +1,12 @@
 package de.tum.moodtrip_backend.api.controller;
 
 
-import de.tum.moodtrip_backend.api.mapper.GeoJsonRouteMapper;
-import de.tum.moodtrip_backend.core.service.RouteService;
+import static java.time.temporal.ChronoUnit.DAYS;
+import java.util.Map;
+
 import org.geojson.FeatureCollection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
@@ -14,29 +17,24 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-
-import reactor.core.publisher.Mono;
-
-import de.tum.moodtrip_backend.api.dto.SurveyRequest;
-import de.tum.moodtrip_backend.api.dto.SurveyResponse;
-import de.tum.moodtrip_backend.api.mapper.SurveyDtoMapper;
-import de.tum.moodtrip_backend.api.security.JwtService;
-import de.tum.moodtrip_backend.core.port.SurveyPort;
-import de.tum.moodtrip_backend.core.service.ConversationDomainService;
-import de.tum.moodtrip_backend.core.service.UserDomainService;
-import de.tum.moodtrip_backend.adapter.music.spotify.service.MusicRecommendationService;
 import de.tum.moodtrip_backend.adapter.music.spotify.mapper.EmotionToFeatureMapper;
 import de.tum.moodtrip_backend.adapter.music.spotify.pojo.FeaturePair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import de.tum.moodtrip_backend.core.model.RouteStatus;
-import de.tum.moodtrip_backend.core.model.RouteGenerationResult;
+import de.tum.moodtrip_backend.adapter.music.spotify.service.MusicRecommendationService;
+import de.tum.moodtrip_backend.api.dto.SurveyRequest;
+import de.tum.moodtrip_backend.api.dto.SurveyResponse;
+import de.tum.moodtrip_backend.api.mapper.GeoJsonRouteMapper;
+import de.tum.moodtrip_backend.api.mapper.SurveyDtoMapper;
+import de.tum.moodtrip_backend.api.security.JwtService;
 import de.tum.moodtrip_backend.core.model.Emotion;
-
-import java.util.Map;
-import static java.time.temporal.ChronoUnit.DAYS;
+import de.tum.moodtrip_backend.core.model.RouteGenerationResult;
+import de.tum.moodtrip_backend.core.model.RouteStatus;
+import de.tum.moodtrip_backend.core.port.SurveyPort;
+import de.tum.moodtrip_backend.core.service.ConversationDomainService;
+import de.tum.moodtrip_backend.core.service.RouteService;
+import de.tum.moodtrip_backend.core.service.UserDomainService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/surveys")
@@ -99,7 +97,7 @@ public class SurveyController {
                                         .map(weights -> weights.isEmpty() ? Map.of(fallbackEmotion, 1.0) : weights)
                                         .defaultIfEmpty(Map.of(fallbackEmotion, 1.0));
 
-                                 Mono<RouteGenerationResult> routeResultMono = emotionWeightsMono.flatMap(emotionWeights -> {
+                                Mono<RouteGenerationResult> routeResultMono = emotionWeightsMono.flatMap(emotionWeights -> {
                                                 long days = DAYS.between(surveyDomain.startDate(), surveyDomain.endDate()) + 1;
 
                                                 double energyScore = emotionWeights.entrySet().stream()
@@ -118,12 +116,18 @@ public class SurveyController {
                                                 logger.info("Trip duration: {} days, Mood energy score: {}. Set dynamic POI limit to: {}", 
                                                         days, String.format("%.2f", energyScore), dynamicLimit);
 
+                                                // Determine if we're in mock mode by checking if the EmotionResult content contains mock indicator
+                                                boolean isMocked = conversation.emotionResult().content().contains("THIS IS A MOCK RESPONSE");
+                                                logger.info("Mock mode for route generation: {} (detected from emotion result content)", isMocked);
+
                                                 return routeService.getRoute(conversationId,
                                                         userId,
                                                         surveyDomain.latitude(), surveyDomain.longitude(), surveyDomain.poiCategories(),
                                                         surveyDomain.rangeMeters(),
                                                         emotionWeights,
-                                                        dynamicLimit);
+                                                        dynamicLimit,
+                                                        surveyDomain.locationName(),
+                                                        isMocked);
                                             })
                                         .cache();
 
