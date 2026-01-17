@@ -198,6 +198,7 @@ export default function Chatbot() {
   const [currentEmotion, setCurrentEmotion] = useState<string | null>(
     initialSnapshot?.currentEmotion ?? null
   );
+  const [spotifyUrlByChat, setSpotifyUrlByChat] = useState<Record<string, string | null>>({});
 
   const skipLoadRef = useRef(false);
 
@@ -605,6 +606,14 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
     try {
       await deleteConversation(Number(chatToDelete.id));
       setChats((prev) => prev.filter((c) => c.id !== chatToDelete.id));
+      
+      // 清理 Spotify URL
+      setSpotifyUrlByChat((prev) => {
+        const next = { ...prev };
+        delete next[chatToDelete.id];
+        return next;
+      });
+      
       if (selectedChatId === chatToDelete.id) {
         setSelectedChatId(null);
         setMessages([]);
@@ -704,6 +713,11 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
               isLoading={isLoading}
               routeGeoJson={routeGeoJson}
               currentEmotion={currentEmotion}
+              spotifyPlaylistUrl={
+                selectedChatId
+                  ? (spotifyUrlByChat[selectedChatId] ?? spotifyUrlByChat[String(selectedChatId)] ?? null)
+                  : null
+              }
               onSurveySubmit={async (data: SurveyData) => {
                 if (!selectedChatId) return;
                 const conversationId = Number(selectedChatId);
@@ -797,6 +811,24 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   const { res, routeData } = attempt;
 
                   setRouteGeoJson(routeData);
+
+                  // 存储 Spotify URL（如果存在）
+                  console.log("Survey response - spotifyPlaylistLink:", res.spotifyPlaylistLink);
+                  console.log("Conversation ID:", conversationId, "Type:", typeof conversationId);
+                  if (res.spotifyPlaylistLink) {
+                    const urlToStore = res.spotifyPlaylistLink;
+                    console.log("Storing Spotify URL for conversation:", conversationId, urlToStore);
+                    setSpotifyUrlByChat((prev) => {
+                      const next = {
+                        ...prev,
+                        [String(conversationId)]: urlToStore,
+                      };
+                      console.log("Updated spotifyUrlByChat:", next);
+                      return next;
+                    });
+                  } else {
+                    console.log("No Spotify URL in response");
+                  }
 
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(payload)}`;
                   await apiSendMessage(conversationId, surveyContent, true);

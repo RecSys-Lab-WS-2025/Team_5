@@ -103,24 +103,25 @@ if (!routeData) {
       }
       className="h-screen"
     >
-      <SidebarInset className="h-screen min-h-0 w-full overflow-hidden !bg-white">
-        <header className="relative z-20 flex h-16 shrink-0 items-center gap-3 border-b !bg-white px-4 backdrop-blur">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+      <SidebarInset className="h-screen min-h-0 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-white">
+        <header className="relative z-20 flex h-16 shrink-0 items-center gap-3 border-b border-gray-200/50 bg-white/80 backdrop-blur-xl px-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate(-1)}
+            className="!bg-white text-gray-600 hover:text-gray-900 hover:!bg-white"
+          >
             <MoveLeft className="h-5 w-5" />
           </Button>
 
-          <h1 className="flex-1 truncate !text-3xl font-semibold">
-            {routeData.title}
-          </h1>
-
-          <SidebarTrigger className="ml-auto rotate-180" />
+          <SidebarTrigger className="ml-auto rotate-180 text-gray-600 hover:text-gray-900" />
         </header>
 
         <main className="h-[calc(100vh-4rem)] min-h-0 w-full">
           {routeData.geoJson ? (
             <MapPane geoJson={routeData.geoJson} />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <div className="flex h-full w-full items-center justify-center text-gray-400">
               Map Preview
             </div>
           )}

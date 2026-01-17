@@ -25,6 +25,7 @@ interface ChatInterfaceProps {
   onSurveySubmit?: (data: SurveyData) => Promise<void> | void;
   currentEmotion?: string | null;
   chatId?: string | null;
+  spotifyPlaylistUrl?: string | null;
 }
 
 function SpotifyVinylMiniCard({
@@ -42,7 +43,7 @@ function SpotifyVinylMiniCard({
     <>
       <div
         className="
-          fixed top-[88px] right-6 z-[60]
+          fixed top-[88px] right-6 z-[100]
           w-[260px] sm:w-[280px]
           rounded-2xl border bg-white/90 backdrop-blur
           shadow-[0_10px_30px_rgba(0,0,0,0.12)]
@@ -140,11 +141,35 @@ function extractLatestSpotifyUrlFromMessages(messages: UIMessage[]): string | nu
       if (p.type !== "text") continue;
       const t = p.text || "";
 
-      const md = t.match(/\((https?:\/\/open\.spotify\.com\/[^)\s]+)\)/i);
-      if (md?.[1]) return md[1];
+      // 匹配 Markdown 链接格式: [text](https://open.spotify.com/...)
+      const md = t.match(/\[([^\]]*)\]\((https?:\/\/open\.spotify\.com\/[^)\s]+)\)/i);
+      if (md?.[2]) {
+        return md[2];
+      }
 
-      const raw = t.match(/https?:\/\/open\.spotify\.com\/[^\s)]+/i);
-      if (raw?.[0]) return raw[0];
+      // 匹配 Markdown 链接格式（更宽松，允许 URL 中有更多字符）
+      const mdLoose = t.match(/\[([^\]]*)\]\((https?:\/\/open\.spotify\.com\/[^)]+)\)/i);
+      if (mdLoose?.[2]) {
+        return mdLoose[2].trim();
+      }
+
+      // 匹配括号中的 URL: (https://open.spotify.com/...)
+      const paren = t.match(/\((https?:\/\/open\.spotify\.com\/[^)\s]+)\)/i);
+      if (paren?.[1]) {
+        return paren[1];
+      }
+
+      // 匹配纯 URL: https://open.spotify.com/...
+      const raw = t.match(/https?:\/\/open\.spotify\.com\/[^\s\)\n]+/i);
+      if (raw?.[0]) {
+        return raw[0];
+      }
+
+      // 匹配任何包含 spotify.com 的 URL（最宽松）
+      const anySpotify = t.match(/https?:\/\/[^\s\)\n]*spotify\.com\/[^\s\)\n]+/i);
+      if (anySpotify?.[0]) {
+        return anySpotify[0];
+      }
     }
   }
   return null;
@@ -175,6 +200,7 @@ export function ChatInterface({
   onSurveySubmit,
   currentEmotion,
   chatId,
+  spotifyPlaylistUrl,
 }: ChatInterfaceProps) {
   const bottomRef = React.useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
@@ -184,31 +210,44 @@ export function ChatInterface({
 
   const chatKey = chatId ?? "__global__";
 
-  const [perChatUrl, setPerChatUrl] = React.useState<Record<string, string | null>>({});
   const [dismissedUrl, setDismissedUrl] = React.useState<Record<string, string | null>>({});
 
+  // 优先使用传入的 URL，如果没有则从消息中提取
   const latestSpotifyUrl = React.useMemo(
-    () => extractLatestSpotifyUrlFromMessages(messages),
-    [messages]
+    () => spotifyPlaylistUrl || extractLatestSpotifyUrlFromMessages(messages),
+    [messages, spotifyPlaylistUrl]
   );
 
-  React.useEffect(() => {
-    if (!latestSpotifyUrl) return;
-    setPerChatUrl((prev) => {
-      if (prev[chatKey] === latestSpotifyUrl) return prev;
-      return { ...prev, [chatKey]: latestSpotifyUrl };
-    });
-  }, [latestSpotifyUrl, chatKey]);
-
   const spotifyUrlForThisChat = React.useMemo(() => {
-    const url = perChatUrl[chatKey] ?? latestSpotifyUrl ?? null;
+    const url = latestSpotifyUrl ?? null;
+    console.log("Spotify URL calculation:", {
+      spotifyPlaylistUrl,
+      latestSpotifyUrl,
+      url,
+      chatKey,
+      dismissedUrl: dismissedUrl[chatKey],
+    });
     if (!url) return null;
 
     const dismissed = dismissedUrl[chatKey] ?? null;
-    if (dismissed && dismissed === url) return null;
+    if (dismissed && dismissed === url) {
+      console.log("Spotify URL was dismissed");
+      return null;
+    }
 
+    console.log("Spotify URL for display:", url);
     return url;
-  }, [chatKey, perChatUrl, dismissedUrl, latestSpotifyUrl]);
+  }, [chatKey, dismissedUrl, latestSpotifyUrl, spotifyPlaylistUrl]);
+
+  // 调试信息（开发时使用）
+  React.useEffect(() => {
+    if (latestSpotifyUrl) {
+      console.log("Spotify URL extracted:", latestSpotifyUrl);
+    }
+    if (spotifyUrlForThisChat) {
+      console.log("Spotify URL for display:", spotifyUrlForThisChat);
+    }
+  }, [latestSpotifyUrl, spotifyUrlForThisChat]);
 
   const lastAssistantMessage = React.useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -557,7 +596,7 @@ export function ChatInterface({
         </form>
       </div>
 
-      {spotifyUrlForThisChat && (
+      {spotifyUrlForThisChat ? (
         <SpotifyVinylMiniCard
           url={spotifyUrlForThisChat}
           title="Moodtrip playlist"
@@ -569,7 +608,7 @@ export function ChatInterface({
             }));
           }}
         />
-      )}
+      ) : null}
     </div>
   );
 }
