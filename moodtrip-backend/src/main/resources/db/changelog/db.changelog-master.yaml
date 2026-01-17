@@ -33,3 +33,5 @@ databaseChangeLog:
       file: db/changelog/changes/016-create-user-preference-offsets.yaml
   - include:
       file: db/changelog/changes/017-add-emotion-result-to-conversation.yaml
+  - include:
+      file: db/changelog/changes/018-add-avatar-url-to-user-profile.yaml

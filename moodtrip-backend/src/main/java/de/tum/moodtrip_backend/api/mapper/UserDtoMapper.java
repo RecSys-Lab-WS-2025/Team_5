@@ -10,6 +10,14 @@ public class UserDtoMapper {
 
     public UserResponse toResponse(UserProfile domain) {
         if (domain == null) return null;
-        return new UserResponse(domain.id(), domain.username(), domain.email(), domain.createdAt());
+
+        return new UserResponse(
+                domain.id(),
+                domain.username(),
+                domain.email(),
+                domain.createdAt(),
+                domain.spotifyTokenId(),
+                domain.avatarUrl()
+        );
     }
 }

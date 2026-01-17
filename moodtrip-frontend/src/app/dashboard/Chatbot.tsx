@@ -9,28 +9,26 @@ import type { ChatSummary } from "@/components/sidebar/app-sidebar";
 import { WelcomeScreen } from "@/components/chat/welcome-screen";
 import { ChatInterface } from "@/components/chat/chat-interface";
 import type { SurveyData } from "@/api/conversation";
-
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
+import { Button } from "@/components/ui/button";
 import {
   Laugh,
   Smile,
   Meh,
   Annoyed,
-  // Angry,
   LifeBuoy,
   Send,
-  Heart,
-  Music,
-  Users,
   SquareTerminal,
+  House,
 } from "lucide-react";
 
 import { getUser } from "@/api/auth";
+import { onUserUpdated } from "@/lib/user-events";
 import {
   startConversation,
   getMyConversations,
@@ -43,6 +41,7 @@ import {
 } from "@/api/conversation";
 import type { RouteFeature, RouteRecommendation } from "@/api/conversation";
 import type { FeatureCollection } from "geojson";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const navData = {
   user: {
@@ -61,38 +60,6 @@ const navData = {
         { title: "Quick-Start", url: "#" },
       ],
     },
-    {
-      title: "My favourites",
-      url: "#",
-      icon: Heart,
-      items: [
-        { title: "Trips", url: "#" },
-        { title: "Saved Spots", url: "#" },
-        { title: "Wishlists", url: "#" },
-        { title: "Pinned Ideas", url: "#" },
-      ],
-    },
-    {
-      title: "My Spotify",
-      url: "#",
-      icon: Music,
-      items: [
-        { title: "Playlists", url: "#" },
-        { title: "Settings", url: "#" },
-      ],
-    },
-    {
-      title: "Community",
-      url: "#",
-      icon: Users,
-      items: [
-        { title: "Travel Feed", url: "#" },
-        { title: "My Stories", url: "#" },
-        { title: "My Journeys", url: "#" },
-        { title: "Insights Dashboard", url: "#" },
-        { title: "Topics & Boards", url: "#" },
-      ],
-    },
   ],
   navSecondary: [
     { title: "Support", url: "#", icon: LifeBuoy },
@@ -100,50 +67,165 @@ const navData = {
   ],
 };
 
+const CHAT_SNAPSHOT_KEY = "moodtrip:chatSnapshot";
+
+type ChatSnapshot = {
+  selectedChatId: string | null;
+  messages: UIMessage[];
+  emotionExtracted: boolean;
+  currentEmotion: string | null;
+  routeGeoJson: FeatureCollection | null;
+};
+
+function readSnapshot(): ChatSnapshot | null {
+  try {
+    const raw = sessionStorage.getItem(CHAT_SNAPSHOT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ChatSnapshot;
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeSnapshot(snapshot: ChatSnapshot) {
+  try {
+    sessionStorage.setItem(CHAT_SNAPSHOT_KEY, JSON.stringify(snapshot));
+  } catch {
+    // ignore
+  }
+}
+
+function clearSnapshot() {
+  try {
+    sessionStorage.removeItem(CHAT_SNAPSHOT_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function isFiniteNumber(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v);
+}
+
+function isValidLatLng(lat: unknown, lng: unknown) {
+  if (!isFiniteNumber(lat) || !isFiniteNumber(lng)) return false;
+  if (lat === 0 && lng === 0) return false;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return false;
+  return true;
+}
+
+async function getBrowserLocation(
+  timeoutMs = 8000
+): Promise<{ latitude: number; longitude: number } | null> {
+  if (typeof window === "undefined") return null;
+  if (!("geolocation" in navigator)) return null;
+
+  return await new Promise((resolve) => {
+    const timer = window.setTimeout(() => resolve(null), timeoutMs);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        window.clearTimeout(timer);
+        const latitude = pos.coords.latitude;
+        const longitude = pos.coords.longitude;
+        if (!isValidLatLng(latitude, longitude)) return resolve(null);
+        resolve({ latitude, longitude });
+      },
+      () => {
+        window.clearTimeout(timer);
+        resolve(null);
+      },
+      { enableHighAccuracy: false, maximumAge: 60_000, timeout: timeoutMs }
+    );
+  });
+}
+
+function normalizeRangeMeters(rangeMeters: unknown) {
+  if (isFiniteNumber(rangeMeters)) {
+    return Math.max(500, Math.min(50_000, Math.round(rangeMeters)));
+  }
+  return 3000;
+}
+
+function normalizeCategories(cats: unknown): string[] {
+  if (!Array.isArray(cats)) return [];
+  return cats
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter(Boolean)
+    .map((x) => x.toUpperCase());
+}
+
 export default function Chatbot() {
-  const [displayUser, setDisplayUser] = useState(() => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const initialSnapshot = (() => {
+    if (typeof window === "undefined") return null;
+    return readSnapshot();
+  })();
+
+  const [displayUserName, setDisplayUserName] = useState(() => {
     const storedUser = getUser();
-    return {
-      name: storedUser?.username ?? navData.user.name,
-      email: storedUser?.email ?? navData.user.email,
-      avatar: undefined,
-    };
+    return storedUser?.username ?? navData.user.name;
   });
 
   useEffect(() => {
-    const handleStorageChange = () => {
+    const off = onUserUpdated(() => {
       const storedUser = getUser();
-      if (storedUser) {
-        setDisplayUser({
-          name: storedUser.username,
-          email: storedUser.email,
-          avatar: undefined,
-        });
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("userLogin", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("userLogin", handleStorageChange);
-    };
+      setDisplayUserName(storedUser?.username ?? navData.user.name);
+    });
+    return () => off();
   }, []);
 
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(
+    initialSnapshot?.selectedChatId ?? null
+  );
   const [chats, setChats] = useState<ChatSummary[]>([]);
-  const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [messages, setMessages] = useState<UIMessage[]>(
+    initialSnapshot?.messages ?? []
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState("");
-  const [emotionExtracted, setEmotionExtracted] = useState(true);
+  const [emotionExtracted, setEmotionExtracted] = useState(
+    initialSnapshot?.emotionExtracted ?? true
+  );
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const [routeGeoJson, setRouteGeoJson] = useState<FeatureCollection | null>(
-    null
+    initialSnapshot?.routeGeoJson ?? null
   );
-  const [currentEmotion, setCurrentEmotion] = useState<string | null>(null);
+  const [currentEmotion, setCurrentEmotion] = useState<string | null>(
+    initialSnapshot?.currentEmotion ?? null
+  );
 
   const skipLoadRef = useRef(false);
+
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.resetChat) {
+      clearSnapshot();
+
+      setSelectedChatId(null);
+      setMessages([]);
+      setEmotionExtracted(false);
+      setPendingChatId(null);
+      setRouteGeoJson(null);
+      setCurrentEmotion(null);
+
+      navigate(".", { replace: true, state: null });
+    }
+  }, [location.state, navigate]);
+
+  useEffect(() => {
+    writeSnapshot({
+      selectedChatId,
+      messages,
+      emotionExtracted,
+      currentEmotion,
+      routeGeoJson,
+    });
+  }, [selectedChatId, messages, emotionExtracted, currentEmotion, routeGeoJson]);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<ChatSummary | null>(null);
@@ -158,9 +240,7 @@ export default function Chatbot() {
       const match: RegExpMatchArray | null = content.match(
         /content=([\s\S]*?),\s*success=(true|false)/
       );
-      if (match && match[1]) {
-        return match[1];
-      }
+      if (match && match[1]) return match[1];
     }
     return content;
   };
@@ -170,23 +250,18 @@ export default function Chatbot() {
     const e = emotion.toUpperCase();
     switch (e) {
       case "JOYFUL":
-        return Laugh;
       case "ENERGIZED":
         return Laugh;
       case "CALM":
         return Smile;
       case "CURIOUS":
-        return Meh;
       case "NOSTALGIC":
-        return Meh;
       case "NEUTRAL":
+      case "SAD":
+      case "TIRED":
         return Meh;
       case "STRESSED":
         return Annoyed;
-      case "SAD":
-        return Meh;
-      case "TIRED":
-        return Meh;
       default:
         return undefined;
     }
@@ -233,7 +308,7 @@ export default function Chatbot() {
 
   useEffect(() => {
     if (!selectedChatId) {
-      setMessages([]);
+      if (messages.length === 0) return;
       return;
     }
 
@@ -243,11 +318,9 @@ export default function Chatbot() {
     }
 
     loadMessages(selectedChatId);
-    const chat = chats.find(c => c.id === selectedChatId);
-    if (chat) {
-      setCurrentEmotion(chat.emotion || null);
-    }
-  }, [selectedChatId, loadMessages, chats]);
+    const chat = chats.find((c) => c.id === selectedChatId);
+    if (chat) setCurrentEmotion(chat.emotion || null);
+  }, [selectedChatId, loadMessages, chats, messages.length]);
 
   const handleNewChat = async () => {
     setSelectedChatId(null);
@@ -255,6 +328,8 @@ export default function Chatbot() {
     setEmotionExtracted(false);
     setPendingChatId(null);
     setRouteGeoJson(null);
+    setCurrentEmotion(null);
+    clearSnapshot();
   };
 
   const handleSelectChat = (chatId: string) => {
@@ -287,9 +362,7 @@ export default function Chatbot() {
         const res = await apiExtractEmotion(Number(selectedChatId), text);
         if (res.success) {
           setEmotionExtracted(true);
-          if (res.topLabel) {
-            setCurrentEmotion(res.topLabel);
-          }
+          if (res.topLabel) setCurrentEmotion(res.topLabel);
         } else {
           setEmotionExtracted(false);
         }
@@ -311,7 +384,11 @@ export default function Chatbot() {
           };
           setMessages((prev) => [...prev, surveyMsg]);
           try {
-            await apiSendMessage(Number(selectedChatId), "[SURVEY_FORM_TRIGGER]", false);
+            await apiSendMessage(
+              Number(selectedChatId),
+              "[SURVEY_FORM_TRIGGER]",
+              false
+            );
           } catch (err) {
             console.error("Failed to persist survey form trigger", err);
           }
@@ -366,12 +443,11 @@ export default function Chatbot() {
       const res = await apiExtractEmotion(Number(chatId), text);
       if (res.success) {
         setEmotionExtracted(true);
-        if (res.topLabel) {
-          setCurrentEmotion(res.topLabel);
-        }
+        if (res.topLabel) setCurrentEmotion(res.topLabel);
       } else {
         setEmotionExtracted(false);
       }
+
       if (res.content) {
         const botMsg: UIMessage = {
           id: (Date.now() + 1).toString(),
@@ -401,10 +477,7 @@ export default function Chatbot() {
     }
   };
 
-  const handleScriptedClick = async (
-    userText: string,
-    assistantText: string
-  ) => {
+  const handleScriptedClick = async (userText: string, assistantText: string) => {
     setIsLoading(true);
 
     let currentChatId = selectedChatId;
@@ -462,27 +535,17 @@ export default function Chatbot() {
   };
 
   const handleIntroClick = () => {
-    const userText =
-      "Could you briefly introduce what this Moodtrip website does?";
-
-    const assistantText = `Of course! 😊  
+    const userText = "Could you briefly introduce what this Moodtrip website does?";
+    const assistantText = `Of course! 😊
 
 **In one sentence:** Moodtrip is a tiny travel buddy that suggests same-day or short-notice trips that match your current mood.
 
-**What Moodtrip helps with:** - You’re not sure *where* to go, you just know *how* you feel  
-- You want a small reset rather than a big, complicated holiday  
+**What Moodtrip helps with:**
+- You’re not sure *where* to go, you just know *how* you feel
+- You want a small reset rather than a big, complicated holiday
 - You’d like ideas that feel emotionally right, not just “top rated nearby”
 
-**What you share with me:** 1. How you feel right now (tired, excited, overwhelmed, calm, “meh”…).  
-2. Who’s coming with you (solo, couple, friends, family).  
-3. When you’d roughly like to go and where you’re starting from (if you already know).
-
-**What I do with that:** - I turn your mood + context into a few trip ideas to explore.  
-- I try to match the vibe you want: soothing, energising, playful, reflective, etc.
-
-**A small heads-up:** I’m not doing deep emotion analysis on the backend *yet*, so if you share something very complex I may not catch every nuance — but I’ll always respond kindly and try to stay close to your tone.
-
-**What you can do next:** Choose a mood prompt from the sidebar, or just type how you’re feeling and hit **Send**.  
+**What you can do next:** Choose a mood prompt from the sidebar, or just type how you’re feeling and hit **Send**.
 I’ll take it from there and start shaping a Moodtrip for you 💫`;
 
     handleScriptedClick(userText, assistantText);
@@ -491,33 +554,22 @@ I’ll take it from there and start shaping a Moodtrip for you 💫`;
   const handleQuickStartClick = () => {
     const userText =
       "How do I quickly get started using Moodtrip? Please give me a short guide.";
+    const assistantText = `Let’s keep it super simple 🌈
 
-    const assistantText = `Let’s keep it super simple 🌈  
+**Quick start in 4 steps:**
+1. Tell me how you feel.
+2. Say what you want this trip to do.
+3. Add a few basics (people, timing, starting area).
+4. Press Send and just chat.
 
-**Quick start in 4 tiny steps:**
-
-1. **Tell me how you feel.** For example: “I’m stressed from work and need a soft reset”,  
-   or “I’m in a great mood and want something fun and spontaneous”.
-
-2. **Say what you want this trip to do.** Do you want to:
-   - Relax and slow down?  
-   - Clear your head?  
-   - Celebrate something?  
-   - Feel inspired or creative?
-
-3. **Add a few basics when you’re ready.** - How many people are travelling  
-   - Rough timing (tonight, tomorrow, this weekend, sometime soon)  
-   - Your starting city or area  
-
-4. **Press Send and just chat.** I’ll ask for anything that’s missing and then suggest a few trip ideas that match your mood, energy and situation — not just your location.
-
-Later on, when Spotify is connected, I’ll also suggest playlists and artists that fit both your mood and the style of your trip, so your Moodtrip comes with its own soundtrack 🎧✨`;
+I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧✨`;
 
     handleScriptedClick(userText, assistantText);
   };
 
   const handleRenameChat = (id: string, currentTitle: string) => {
-    const chat = chats.find((c) => c.id === id) || { id, title: currentTitle };
+    const chat =
+      chats.find((c) => c.id === id) || ({ id, title: currentTitle } as any);
     setChatToRename(chat as ChatSummary);
     setRenameDialogOpen(true);
   };
@@ -526,10 +578,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
     if (!chatToRename) return;
     setIsRenaming(true);
     try {
-      const updated = await renameConversation(
-        Number(chatToRename.id),
-        newTitle
-      );
+      const updated = await renameConversation(Number(chatToRename.id), newTitle);
       setChats((prev) =>
         prev.map((c) =>
           c.id === chatToRename.id ? { ...c, title: updated.title } : c
@@ -560,7 +609,10 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
         setSelectedChatId(null);
         setMessages([]);
         setEmotionExtracted(false);
+        setPendingChatId(null);
         setRouteGeoJson(null);
+        setCurrentEmotion(null);
+        clearSnapshot();
       }
     } catch (e) {
       console.error("Failed to delete chat", e);
@@ -596,7 +648,6 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
   return (
     <SidebarProvider>
       <AppSidebar
-        user={displayUser}
         navMain={navData.navMain}
         navSecondary={navData.navSecondary}
         chats={chats}
@@ -610,10 +661,30 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
         onQuickStartClick={handleQuickStartClick}
         onRefreshChats={loadChats}
       />
+
       <SidebarInset>
-        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 bg-white">
+        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center bg-white">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                clearSnapshot();
+                navigate("/", { replace: true });
+              }}
+              aria-label="Go to home"
+              title="Home"
+              className="
+                !bg-transparent
+                hover:bg-transparent
+                active:bg-transparent
+                focus-visible:bg-transparent
+                shadow-none
+              "
+            >
+              <House className="h-5 w-5 text-black" />
+            </Button>
           </div>
         </header>
 
@@ -621,10 +692,11 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
           {showWelcome ? (
             <WelcomeScreen
               onSuggestionClick={handleSuggestionClick}
-              userName={displayUser.name}
+              userName={displayUserName}
             />
           ) : (
             <ChatInterface
+              chatId={selectedChatId}
               messages={messages}
               input={input}
               handleInputChange={handleInputChange}
@@ -635,6 +707,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
               onSurveySubmit={async (data: SurveyData) => {
                 if (!selectedChatId) return;
                 const conversationId = Number(selectedChatId);
+
                 const appendRecovery = async (messageText: string) => {
                   const triggerPayload = "[SURVEY_FORM_TRIGGER]";
 
@@ -658,38 +731,75 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                   }
                 };
 
-                let handledFailure = false;
                 setIsLoading(true);
+
                 try {
-                  const res = await submitSurvey(conversationId, data);
+                  let payload: SurveyData = {
+                    ...data,
+                    rangeMeters: normalizeRangeMeters((data as any).rangeMeters),
+                    poiCategories: normalizeCategories((data as any).poiCategories),
+                  };
 
-                  if (res.routeStatus === "FAILED") {
-                    const errorMessage =
-                      res.userMessage ??
-                      "I couldn't generate a route due to a routing service error. Please try again.";
-                    await appendRecovery(errorMessage);
+                  if (!isValidLatLng(payload.latitude, payload.longitude)) {
+                    const geo = await getBrowserLocation();
+                    if (geo) {
+                      payload = {
+                        ...payload,
+                        latitude: geo.latitude,
+                        longitude: geo.longitude,
+                      };
+                    }
+                  }
+
+                  if (!isValidLatLng(payload.latitude, payload.longitude)) {
                     setRouteGeoJson(null);
-                    handledFailure = true;
-                    throw new Error(errorMessage);
+                    await appendRecovery(
+                      "Location is missing or invalid. Please allow location access or choose a different area."
+                    );
+                    return;
                   }
 
-                  const routeData = res.route as FeatureCollection | undefined;
-                  if (!routeData) {
-                    const message =
-                      "The route data was missing or malformed. Please try again.";
-                    await appendRecovery(message);
-                    handledFailure = true;
-                    throw new Error(message);
+                  const trySubmit = async (p: SurveyData) => {
+                    const res = await submitSurvey(conversationId, p);
+                    if (res.routeStatus === "FAILED") return { ok: false as const, res };
+                    const routeData = res.route as FeatureCollection | undefined;
+                    if (!routeData) {
+                      return {
+                        ok: false as const,
+                        res: {
+                          routeStatus: "FAILED" as const,
+                          userMessage:
+                            "The route data was missing or malformed. Please try again.",
+                        },
+                      };
+                    }
+                    return { ok: true as const, res, routeData };
+                  };
+
+                  let attempt = await trySubmit(payload);
+
+                  if (!attempt.ok) {
+                    const noCatPayload: any = { ...payload };
+                    delete noCatPayload.poiCategories;
+                    const attempt2 = await trySubmit(noCatPayload as SurveyData);
+                    if (attempt2.ok) attempt = attempt2;
                   }
+
+                  if (!attempt.ok) {
+                    const msg =
+                      attempt.res.userMessage ??
+                      "I couldn't find enough interesting places nearby to build a route. Please try a larger radius or a different area.";
+                    setRouteGeoJson(null);
+                    await appendRecovery(msg);
+                    return;
+                  }
+
+                  const { res, routeData } = attempt;
 
                   setRouteGeoJson(routeData);
 
-                  const surveyContent = `[SURVEY_DATA] ${JSON.stringify(data)}`;
-                  await apiSendMessage(
-                    conversationId,
-                    surveyContent,
-                    true
-                  );
+                  const surveyContent = `[SURVEY_DATA] ${JSON.stringify(payload)}`;
+                  await apiSendMessage(conversationId, surveyContent, true);
 
                   const persistedSurveyMsg: UIMessage = {
                     id: Date.now().toString(),
@@ -713,87 +823,88 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
                   };
                   setMessages((prev) => [...prev, successMsg]);
 
-                  // Send and display the route map as a bot message
-                  try {
-                    const mapPayload = `[ROUTE_MAP] ${JSON.stringify(
-                      routeData
-                    )}`;
-                    setRouteGeoJson(routeData);
-                    await apiSendMessage(conversationId, mapPayload, false);
-                    const mapMsg: UIMessage = {
-                      id: (Date.now() + 2).toString(),
-                      role: "assistant",
-                      parts: [{ type: "text", text: mapPayload }],
-                    };
-                    setMessages((prev) => [...prev, mapMsg]);
+                  const mapPayload = `[ROUTE_MAP] ${JSON.stringify(routeData)}`;
+                  setRouteGeoJson(routeData);
+                  await apiSendMessage(conversationId, mapPayload, false);
 
-                    const routeFc = routeData as FeatureCollection;
-                    const routeFeature = routeFc.features.find((f) => f.properties?.type === "route") as RouteFeature | undefined;
-                    const routeProps = routeFeature?.properties;
+                  const mapMsg: UIMessage = {
+                    id: (Date.now() + 2).toString(),
+                    role: "assistant",
+                    parts: [{ type: "text", text: mapPayload }],
+                  };
+                  setMessages((prev) => [...prev, mapMsg]);
 
-                    // Find first available POI image as a fallback
-                    const poiFeatures = routeFc.features.filter(f => f.properties?.type === "poi");
-                    const firstPoiWithImage = poiFeatures.find(f => f.properties?.imageUrl);
-                    const fallbackPoiImage = firstPoiWithImage?.properties?.imageUrl;
-                    const finalThumbnail = routeProps?.image || fallbackPoiImage || "/placeholder.png";
+                  const routeFc = routeData as FeatureCollection;
+                  const routeFeature = routeFc.features.find(
+                    (f: any) => f?.properties?.type === "route"
+                  ) as RouteFeature | undefined;
+                  const routeProps: any = routeFeature?.properties;
 
-                    const cardDataList: RouteRecommendation[] = [
-                      {
-                        id: "1",
-                        title: routeProps?.name || `Your Personalized Trip`,
-                        description: routeProps?.description || "A personalized route based on your mood.",
-                        imageUrl: finalThumbnail,
-                        distanceMeters: routeProps?.distanceMeters || 0,
-                        durationSeconds: routeProps?.durationSeconds || 0,
-                        geoJson: routeFc
-                      },
-                      {
-                        id: "2",
-                        title: routeProps?.name || `Your Personalized Trip`,
-                        description: routeProps?.description || "A personalized route based on your mood.",
-                        imageUrl: finalThumbnail,
-                        distanceMeters: routeProps?.distanceMeters || 0,
-                        durationSeconds: routeProps?.durationSeconds || 0,
-                        geoJson: routeFc
-                      },
-                      {
-                        id: "3",
-                        title: routeProps?.name || `Your Personalized Trip`,
-                        description: routeProps?.description || "A personalized route based on your mood.",
-                        imageUrl: finalThumbnail,
-                        distanceMeters: routeProps?.distanceMeters || 0,
-                        durationSeconds: routeProps?.durationSeconds || 0,
-                        geoJson: routeFc
-                      }
-                    ];
+                  const poiFeatures = routeFc.features.filter(
+                    (f: any) => f?.properties?.type === "poi"
+                  );
+                  const firstPoiWithImage = poiFeatures.find(
+                    (f: any) => f?.properties?.imageUrl
+                  );
+                  const fallbackPoiImage = firstPoiWithImage?.properties?.imageUrl as
+                    | string
+                    | undefined;
+                  const finalThumbnail =
+                    routeProps?.image || fallbackPoiImage || "/placeholder.png";
 
-                    const cardsPayload = `[ROUTE_CARDS] ${JSON.stringify(cardDataList)}`;
-                    await apiSendMessage(conversationId, cardsPayload, false);
+                  const cardDataList: RouteRecommendation[] = [
+                    {
+                      id: "1",
+                      title: routeProps?.name || "Your Personalized Trip",
+                      description:
+                        routeProps?.description ||
+                        "A personalized route based on your mood.",
+                      imageUrl: finalThumbnail,
+                      distanceMeters: routeProps?.distanceMeters || 0,
+                      durationSeconds: routeProps?.durationSeconds || 0,
+                      geoJson: routeFc,
+                    },
+                    {
+                      id: "2",
+                      title: routeProps?.name || "Your Personalized Trip",
+                      description:
+                        routeProps?.description ||
+                        "A personalized route based on your mood.",
+                      imageUrl: finalThumbnail,
+                      distanceMeters: routeProps?.distanceMeters || 0,
+                      durationSeconds: routeProps?.durationSeconds || 0,
+                      geoJson: routeFc,
+                    },
+                    {
+                      id: "3",
+                      title: routeProps?.name || "Your Personalized Trip",
+                      description:
+                        routeProps?.description ||
+                        "A personalized route based on your mood.",
+                      imageUrl: finalThumbnail,
+                      distanceMeters: routeProps?.distanceMeters || 0,
+                      durationSeconds: routeProps?.durationSeconds || 0,
+                      geoJson: routeFc,
+                    },
+                  ];
 
-                    const cardsMsg: UIMessage = {
-                      id: (Date.now() + 3).toString(),
-                      role: "assistant",
-                      parts: [{ type: "text", text: cardsPayload }],
-                    };
-                    setMessages((prev) => [...prev, cardsMsg]);
-                  } catch (mapErr) {
-                    console.error("Failed to persist or render route map", mapErr);
-                    const message =
-                      "I generated a route but couldn't render the map. Please try again.";
-                    await appendRecovery(message);
-                    handledFailure = true;
-                    throw mapErr instanceof Error ? mapErr : new Error(message);
-                  }
+                  const cardsPayload = `[ROUTE_CARDS] ${JSON.stringify(cardDataList)}`;
+                  await apiSendMessage(conversationId, cardsPayload, false);
+
+                  const cardsMsg: UIMessage = {
+                    id: (Date.now() + 3).toString(),
+                    role: "assistant",
+                    parts: [{ type: "text", text: cardsPayload }],
+                  };
+                  setMessages((prev) => [...prev, cardsMsg]);
                 } catch (e) {
-                  if (!handledFailure) {
-                    setRouteGeoJson(null);
-                    const fallbackMessage =
-                      e instanceof Error && e.message
-                        ? e.message
-                        : "I couldn't generate a route due to an unexpected error. Please try again.";
-                    await appendRecovery(fallbackMessage);
-                  }
                   console.error("Failed to submit survey", e);
+                  setRouteGeoJson(null);
+                  const fallbackMessage =
+                    e instanceof Error && e.message
+                      ? e.message
+                      : "I couldn't generate a route due to an unexpected error. Please try again.";
+                  await appendRecovery(fallbackMessage);
                 } finally {
                   setIsLoading(false);
                 }
@@ -807,9 +918,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
         open={deleteDialogOpen}
         onOpenChange={(open) => {
           setDeleteDialogOpen(open);
-          if (!open) {
-            setChatToDelete(null);
-          }
+          if (!open) setChatToDelete(null);
         }}
         title="Delete this chat?"
         description={
@@ -827,9 +936,7 @@ Later on, when Spotify is connected, I’ll also suggest playlists and artists t
         open={renameDialogOpen}
         onOpenChange={(open) => {
           setRenameDialogOpen(open);
-          if (!open) {
-            setChatToRename(null);
-          }
+          if (!open) setChatToRename(null);
         }}
         initialTitle={chatToRename?.title ?? ""}
         loading={isRenaming}

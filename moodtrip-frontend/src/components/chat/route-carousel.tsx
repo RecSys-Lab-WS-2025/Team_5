@@ -17,21 +17,33 @@ interface RouteCarouselProps {
 }
 
 export function RouteCarousel({ routes, onRouteClick }: RouteCarouselProps) {
-    return (
-        <div className="w-full overflow-x-auto pb-4 -mx-4 px-4 scroll-smooth no-scrollbar snap-x snap-mandatory flex gap-4">
-            {routes.map((route, i) => (
-                <div key={i} className="snap-center flex-shrink-0 w-[280px] sm:w-[320px]">
-                    <RouteCard
-                        index={i + 1}
-                        title={route.title}
-                        description={route.description}
-                        imageUrl={route.imageUrl || "/placeholder.png"}
-                        distanceMeters={route.distanceMeters}
-                        durationSeconds={route.durationSeconds}
-                        onClick={() => onRouteClick(route)}
-                    />
-                </div>
-            ))}
-        </div>
-    );
+  return (
+    <div className="w-full">
+      <div className="w-full flex flex-wrap justify-center gap-4 pb-4">
+        {routes.map((route, i) => (
+          <div
+            key={i}
+            className="
+              flex-shrink-0
+              w-full
+              sm:w-[360px]
+              lg:w-[320px]
+              xl:w-[300px]
+              2xl:w-[320px]
+            "
+          >
+            <RouteCard
+              index={i + 1}
+              title={route.title}
+              description={route.description}
+              imageUrl={route.imageUrl || "/placeholder-route.jpg"}
+              distanceMeters={route.distanceMeters}
+              durationSeconds={route.durationSeconds}
+              onClick={() => onRouteClick(route)}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

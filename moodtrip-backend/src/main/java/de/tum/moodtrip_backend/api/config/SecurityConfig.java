@@ -26,7 +26,7 @@ public class SecurityConfig {
     private final org.springframework.web.cors.reactive.CorsConfigurationSource corsConfigurationSource;
 
     public SecurityConfig(
-            JwtAuthenticationManager authenticationManager, 
+            JwtAuthenticationManager authenticationManager,
             JwtServerAuthenticationConverter authenticationConverter,
             org.springframework.web.cors.reactive.CorsConfigurationSource corsConfigurationSource
     ) {
@@ -47,16 +47,17 @@ public class SecurityConfig {
         authWebFilter.setServerAuthenticationConverter(authenticationConverter);
 
         authWebFilter.setRequiresAuthenticationMatcher(
-               new NegatedServerWebExchangeMatcher(
-                       pathMatchers(
-                        "/api/auth/login",
-                        "/api/auth/refresh",
-                        "/api/users",
-                        "/api/spotify/login",
-                        "/api/spotify/callback",
-                        "/actuator/**"
+                new NegatedServerWebExchangeMatcher(
+                        pathMatchers(
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/users",
+                                "/api/spotify/login",
+                                "/api/spotify/callback",
+                                "/actuator/**",
+                                "/uploads/**"
+                        )
                 )
-               )
         );
 
         return http
@@ -70,6 +71,9 @@ public class SecurityConfig {
                         .pathMatchers("/api/spotify/login").permitAll()
                         .pathMatchers("/api/spotify/callback").permitAll()
                         .pathMatchers("/actuator/**").permitAll()
+
+                        .pathMatchers("/uploads/**").permitAll()
+
                         .anyExchange().authenticated()
                 )
                 .addFilterAt(authWebFilter, SecurityWebFiltersOrder.AUTHENTICATION)
