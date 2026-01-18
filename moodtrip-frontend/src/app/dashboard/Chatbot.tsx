@@ -21,7 +21,6 @@ import {
   Smile,
   Meh,
   Annoyed,
-  LifeBuoy,
   Send,
   SquareTerminal,
   House,
