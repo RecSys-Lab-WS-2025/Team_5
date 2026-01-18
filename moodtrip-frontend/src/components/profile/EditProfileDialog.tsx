@@ -31,6 +31,33 @@ function validateUsername(raw: string): string | null {
   return null
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function getErrorMessage(e: unknown): string {
+  if (e instanceof Error && typeof e.message === "string" && e.message.trim()) return e.message
+  if (isRecord(e) && typeof e.message === "string" && e.message.trim()) return e.message
+  return "Failed to update profile."
+}
+
+type AuthUser = {
+  username?: string
+  avatarUrl?: string | null
+  [k: string]: unknown
+}
+
+function parseAuthUser(raw: string | null): AuthUser | null {
+  if (!raw) return null
+  try {
+    const v: unknown = JSON.parse(raw)
+    if (isRecord(v)) return v as AuthUser
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function EditProfileDialog({ open, onOpenChange, user, onUserUpdated }: Props) {
   const safeUsername = (user?.username ?? "").toString()
   const safeEmail = (user?.email ?? "").toString()
@@ -78,6 +105,7 @@ export function EditProfileDialog({ open, onOpenChange, user, onUserUpdated }: P
       setAvatarPreview(user?.avatarUrl ?? undefined)
     }
 
+    // allow re-pick same file
     e.currentTarget.value = ""
   }
 
@@ -120,10 +148,10 @@ export function EditProfileDialog({ open, onOpenChange, user, onUserUpdated }: P
       onUserUpdated?.({ username: finalUsername, avatarUrl: finalAvatarUrl })
 
       const currentRaw = localStorage.getItem("auth_user")
-      const current = currentRaw ? JSON.parse(currentRaw) : getUser()
+      const current = parseAuthUser(currentRaw) ?? getUser()
 
       if (current) {
-        const next = {
+        const next: AuthUser = {
           ...current,
           username: finalUsername,
           avatarUrl: finalAvatarUrl,
@@ -133,9 +161,8 @@ export function EditProfileDialog({ open, onOpenChange, user, onUserUpdated }: P
       }
 
       onOpenChange(false)
-    } catch (e: any) {
-      const msg = typeof e?.message === "string" ? e.message : "Failed to update profile."
-      setError(msg)
+    } catch (e: unknown) {
+      setError(getErrorMessage(e))
     } finally {
       setSaving(false)
     }
@@ -154,53 +181,38 @@ export function EditProfileDialog({ open, onOpenChange, user, onUserUpdated }: P
         </DialogHeader>
 
         <div className="mt-2 flex flex-col items-center gap-3">
-<div className="mt-2 flex flex-col items-center gap-3">
-  <div className="relative">
-    <label className="cursor-pointer">
-      <Avatar className="h-20 w-20">
-        <AvatarImage
-          key={displayAvatar}
-          src={displayAvatar}
-          alt={safeUsername || "User"}
-        />
-        <AvatarFallback>{getInitials(safeUsername || "User")}</AvatarFallback>
-      </Avatar>
+          <div className="mt-2 flex flex-col items-center gap-3">
+            <div className="relative">
+              <label className="cursor-pointer">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage key={displayAvatar} src={displayAvatar} alt={safeUsername || "User"} />
+                  <AvatarFallback>{getInitials(safeUsername || "User")}</AvatarFallback>
+                </Avatar>
 
-      <input
-        className="hidden"
-        type="file"
-        accept="image/*"
-        onChange={onPickAvatar}
-      />
-    </label>
+                <input className="hidden" type="file" accept="image/*" onChange={onPickAvatar} />
+              </label>
 
-    <label
-      className="
-        absolute
-        -bottom-1
-        left-1/2
-        -translate-x-1/2
-        cursor-pointer
-        rounded-full
-        bg-black/70
-        px-3
-        py-1
-        text-xs
-        text-white
-        hover:bg-black
-      "
-    >
-      Upload
-      <input
-        className="hidden"
-        type="file"
-        accept="image/*"
-        onChange={onPickAvatar}
-      />
-    </label>
-  </div>
-</div>
-
+              <label
+                className="
+                  absolute
+                  -bottom-1
+                  left-1/2
+                  -translate-x-1/2
+                  cursor-pointer
+                  rounded-full
+                  bg-black/70
+                  px-3
+                  py-1
+                  text-xs
+                  text-white
+                  hover:bg-black
+                "
+              >
+                Upload
+                <input className="hidden" type="file" accept="image/*" onChange={onPickAvatar} />
+              </label>
+            </div>
+          </div>
 
           <div className="w-full space-y-2">
             <div className="space-y-1">
@@ -227,16 +239,17 @@ export function EditProfileDialog({ open, onOpenChange, user, onUserUpdated }: P
             <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button 
-                onClick={onSave} 
-                disabled={saving || !!validationError}
-                className="
-                    !bg-blue-100
-                    !text-blue-900
-                    hover:bg-blue-200
-                    !disabled:bg-blue-50
-                    !disabled:text-blue-300
-        ">
+            <Button
+              onClick={onSave}
+              disabled={saving || !!validationError}
+              className="
+                !bg-blue-100
+                !text-blue-900
+                hover:bg-blue-200
+                !disabled:bg-blue-50
+                !disabled:text-blue-300
+              "
+            >
               Save
             </Button>
           </div>

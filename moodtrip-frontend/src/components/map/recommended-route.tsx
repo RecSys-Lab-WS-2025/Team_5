@@ -19,7 +19,7 @@ import { submitPoiRating, fetchPoiRating } from "@/api/emotion";
 type Props = {
   data?: FeatureCollection | null;
   emotion?: string;
-  invalidateKey?: any;
+  invalidateKey?: unknown; // ✅ was any
 };
 
 function FitToData({ data }: { data?: FeatureCollection | null }) {
@@ -49,7 +49,7 @@ function FitToData({ data }: { data?: FeatureCollection | null }) {
   return null;
 }
 
-function InvalidateOnResize({ dep }: { dep: any }) {
+function InvalidateOnResize({ dep }: { dep: unknown }) { // ✅ was any
   const map = useMap();
 
   useEffect(() => {
@@ -198,7 +198,11 @@ function PoiRating({
         </div>
       </div>
 
-      <div className={`flex items-center gap-0.5 ${isSubmitting ? "opacity-50 pointer-events-none" : ""}`}>
+      <div
+        className={`flex items-center gap-0.5 ${
+          isSubmitting ? "opacity-50 pointer-events-none" : ""
+        }`}
+      >
         {[1, 2, 3, 4, 5].map((star) => (
           <StarItem
             key={star}

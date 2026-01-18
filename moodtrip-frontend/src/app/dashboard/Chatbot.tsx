@@ -39,9 +39,40 @@ import {
   renameConversation,
   deleteConversation,
 } from "@/api/conversation";
-import type { RouteFeature, RouteRecommendation } from "@/api/conversation";
-import type { FeatureCollection } from "geojson";
+import type { RouteRecommendation } from "@/api/conversation";
+import type {
+  Feature,
+  FeatureCollection,
+  Geometry,
+  GeoJsonProperties,
+} from "geojson";
 import { useLocation, useNavigate } from "react-router-dom";
+
+type AnyFeature = Feature<Geometry, GeoJsonProperties>;
+
+type RouteProperties = {
+  type?: "route";
+  name?: string;
+  description?: string;
+  image?: string;
+  distanceMeters?: number;
+  durationSeconds?: number;
+};
+
+type PoiProperties = {
+  type?: "poi";
+  imageUrl?: string;
+};
+
+function isRouteFeature(f: AnyFeature): f is Feature<Geometry, RouteProperties> {
+  const p = f.properties as RouteProperties | null | undefined;
+  return !!p && p.type === "route";
+}
+
+function isPoiFeature(f: AnyFeature): f is Feature<Geometry, PoiProperties> {
+  const p = f.properties as PoiProperties | null | undefined;
+  return !!p && p.type === "poi";
+}
 
 const navData = {
   user: {
@@ -62,8 +93,7 @@ const navData = {
     },
   ],
   navSecondary: [
-    { title: "Support", url: "#", icon: LifeBuoy },
-    { title: "Feedback", url: "#", icon: Send },
+    { title: "Feedback", url: "/contact", icon: Send },
   ],
 };
 
@@ -75,6 +105,13 @@ type ChatSnapshot = {
   emotionExtracted: boolean;
   currentEmotion: string | null;
   routeGeoJson: FeatureCollection | null;
+};
+
+type ChatLocationState = { resetChat?: boolean } | null;
+
+type SubmitSurveyResponse = Awaited<ReturnType<typeof submitSurvey>>;
+type SubmitSurveyResponseWithSpotify = SubmitSurveyResponse & {
+  spotifyPlaylistLink?: string | null;
 };
 
 function readSnapshot(): ChatSnapshot | null {
@@ -198,12 +235,15 @@ export default function Chatbot() {
   const [currentEmotion, setCurrentEmotion] = useState<string | null>(
     initialSnapshot?.currentEmotion ?? null
   );
-  const [spotifyUrlByChat, setSpotifyUrlByChat] = useState<Record<string, string | null>>({});
+
+  const [spotifyUrlByChat, setSpotifyUrlByChat] = useState<
+    Record<string, string | null>
+  >({});
 
   const skipLoadRef = useRef(false);
 
   useEffect(() => {
-    const state = location.state as any;
+    const state = (location.state as ChatLocationState) ?? null;
     if (state?.resetChat) {
       clearSnapshot();
 
@@ -569,9 +609,14 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
   };
 
   const handleRenameChat = (id: string, currentTitle: string) => {
-    const chat =
-      chats.find((c) => c.id === id) || ({ id, title: currentTitle } as any);
-    setChatToRename(chat as ChatSummary);
+    const found = chats.find((c) => c.id === id);
+    const chat: ChatSummary = found ?? {
+      id,
+      title: currentTitle,
+      icon: undefined,
+      emotion: undefined,
+    };
+    setChatToRename(chat);
     setRenameDialogOpen(true);
   };
 
@@ -606,14 +651,13 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
     try {
       await deleteConversation(Number(chatToDelete.id));
       setChats((prev) => prev.filter((c) => c.id !== chatToDelete.id));
-      
-      // 清理 Spotify URL
+
       setSpotifyUrlByChat((prev) => {
         const next = { ...prev };
-        delete next[chatToDelete.id];
+        delete next[String(chatToDelete.id)];
         return next;
       });
-      
+
       if (selectedChatId === chatToDelete.id) {
         setSelectedChatId(null);
         setMessages([]);
@@ -714,9 +758,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
               routeGeoJson={routeGeoJson}
               currentEmotion={currentEmotion}
               spotifyPlaylistUrl={
-                selectedChatId
-                  ? (spotifyUrlByChat[selectedChatId] ?? spotifyUrlByChat[String(selectedChatId)] ?? null)
-                  : null
+                selectedChatId ? (spotifyUrlByChat[String(selectedChatId)] ?? null) : null
               }
               onSurveySubmit={async (data: SurveyData) => {
                 if (!selectedChatId) return;
@@ -748,10 +790,13 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                 setIsLoading(true);
 
                 try {
+                  const rangeMetersInput = (data as unknown as { rangeMeters?: unknown }).rangeMeters;
+                  const poiCategoriesInput = (data as unknown as { poiCategories?: unknown }).poiCategories;
+
                   let payload: SurveyData = {
                     ...data,
-                    rangeMeters: normalizeRangeMeters((data as any).rangeMeters),
-                    poiCategories: normalizeCategories((data as any).poiCategories),
+                    rangeMeters: normalizeRangeMeters(rangeMetersInput),
+                    poiCategories: normalizeCategories(poiCategoriesInput),
                   };
 
                   if (!isValidLatLng(payload.latitude, payload.longitude)) {
@@ -774,8 +819,11 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   }
 
                   const trySubmit = async (p: SurveyData) => {
-                    const res = await submitSurvey(conversationId, p);
+                    const res =
+                      (await submitSurvey(conversationId, p)) as SubmitSurveyResponseWithSpotify;
+
                     if (res.routeStatus === "FAILED") return { ok: false as const, res };
+
                     const routeData = res.route as FeatureCollection | undefined;
                     if (!routeData) {
                       return {
@@ -793,9 +841,11 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   let attempt = await trySubmit(payload);
 
                   if (!attempt.ok) {
-                    const noCatPayload: any = { ...payload };
-                    delete noCatPayload.poiCategories;
-                    const attempt2 = await trySubmit(noCatPayload as SurveyData);
+                    const noCatPayload: SurveyData = {
+                      ...payload,
+                      poiCategories: [],
+                    };
+                    const attempt2 = await trySubmit(noCatPayload);
                     if (attempt2.ok) attempt = attempt2;
                   }
 
@@ -812,22 +862,12 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
 
                   setRouteGeoJson(routeData);
 
-                  // 存储 Spotify URL（如果存在）
-                  console.log("Survey response - spotifyPlaylistLink:", res.spotifyPlaylistLink);
-                  console.log("Conversation ID:", conversationId, "Type:", typeof conversationId);
-                  if (res.spotifyPlaylistLink) {
-                    const urlToStore = res.spotifyPlaylistLink;
-                    console.log("Storing Spotify URL for conversation:", conversationId, urlToStore);
-                    setSpotifyUrlByChat((prev) => {
-                      const next = {
-                        ...prev,
-                        [String(conversationId)]: urlToStore,
-                      };
-                      console.log("Updated spotifyUrlByChat:", next);
-                      return next;
-                    });
-                  } else {
-                    console.log("No Spotify URL in response");
+                  const spotifyLink = res.spotifyPlaylistLink ?? null;
+                  if (spotifyLink) {
+                    setSpotifyUrlByChat((prev) => ({
+                      ...prev,
+                      [String(conversationId)]: spotifyLink,
+                    }));
                   }
 
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(payload)}`;
@@ -842,8 +882,8 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
 
                   let botText =
                     "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
-                  if (res.spotifyPlaylistLink) {
-                    botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${res.spotifyPlaylistLink})`;
+                  if (spotifyLink) {
+                    botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${spotifyLink})`;
                   }
 
                   await apiSendMessage(conversationId, botText, false);
@@ -856,7 +896,6 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   setMessages((prev) => [...prev, successMsg]);
 
                   const mapPayload = `[ROUTE_MAP] ${JSON.stringify(routeData)}`;
-                  setRouteGeoJson(routeData);
                   await apiSendMessage(conversationId, mapPayload, false);
 
                   const mapMsg: UIMessage = {
@@ -867,20 +906,16 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   setMessages((prev) => [...prev, mapMsg]);
 
                   const routeFc = routeData as FeatureCollection;
-                  const routeFeature = routeFc.features.find(
-                    (f: any) => f?.properties?.type === "route"
-                  ) as RouteFeature | undefined;
-                  const routeProps: any = routeFeature?.properties;
+                  const allFeatures = (routeFc.features ?? []) as AnyFeature[];
 
-                  const poiFeatures = routeFc.features.filter(
-                    (f: any) => f?.properties?.type === "poi"
-                  );
+                  const rf = allFeatures.find(isRouteFeature);
+                  const routeProps = rf?.properties;
+
+                  const poiFeatures = allFeatures.filter(isPoiFeature);
                   const firstPoiWithImage = poiFeatures.find(
-                    (f: any) => f?.properties?.imageUrl
+                    (f) => !!f.properties?.imageUrl
                   );
-                  const fallbackPoiImage = firstPoiWithImage?.properties?.imageUrl as
-                    | string
-                    | undefined;
+                  const fallbackPoiImage = firstPoiWithImage?.properties?.imageUrl;
                   const finalThumbnail =
                     routeProps?.image || fallbackPoiImage || "/placeholder.png";
 

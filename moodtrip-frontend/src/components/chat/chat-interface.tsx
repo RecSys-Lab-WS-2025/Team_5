@@ -141,35 +141,27 @@ function extractLatestSpotifyUrlFromMessages(messages: UIMessage[]): string | nu
       if (p.type !== "text") continue;
       const t = p.text || "";
 
-      // 匹配 Markdown 链接格式: [text](https://open.spotify.com/...)
+      // Markdown: [text](https://open.spotify.com/...)
       const md = t.match(/\[([^\]]*)\]\((https?:\/\/open\.spotify\.com\/[^)\s]+)\)/i);
-      if (md?.[2]) {
-        return md[2];
-      }
+      if (md?.[2]) return md[2];
 
-      // 匹配 Markdown 链接格式（更宽松，允许 URL 中有更多字符）
+      // looser Markdown
       const mdLoose = t.match(/\[([^\]]*)\]\((https?:\/\/open\.spotify\.com\/[^)]+)\)/i);
-      if (mdLoose?.[2]) {
-        return mdLoose[2].trim();
-      }
+      if (mdLoose?.[2]) return mdLoose[2].trim();
 
-      // 匹配括号中的 URL: (https://open.spotify.com/...)
+      // (https://open.spotify.com/...)
       const paren = t.match(/\((https?:\/\/open\.spotify\.com\/[^)\s]+)\)/i);
-      if (paren?.[1]) {
-        return paren[1];
-      }
+      if (paren?.[1]) return paren[1];
 
-      // 匹配纯 URL: https://open.spotify.com/...
-      const raw = t.match(/https?:\/\/open\.spotify\.com\/[^\s\)\n]+/i);
-      if (raw?.[0]) {
-        return raw[0];
-      }
+      // raw https://open.spotify.com/...
+      // ✅ remove useless escape: \) -> )
+      const raw = t.match(/https?:\/\/open\.spotify\.com\/[^\s)\n]+/i);
+      if (raw?.[0]) return raw[0];
 
-      // 匹配任何包含 spotify.com 的 URL（最宽松）
-      const anySpotify = t.match(/https?:\/\/[^\s\)\n]*spotify\.com\/[^\s\)\n]+/i);
-      if (anySpotify?.[0]) {
-        return anySpotify[0];
-      }
+      // any spotify.com url
+      // ✅ remove useless escape: \) -> )
+      const anySpotify = t.match(/https?:\/\/[^\s)\n]*spotify\.com\/[^\s)\n]+/i);
+      if (anySpotify?.[0]) return anySpotify[0];
     }
   }
   return null;
@@ -209,10 +201,8 @@ export function ChatInterface({
   const [typingIndex, setTypingIndex] = React.useState(0);
 
   const chatKey = chatId ?? "__global__";
-
   const [dismissedUrl, setDismissedUrl] = React.useState<Record<string, string | null>>({});
 
-  // 优先使用传入的 URL，如果没有则从消息中提取
   const latestSpotifyUrl = React.useMemo(
     () => spotifyPlaylistUrl || extractLatestSpotifyUrlFromMessages(messages),
     [messages, spotifyPlaylistUrl]
@@ -220,34 +210,13 @@ export function ChatInterface({
 
   const spotifyUrlForThisChat = React.useMemo(() => {
     const url = latestSpotifyUrl ?? null;
-    console.log("Spotify URL calculation:", {
-      spotifyPlaylistUrl,
-      latestSpotifyUrl,
-      url,
-      chatKey,
-      dismissedUrl: dismissedUrl[chatKey],
-    });
     if (!url) return null;
 
     const dismissed = dismissedUrl[chatKey] ?? null;
-    if (dismissed && dismissed === url) {
-      console.log("Spotify URL was dismissed");
-      return null;
-    }
+    if (dismissed && dismissed === url) return null;
 
-    console.log("Spotify URL for display:", url);
     return url;
-  }, [chatKey, dismissedUrl, latestSpotifyUrl, spotifyPlaylistUrl]);
-
-  // 调试信息（开发时使用）
-  React.useEffect(() => {
-    if (latestSpotifyUrl) {
-      console.log("Spotify URL extracted:", latestSpotifyUrl);
-    }
-    if (spotifyUrlForThisChat) {
-      console.log("Spotify URL for display:", spotifyUrlForThisChat);
-    }
-  }, [latestSpotifyUrl, spotifyUrlForThisChat]);
+  }, [chatKey, dismissedUrl, latestSpotifyUrl]);
 
   const lastAssistantMessage = React.useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -354,9 +323,7 @@ export function ChatInterface({
   }, [typingMessageId, lastAssistantMessage]);
 
   React.useEffect(() => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: "smooth" });
   }, [messages, typingIndex]);
 
   const renderMessageParts = (message: UIMessage) => {
@@ -391,8 +358,7 @@ export function ChatInterface({
                 <SurveyForm readOnly initialData={data} />
               </div>
             );
-          } catch (e) {
-            console.error("Failed to parse survey data", e);
+          } catch {
             return (
               <div key={idx} className="prose prose-sm dark:prose-invert whitespace-pre-wrap">
                 <ReactMarkdown>{text}</ReactMarkdown>
@@ -407,8 +373,8 @@ export function ChatInterface({
 
           try {
             dataFromMessage = JSON.parse(jsonStr) as FeatureCollection;
-          } catch (e) {
-            console.error("Failed to parse route map data", e);
+          } catch {
+            // ignore
           }
 
           const mapData = dataFromMessage || routeGeoJson || null;
@@ -438,8 +404,7 @@ export function ChatInterface({
                 </div>
               </div>
             );
-          } catch (e) {
-            console.error("Failed to parse route cards", e);
+          } catch {
             return null;
           }
         }
@@ -452,9 +417,7 @@ export function ChatInterface({
           );
         }
 
-        if (typedCharsLeft <= 0) {
-          return <div key={idx} />;
-        }
+        if (typedCharsLeft <= 0) return <div key={idx} />;
 
         const slice = typedCharsLeft >= text.length ? text : text.slice(0, typedCharsLeft);
         typedCharsLeft = Math.max(typedCharsLeft - text.length, 0);
@@ -481,9 +444,7 @@ export function ChatInterface({
   const { state, isMobile } = useSidebar();
   const fixedBarStyle = !isMobile
     ? {
-        left: `var(${
-          state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"
-        })`,
+        left: `var(${state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"})`,
       }
     : undefined;
 

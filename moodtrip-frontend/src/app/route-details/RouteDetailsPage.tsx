@@ -1,8 +1,9 @@
+"use client";
+
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { MoveLeft } from "lucide-react";
+import { MoveLeft, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,13 +16,10 @@ import {
 import { RecommendedRouteMap } from "@/components/map/recommended-route";
 import { AppSidebar } from "@/components/route-details/app-sidebar";
 
-import type {
-  RouteRecommendation,
-  PoiFeature,
-  RouteFeature,
-} from "@/api/conversation";
+import type { FeatureCollection } from "geojson";
+import type { RouteRecommendation, PoiFeature, RouteFeature } from "@/api/conversation";
 
-function MapPane({ geoJson }: { geoJson: any }) {
+function MapPane({ geoJson }: { geoJson: FeatureCollection }) {
   const { isMobile, openMobile, state } = useSidebar();
   const invalidateKey = isMobile ? (openMobile ? "open" : "closed") : state;
 
@@ -32,47 +30,41 @@ function MapPane({ geoJson }: { geoJson: any }) {
   );
 }
 
+type RouteDetailsState = RouteRecommendation | null;
+
 export const RouteDetailsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const routeData = location.state as RouteRecommendation;
+  const routeData = (location.state as RouteDetailsState) ?? null;
 
   const [selectedDay, setSelectedDay] = React.useState(1);
 
-if (!routeData) {
-  return (
-    <div className="flex h-screen items-center justify-center bg-white p-4">
-      <div className="text-center space-y-4">
-        <h2 className="text-xl font-semibold text-foreground">
-          Route not found
-        </h2>
-
-<Button
-  onClick={() => navigate(-1)}
-  className={cn(
-    "inline-flex h-10 w-10 items-center justify-center rounded-full",
-    "!bg-white text-foreground",
-    "border border-black/10",
-    "shadow-sm shadow-black/10",
-    "hover:bg-white hover:border-black/20",
-    "transition-colors"
-  )}
->
-  <ArrowLeft className="h-5 w-5" />
-</Button>
+  if (!routeData) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white p-4">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-semibold text-foreground">Route not found</h2>
+          <Button
+            onClick={() => navigate(-1)}
+            className={cn(
+              "inline-flex h-10 w-10 items-center justify-center rounded-full",
+              "!bg-white text-foreground",
+              "border border-black/10",
+              "shadow-sm shadow-black/10",
+              "hover:bg-white hover:border-black/20",
+              "transition-colors"
+            )}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
-    </div>
-  );
-}
-
+    );
+  }
 
   const allFeatures = routeData.geoJson?.features || [];
-  const pois = allFeatures.filter(
-    (f): f is PoiFeature => f.properties?.type === "poi"
-  );
-  const routeFeature = allFeatures.find(
-    (f): f is RouteFeature => f.properties?.type === "route"
-  );
+  const pois = allFeatures.filter((f): f is PoiFeature => f.properties?.type === "poi");
+  const routeFeature = allFeatures.find((f): f is RouteFeature => f.properties?.type === "route");
 
   const totalDays = routeFeature?.properties?.tripDays || 1;
   const dailyStats = routeFeature?.properties?.dailyStats || [];
@@ -80,10 +72,8 @@ if (!routeData) {
   const dayPois = pois.filter((poi) => poi.properties.day === selectedDay);
   const selectedDayStats = dailyStats.find((s) => s.day === selectedDay);
 
-  const displayDistance =
-    selectedDayStats?.distanceMeters ?? routeData.distanceMeters ?? 0;
-  const displayDuration =
-    selectedDayStats?.durationSeconds ?? routeData.durationSeconds ?? 0;
+  const displayDistance = selectedDayStats?.distanceMeters ?? routeData.distanceMeters ?? 0;
+  const displayDuration = selectedDayStats?.durationSeconds ?? routeData.durationSeconds ?? 0;
 
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -105,9 +95,9 @@ if (!routeData) {
     >
       <SidebarInset className="h-screen min-h-0 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-white">
         <header className="relative z-20 flex h-16 shrink-0 items-center gap-3 border-b border-gray-200/50 bg-white/80 backdrop-blur-xl px-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => navigate(-1)}
             className="!bg-white text-gray-600 hover:text-gray-900 hover:!bg-white"
           >
