@@ -98,6 +98,7 @@ public class SurveyController {
                             .flatMap(surveyPort::save)
                             .doOnNext(s -> logger.info("Survey saved successfully for conversationId: {}", conversationId))
                             .flatMap(surveyDomain -> {
+                                logger.info("Survey categories for conversationId {}: {}", conversationId, surveyDomain.poiCategories());
                                 Emotion fallbackEmotion = conversation.emotion() != null ? conversation.emotion() : Emotion.NEUTRAL;
                                 Mono<Map<Emotion, Double>> emotionWeightsMono = conversationDomainService.getLatestEmotionWeights(conversationId)
                                         .map(weights -> weights.isEmpty() ? Map.of(fallbackEmotion, 1.0) : weights)
