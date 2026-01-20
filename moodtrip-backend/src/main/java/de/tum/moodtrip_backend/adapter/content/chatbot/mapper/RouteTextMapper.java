@@ -146,7 +146,7 @@ public class RouteTextMapper {
                                     int quoteEnd = quoteStart + 1;
                                     while (quoteEnd < dayDescBlock.length()) {
                                         char c = dayDescBlock.charAt(quoteEnd);
-                                        if (c == quoteChar && dayDescBlock.charAt(quoteEnd - 1) != '\\') {
+                                        if (c == quoteChar && (quoteEnd == quoteStart + 1 || dayDescBlock.charAt(quoteEnd - 1) != '\\')) {
                                             break;
                                         }
                                         quoteEnd++;
