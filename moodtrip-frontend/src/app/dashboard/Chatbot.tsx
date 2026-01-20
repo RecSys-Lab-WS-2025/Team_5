@@ -52,7 +52,7 @@ type AnyFeature = Feature<Geometry, GeoJsonProperties>;
 type RouteProperties = {
   type?: "route";
   name?: string;
-  description?: string;
+  dayDescriptions?: Record<string, string>;
   image?: string;
   distanceMeters?: number;
   durationSeconds?: number;
@@ -918,13 +918,13 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   const finalThumbnail =
                     routeProps?.image || fallbackPoiImage || "/placeholder.png";
 
+                  const dayDescriptions = routeProps?.dayDescriptions || { "1": "A personalized route based on your mood." };
+
                   const cardDataList: RouteRecommendation[] = [
                     {
                       id: "1",
                       title: routeProps?.name || "Your Personalized Trip",
-                      description:
-                        routeProps?.description ||
-                        "A personalized route based on your mood.",
+                      dayDescriptions,
                       imageUrl: finalThumbnail,
                       distanceMeters: routeProps?.distanceMeters || 0,
                       durationSeconds: routeProps?.durationSeconds || 0,
@@ -933,9 +933,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     {
                       id: "2",
                       title: routeProps?.name || "Your Personalized Trip",
-                      description:
-                        routeProps?.description ||
-                        "A personalized route based on your mood.",
+                      dayDescriptions,
                       imageUrl: finalThumbnail,
                       distanceMeters: routeProps?.distanceMeters || 0,
                       durationSeconds: routeProps?.durationSeconds || 0,
@@ -944,9 +942,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     {
                       id: "3",
                       title: routeProps?.name || "Your Personalized Trip",
-                      description:
-                        routeProps?.description ||
-                        "A personalized route based on your mood.",
+                      dayDescriptions,
                       imageUrl: finalThumbnail,
                       distanceMeters: routeProps?.distanceMeters || 0,
                       durationSeconds: routeProps?.durationSeconds || 0,

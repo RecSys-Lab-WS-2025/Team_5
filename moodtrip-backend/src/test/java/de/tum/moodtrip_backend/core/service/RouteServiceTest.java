@@ -65,7 +65,7 @@ class RouteServiceTest {
         List<de.tum.moodtrip_backend.core.model.PoiCategory> poiCategories = List.of();
         Map<de.tum.moodtrip_backend.core.model.Emotion, Double> emotionWeights = Map.of();
 
-        StepVerifier.create(routeService.getRoute(1L, 2L, 0.0, 0.0, poiCategories, 1000, emotionWeights, 15, "Test City", false))
+        StepVerifier.create(routeService.getRoute(1L, 2L, 0.0, 0.0, poiCategories, 1000, emotionWeights, 15, "Test City", 1, false))
                 .assertNext(result -> {
                     assertThat(result.status()).isEqualTo(de.tum.moodtrip_backend.core.model.RouteStatus.FAILED);
                     assertThat(result.userMessage()).isNotBlank();

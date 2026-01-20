@@ -104,16 +104,21 @@ public final class GeoJsonRouteMapper {
             routeFeature.setProperty("emotion", emotion);
             routeFeature.setProperty("tripDays", tripDays);
             
-            // Add title and description to the route feature
+            // Add title and day descriptions to the route feature
             if (route.title() != null) {
                 routeFeature.setProperty("name", route.title());
             }
-            if (route.description() != null) {
-                routeFeature.setProperty("description", route.description());
+            if (route.dayDescriptions() != null && !route.dayDescriptions().isEmpty()) {
+                // Convert Map<Integer, String> to Map<String, String> for JSON serialization
+                Map<String, String> dayDescriptionsStr = new HashMap<>();
+                for (Map.Entry<Integer, String> entry : route.dayDescriptions().entrySet()) {
+                    dayDescriptionsStr.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
+                routeFeature.setProperty("dayDescriptions", dayDescriptionsStr);
             }
 
             List<Map<String, Object>> dailyStats = new ArrayList<>();
-            
+
             for (int d = 1; d <= tripDays; d++) {
                 double dayDistance = 0;
                 double dayDuration = 0;
@@ -123,9 +128,16 @@ public final class GeoJsonRouteMapper {
                     int poiDay = (int) Math.floor((double) i * tripDays / totalPois) + 1;
                     if (poiDay == d) {
                         dayPoisCount++;
+                        // Only count leg[i] if BOTH POI i and POI i+1 are in the same day
+                        // leg[i] represents the distance from POI i to POI i+1
                         if (i < route.legDistances().size()) {
-                            dayDistance += route.legDistances().get(i);
-                            dayDuration += route.legDurations().get(i);
+                            int nextPoiDay = (int) Math.floor((double) (i + 1) * tripDays / totalPois) + 1;
+                            if (nextPoiDay == d) {
+                                // Both POIs are in the same day, count this leg
+                                dayDistance += route.legDistances().get(i);
+                                dayDuration += route.legDurations().get(i);
+                            }
+                            // Cross-day legs are not counted (user might use transport between days)
                         }
                     }
                 }

@@ -147,6 +147,8 @@ public class PoiScoringService {
         return new PoiScore(
                 finalScore,
                 categoryScore.score(),
+                categoryScore.baseScore(),
+                categoryScore.boostApplied(),
                 tagScore,
                 distanceScore,
                 distanceMeters,
@@ -183,7 +185,7 @@ public class PoiScoringService {
 
                     Map<Emotion, Double> byEmotion = contributions.stream()
                             .collect(Collectors.toMap(EmotionContribution::emotion, EmotionContribution::weightedScore));
-                    return new CategoryScore(category, finalCategoryScore, byEmotion);
+                    return new CategoryScore(category, finalCategoryScore, emotionBaseScore, isSelected, byEmotion);
                 });
     }
 
@@ -283,12 +285,14 @@ public class PoiScoringService {
                         .map(e -> e.getKey() + "=" + String.format("%.3f", e.getValue()))
                         .collect(Collectors.joining(", "));
 
-        LOGGER.info("Ranked POI -> id={}, name='{}', category={}, finalScore={}, categoryScore={}, tagScore={}, distanceScore={}, distanceMeters={}, emotions=[{}], signals={{nameTag={}, wikipedia={}, wikidata={}, commons={}, website={}, image={}, opening_hours={}, phone={}, trustMarker={}}}",
+        LOGGER.info("Ranked POI -> id={}, name='{}', category={}, finalScore={}, categoryScore={} (base={}, boosted={}), tagScore={}, distanceScore={}, distanceMeters={}, emotions=[{}], signals={{nameTag={}, wikipedia={}, wikidata={}, commons={}, website={}, image={}, opening_hours={}, phone={}, trustMarker={}}}",
                 poi.osmId(),
                 poi.name(),
                 poi.category(),
                 String.format("%.3f", score.finalScore()),
                 String.format("%.3f", score.categoryScore()),
+                String.format("%.3f", score.categoryBaseScore()),
+                score.categoryBoostApplied(),
                 String.format("%.3f", score.tagScore()),
                 String.format("%.3f", score.distanceScore()),
                 String.format("%.1f", score.distanceMeters()),
@@ -321,6 +325,8 @@ public class PoiScoringService {
 
     private record CategoryScore(PoiCategory category,
                                  double score,
+                                 double baseScore,
+                                 boolean boostApplied,
                                  Map<Emotion, Double> emotionContributions) {
     }
 

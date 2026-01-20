@@ -70,6 +70,7 @@ public class RouteService {
             Map<Emotion, Double> emotionWeights,
             int poiLimit,
             String city,
+            int tripDays,
             boolean isMocked
     ) {
         poiLimit = Math.min(poiLimit, MAX_POI_RESULTS);
@@ -92,10 +93,10 @@ public class RouteService {
                         }
                     }
                     
-                    // Generate route title and description using AI
-                    return routeDescriptionService.generateRouteText(mood, cityName, route.pois(), isMocked)
+                    // Generate route title and day descriptions using AI
+                    return routeDescriptionService.generateRouteText(mood, cityName, route.pois(), tripDays, isMocked)
                             .map(routeText -> {
-                                // Create a new Route object with title and description
+                                // Create a new Route object with title and day descriptions
                                 Route originalRoute = route.route();
                                 Route routeWithTitleAndDesc = new Route(
                                     originalRoute.distanceMeters(),
@@ -105,9 +106,9 @@ public class RouteService {
                                     originalRoute.legDurations(),
                                     originalRoute.waypointOrder(),
                                     routeText.title(),
-                                    routeText.description()
+                                    routeText.dayDescriptions()
                                 );
-                                
+
                                 return new PoiRouteResult(route.pois(), routeWithTitleAndDesc);
                             })
                             .defaultIfEmpty(route) // Fallback if route text generation fails

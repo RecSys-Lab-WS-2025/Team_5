@@ -68,7 +68,7 @@ class MmrRerankingServiceTest {
 
     private ScoredPoi poi(long id, double score, PoiCategory category, double lat, double lon, Map<String, String> tags) {
         Poi poi = new Poi(id, Poi.OsmType.NODE, lat, lon, "poi-" + id, category, tags);
-        PoiScore poiScore = new PoiScore(score, 0.0, 0.0, 0.0, 0.0, Map.of());
+        PoiScore poiScore = new PoiScore(score, 0.0, 0.0, false, 0.0, 0.0, 0.0, Map.of());
         return new ScoredPoi(poi, poiScore);
     }
 }

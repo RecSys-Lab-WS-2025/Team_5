@@ -1,4 +1,4 @@
-import { Star, Users, ExternalLink } from "lucide-react";
+import { Star, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 export interface RouteCardProps {
@@ -7,7 +7,8 @@ export interface RouteCardProps {
     imageUrl: string;
     distanceMeters: number;
     durationSeconds: number;
-    index?: number; // TODO: Remove this mock index when we have real ranking or remove it if not needed
+    tripDays?: number;
+    index?: number;
     onClick?: () => void;
 }
 
@@ -17,23 +18,36 @@ export function RouteCard({
     imageUrl,
     distanceMeters,
     durationSeconds,
+    tripDays = 1,
     index,
     onClick,
 }: RouteCardProps) {
-    // TODO: Replace this mock difficulty logic with real data from backend
-    // Mock Difficulty based on distance
-    const getDifficulty = (meters: number) => {
-        if (meters < 3000) return 1;
-        if (meters < 6000) return 2;
-        if (meters < 10000) return 3;
-        if (meters < 15000) return 4;
+    // Calculate difficulty based on DAILY AVERAGE distance and duration
+    // This makes multi-day trips easier than single-day trips with the same total distance
+    const getDifficulty = (meters: number, seconds: number, days: number) => {
+        const dailyKm = (meters / 1000) / days;
+        const dailyHours = (seconds / 3600) / days;
+
+        // Calculate daily effort score combining distance and time
+        // Distance weight: 1 point per km
+        // Time weight: 0.3 points per hour (accounts for pace/terrain)
+        const dailyEffortScore = dailyKm + (dailyHours * 0.3);
+
+        // Difficulty levels based on DAILY effort score:
+        // 1 star: Very Easy (< 2 daily effort) - leisurely walks under 2km/day
+        // 2 stars: Easy (2-4 daily effort) - casual walks 2-4km/day
+        // 3 stars: Moderate (4-7 daily effort) - decent walks 4-7km/day
+        // 4 stars: Challenging (7-12 daily effort) - active days 7-12km/day
+        // 5 stars: Demanding (> 12 daily effort) - intense hiking 12km+/day
+        if (dailyEffortScore < 2) return 1;
+        if (dailyEffortScore < 4) return 2;
+        if (dailyEffortScore < 7) return 3;
+        if (dailyEffortScore < 12) return 4;
         return 5;
     };
 
-    const difficulty = getDifficulty(distanceMeters);
+    const difficulty = getDifficulty(distanceMeters, durationSeconds, tripDays);
 
-    // TODO: Use a proper localization/formatting library or backend string
-    // Format Duration
     const formatDuration = (seconds: number) => {
         const hours = Math.floor(seconds / 3600);
         const mins = Math.round((seconds % 3600) / 60);
@@ -43,24 +57,11 @@ export function RouteCard({
 
     const durationText = formatDuration(durationSeconds);
 
-    // TODO: Replace with real crowd level data from backend API
-    // Mock Crowd Level
-    const crowdLevel = 2.5;
-
     const renderStars = (rating: number) => {
         return Array.from({ length: 5 }).map((_, i) => (
             <Star
                 key={i}
                 className={`w-4 h-4 ${i < rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
-            />
-        ));
-    };
-
-    const renderCrowd = (level: number) => {
-        return Array.from({ length: 5 }).map((_, i) => (
-            <Users
-                key={i}
-                className={`w-4 h-4 ${i < Math.ceil(level) ? "fill-blue-500 text-blue-500" : "text-gray-300"}`}
             />
         ));
     };
@@ -112,12 +113,6 @@ export function RouteCard({
                     <div className="flex items-center gap-2 text-xs">
                         <span className="font-medium text-gray-500 w-16">Duration:</span>
                         <span className="text-gray-700 font-medium">{durationText}</span>
-                    </div>
-
-                    {/* Crowd Level */}
-                    <div className="flex items-center gap-2 text-xs">
-                        <span className="font-medium text-gray-500 w-16">Crowd Level:</span>
-                        <div className="flex gap-0.5">{renderCrowd(crowdLevel)}</div>
                     </div>
                 </div>
             </div>

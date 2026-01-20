@@ -169,7 +169,7 @@ export type SurveyResponse =
 export interface RouteRecommendation {
   id: string;
   title: string;
-  description: string;
+  dayDescriptions: Record<string, string>;
   imageUrl: string;
   distanceMeters: number;
   durationSeconds: number;
@@ -206,7 +206,7 @@ export interface RouteFeature {
     durationSeconds: number;
     tripDays: number;
     name?: string;
-    description?: string;
+    dayDescriptions?: Record<string, string>;
     image?: string;
     dailyStats: Array<{
       day: number;
