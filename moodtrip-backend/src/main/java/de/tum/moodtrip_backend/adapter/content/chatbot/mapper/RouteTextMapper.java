@@ -111,10 +111,30 @@ public class RouteTextMapper {
                     // Find the matching closing brace
                     int braceCount = 1;
                     int braceEnd = braceStart + 1;
+                    boolean inString = false;
+                    char stringChar = 0;
+                    boolean escaped = false;
                     while (braceEnd < response.length() && braceCount > 0) {
                         char c = response.charAt(braceEnd);
-                        if (c == '{') braceCount++;
-                        else if (c == '}') braceCount--;
+
+                        if (inString) {
+                            if (escaped) {
+                                escaped = false;
+                            } else if (c == '\\') {
+                                escaped = true;
+                            } else if (c == stringChar) {
+                                inString = false;
+                            }
+                        } else {
+                            if (c == '"' || c == '\'') {
+                                inString = true;
+                                stringChar = c;
+                            } else if (c == '{') {
+                                braceCount++;
+                            } else if (c == '}') {
+                                braceCount--;
+                            }
+                        }
                         braceEnd++;
                     }
 
