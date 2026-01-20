@@ -1,4 +1,6 @@
 package de.tum.moodtrip_backend.core.model;
 
-public record RouteText(String title, String description) {
+import java.util.Map;
+
+public record RouteText(String title, Map<Integer, String> dayDescriptions) {
 }

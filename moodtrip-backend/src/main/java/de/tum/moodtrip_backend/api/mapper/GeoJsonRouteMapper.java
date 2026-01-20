@@ -104,12 +104,17 @@ public final class GeoJsonRouteMapper {
             routeFeature.setProperty("emotion", emotion);
             routeFeature.setProperty("tripDays", tripDays);
             
-            // Add title and description to the route feature
+            // Add title and day descriptions to the route feature
             if (route.title() != null) {
                 routeFeature.setProperty("name", route.title());
             }
-            if (route.description() != null) {
-                routeFeature.setProperty("description", route.description());
+            if (route.dayDescriptions() != null && !route.dayDescriptions().isEmpty()) {
+                // Convert Map<Integer, String> to Map<String, String> for JSON serialization
+                Map<String, String> dayDescriptionsStr = new HashMap<>();
+                for (Map.Entry<Integer, String> entry : route.dayDescriptions().entrySet()) {
+                    dayDescriptionsStr.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
+                routeFeature.setProperty("dayDescriptions", dayDescriptionsStr);
             }
 
             List<Map<String, Object>> dailyStats = new ArrayList<>();

@@ -1,6 +1,7 @@
 package de.tum.moodtrip_backend.core.model;
 
 import java.util.List;
+import java.util.Map;
 
 public record Route(
         double distanceMeters,
@@ -10,6 +11,6 @@ public record Route(
         List<Double> legDurations,
         List<Integer> waypointOrder,
         String title,
-        String description
+        Map<Integer, String> dayDescriptions
 ) {
 }

@@ -4,7 +4,7 @@ import type { FeatureCollection } from "geojson";
 export interface RouteCardData {
     id: string;
     title: string;
-    description: string;
+    dayDescriptions: Record<string, string>;
     imageUrl: string;
     distanceMeters: number;
     durationSeconds: number;
@@ -17,6 +17,11 @@ interface RouteCarouselProps {
 }
 
 export function RouteCarousel({ routes, onRouteClick }: RouteCarouselProps) {
+  // Get the first day's description for card preview
+  const getPreviewDescription = (dayDescriptions: Record<string, string>) => {
+    return dayDescriptions?.["1"] || Object.values(dayDescriptions || {})[0] || "A personalized route based on your mood.";
+  };
+
   return (
     <div className="w-full">
       <div className="w-full flex flex-wrap justify-center gap-4 pb-4">
@@ -35,7 +40,7 @@ export function RouteCarousel({ routes, onRouteClick }: RouteCarouselProps) {
             <RouteCard
               index={i + 1}
               title={route.title}
-              description={route.description}
+              description={getPreviewDescription(route.dayDescriptions)}
               imageUrl={route.imageUrl || "/placeholder-route.jpg"}
               distanceMeters={route.distanceMeters}
               durationSeconds={route.durationSeconds}

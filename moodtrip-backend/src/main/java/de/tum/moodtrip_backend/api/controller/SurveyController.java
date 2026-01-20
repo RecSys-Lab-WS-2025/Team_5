@@ -127,6 +127,7 @@ public class SurveyController {
                                                         emotionWeights,
                                                         dynamicLimit,
                                                         surveyDomain.locationName(),
+                                                        (int) days,
                                                         isMocked);
                                             })
                                         .cache();

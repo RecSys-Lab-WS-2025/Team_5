@@ -1,6 +1,8 @@
 package de.tum.moodtrip_backend.adapter.content.chatbot.mapper;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,156 +12,189 @@ import de.tum.moodtrip_backend.core.model.RouteText;
 
 /**
  * Mapper for parsing AI-generated route text responses into RouteText objects.
- * Supports multiple response formats: JSON, line-based, and fallback parsing.
+ * Supports day-by-day descriptions with multiple response formats.
  */
 public class RouteTextMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RouteTextMapper.class);
 
     /**
-     * Parse AI response string into RouteText
-     * Supports JSON format, line format, and fallback parsing
+     * Parse AI response string into RouteText with day descriptions
+     * Supports JSON format with dayDescriptions field
      */
-    public static RouteText fromAiResponse(String response) {
-        LOGGER.info("Parsing AI response into RouteText, response length: {} chars", response.length());
-        
+    public static RouteText fromAiResponse(String response, int tripDays) {
+        LOGGER.info("Parsing AI response into RouteText with {} days, response length: {} chars", tripDays, response.length());
+
         String cleanedResponse = response.trim();
-        
+
         // Try JSON format first
-        RouteText jsonResult = tryParseJsonFormat(cleanedResponse);
+        RouteText jsonResult = tryParseJsonFormat(cleanedResponse, tripDays);
         if (jsonResult != null) {
             return jsonResult;
         }
-        
-        // Try line format
-        RouteText lineResult = tryParseLineFormat(cleanedResponse);
-        if (lineResult != null) {
-            return lineResult;
-        }
-        
-        // Fallback: use entire response as description
-        return parseFallback(cleanedResponse);
+
+        // Fallback: create default day descriptions
+        return parseFallback(cleanedResponse, tripDays);
     }
 
     /**
      * Generate mock RouteText for testing (bypasses AI)
      */
-    public static RouteText createMockRouteText(String mood, String city, List<EnrichedPoi> pois) {
-        LOGGER.debug("Creating mock route text for mood: {}, city: {}", mood, city);
-        
+    public static RouteText createMockRouteText(String mood, String city, List<EnrichedPoi> pois, int tripDays) {
+        LOGGER.debug("Creating mock route text for mood: {}, city: {}, {} days", mood, city, tripDays);
+
         String title = generateMockTitle(mood, city);
-        String description = generateMockDescription(mood, city, pois);
-        
-        LOGGER.info("Generated mock route - Title: '{}', Description length: {} chars", 
-            title, description.length());
-        
-        return new RouteText(title, description);
+        Map<Integer, String> dayDescriptions = generateMockDayDescriptions(mood, city, pois, tripDays);
+
+        LOGGER.info("Generated mock route - Title: '{}', {} day descriptions",
+            title, dayDescriptions.size());
+
+        return new RouteText(title, dayDescriptions);
     }
 
     /**
      * Create error RouteText for invalid inputs
      */
-    public static RouteText createErrorRouteText(String errorMessage, String city) {
+    public static RouteText createErrorRouteText(String errorMessage, String city, int tripDays) {
         String title = "Error Route";
-        String description = String.format(
-            "Unable to generate route: %s. This is a mock response for error handling demonstration in %s.", 
-            errorMessage, 
+        Map<Integer, String> dayDescriptions = new HashMap<>();
+        String errorDesc = String.format(
+            "Unable to generate route: %s. This is a mock response for error handling demonstration in %s.",
+            errorMessage,
             city != null ? city : "unknown location"
         );
-        
+
+        for (int day = 1; day <= tripDays; day++) {
+            dayDescriptions.put(day, errorDesc);
+        }
+
         LOGGER.warn("Creating error route text: {}", errorMessage);
-        return new RouteText(title, description);
+        return new RouteText(title, dayDescriptions);
     }
 
     // ==================== Private Parsing Methods ====================
 
     /**
-     * Attempt to parse JSON format: {"title": "...", "description": "..."}
-     * Uses proper JSON parsing to handle commas in description
+     * Attempt to parse JSON format with dayDescriptions:
+     * {"title": "...", "dayDescriptions": {"1": "...", "2": "..."}}
      */
-    private static RouteText tryParseJsonFormat(String response) {
+    private static RouteText tryParseJsonFormat(String response, int tripDays) {
         if (!response.startsWith("{") || !response.endsWith("}")) {
             LOGGER.debug("Not JSON format (no braces)");
             return null;
         }
 
         try {
-            // Try to find title and description using regex to handle commas in values
+            // Extract title
             String titlePattern = "\"title\"\\s*:\\s*\"([^\"]*)\"|'title'\\s*:\\s*'([^']*)'";
-            String descPattern = "\"description\"\\s*:\\s*\"(.*?)\"(?=\\s*[,}])|'description'\\s*:\\s*'(.*?)'(?=\\s*[,}])";
-            
             java.util.regex.Pattern titleRe = java.util.regex.Pattern.compile(titlePattern);
             java.util.regex.Matcher titleMatcher = titleRe.matcher(response);
-            
-            java.util.regex.Pattern descRe = java.util.regex.Pattern.compile(descPattern);
-            java.util.regex.Matcher descMatcher = descRe.matcher(response);
-            
+
             String extractedTitle = null;
-            String extractedDescription = null;
-            
             if (titleMatcher.find()) {
                 extractedTitle = titleMatcher.group(1) != null ? titleMatcher.group(1) : titleMatcher.group(2);
             }
-            
-            if (descMatcher.find()) {
-                extractedDescription = descMatcher.group(1) != null ? descMatcher.group(1) : descMatcher.group(2);
+
+            // Extract dayDescriptions object
+            Map<Integer, String> dayDescriptions = new HashMap<>();
+
+            // Find the dayDescriptions block
+            int dayDescStart = response.indexOf("\"dayDescriptions\"");
+            if (dayDescStart == -1) {
+                dayDescStart = response.indexOf("'dayDescriptions'");
             }
-            
-            if (extractedTitle != null && extractedDescription != null) {
-                LOGGER.info("Successfully parsed JSON format - Title: '{}', Description length: {} chars", 
-                    extractedTitle, extractedDescription.length());
-                return new RouteText(extractedTitle, extractedDescription);
+
+            if (dayDescStart != -1) {
+                // Find the opening brace of the dayDescriptions object
+                int braceStart = response.indexOf("{", dayDescStart);
+                if (braceStart != -1) {
+                    // Find the matching closing brace
+                    int braceCount = 1;
+                    int braceEnd = braceStart + 1;
+                    while (braceEnd < response.length() && braceCount > 0) {
+                        char c = response.charAt(braceEnd);
+                        if (c == '{') braceCount++;
+                        else if (c == '}') braceCount--;
+                        braceEnd++;
+                    }
+
+                    String dayDescBlock = response.substring(braceStart, braceEnd);
+
+                    // Extract each day's description
+                    for (int day = 1; day <= tripDays; day++) {
+                        String dayKey = "\"" + day + "\"";
+                        int dayKeyPos = dayDescBlock.indexOf(dayKey);
+                        if (dayKeyPos == -1) {
+                            dayKey = "'" + day + "'";
+                            dayKeyPos = dayDescBlock.indexOf(dayKey);
+                        }
+
+                        if (dayKeyPos != -1) {
+                            // Find the value after the colon
+                            int colonPos = dayDescBlock.indexOf(":", dayKeyPos);
+                            if (colonPos != -1) {
+                                // Find the opening quote
+                                int quoteStart = dayDescBlock.indexOf("\"", colonPos);
+                                char quoteChar = '"';
+                                if (quoteStart == -1) {
+                                    quoteStart = dayDescBlock.indexOf("'", colonPos);
+                                    quoteChar = '\'';
+                                }
+
+                                if (quoteStart != -1) {
+                                    // Find the closing quote (handle escaped quotes)
+                                    int quoteEnd = quoteStart + 1;
+                                    while (quoteEnd < dayDescBlock.length()) {
+                                        char c = dayDescBlock.charAt(quoteEnd);
+                                        if (c == quoteChar && dayDescBlock.charAt(quoteEnd - 1) != '\\') {
+                                            break;
+                                        }
+                                        quoteEnd++;
+                                    }
+
+                                    if (quoteEnd < dayDescBlock.length()) {
+                                        String description = dayDescBlock.substring(quoteStart + 1, quoteEnd);
+                                        // Unescape quotes
+                                        description = description.replace("\\\"", "\"").replace("\\'", "'");
+                                        dayDescriptions.put(day, description);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (extractedTitle != null && !dayDescriptions.isEmpty()) {
+                LOGGER.info("Successfully parsed JSON format - Title: '{}', {} day descriptions",
+                    extractedTitle, dayDescriptions.size());
+                return new RouteText(extractedTitle, dayDescriptions);
             } else {
-                LOGGER.warn("JSON format detected but fields not found - title: {}, description: {}", 
-                    extractedTitle != null, extractedDescription != null);
+                LOGGER.warn("JSON format detected but fields not found - title: {}, dayDescriptions: {}",
+                    extractedTitle != null, dayDescriptions.size());
             }
         } catch (Exception e) {
             LOGGER.warn("Failed to parse as JSON format: {}", e.getMessage());
         }
-        
+
         return null;
     }
 
     /**
-     * Attempt to parse line format:
-     * Title: ...
-     * Description: ...
+     * Fallback parsing: create generic day descriptions from response
      */
-    private static RouteText tryParseLineFormat(String response) {
-        try {
-            String[] lines = response.split("\n");
-            String title = null;
-            String description = null;
-            
-            for (String line : lines) {
-                String trimmedLine = line.trim();
-                if (trimmedLine.toLowerCase().startsWith("title:")) {
-                    title = trimmedLine.substring(6).trim().replaceAll("^\"|\"$", "");
-                } else if (trimmedLine.toLowerCase().startsWith("description:")) {
-                    description = trimmedLine.substring(12).trim().replaceAll("^\"|\"$", "");
-                }
-            }
-            
-            if (title != null && description != null) {
-                LOGGER.info("Successfully parsed line format");
-                return new RouteText(title, description);
-            }
-        } catch (Exception e) {
-            LOGGER.warn("Failed to parse line format: {}", e.getMessage());
-        }
-        
-        return null;
-    }
-
-    /**
-     * Fallback parsing: use entire response as description
-     */
-    private static RouteText parseFallback(String response) {
+    private static RouteText parseFallback(String response, int tripDays) {
         String fallbackTitle = "Personalized " + extractMoodFromResponse(response) + " Journey";
-        String fallbackDescription = response;
-        
-        LOGGER.info("Using fallback parsing - Title: '{}'", fallbackTitle);
-        return new RouteText(fallbackTitle, fallbackDescription);
+
+        Map<Integer, String> dayDescriptions = new HashMap<>();
+        // Split response into days if possible, otherwise use the whole response for day 1
+        for (int day = 1; day <= tripDays; day++) {
+            dayDescriptions.put(day, String.format("Day %d of your journey. %s", day,
+                tripDays == 1 ? response : "Explore and enjoy the planned activities."));
+        }
+
+        LOGGER.info("Using fallback parsing - Title: '{}', {} days", fallbackTitle, tripDays);
+        return new RouteText(fallbackTitle, dayDescriptions);
     }
 
     // ==================== Mock Generation Methods ====================
@@ -170,105 +205,91 @@ public class RouteTextMapper {
     private static String generateMockTitle(String mood, String city) {
         String formattedMood = capitalizeFirst(mood);
         String formattedCity = city != null && !city.trim().isEmpty() ? city.trim() : "Test Location";
-    
+
         return switch (mood.toLowerCase()) {
-            // JOYFUL / ENERGIZED and similar upbeat moods
             case "joyful", "happy", "excited", "energized" ->
                 String.format("%s %s Adventure", formattedMood, formattedCity);
-            // CALM / TIRED / STRESSED and similar relaxing/soothing moods
             case "relaxed", "calm", "peaceful", "tired", "stressed" ->
                 String.format("Serene %s Escape", formattedCity);
-            // CURIOUS and other exploratory moods
             case "adventurous", "bold", "exploratory", "curious" ->
                 String.format("%s Discovery Quest", formattedCity);
-            // NOSTALGIC / SAD and reflective moods
             case "contemplative", "thoughtful", "reflective", "nostalgic", "sad" ->
                 String.format("Mindful %s Journey", formattedCity);
-            // NEUTRAL and anything else fall back to a generic mock route
             default ->
                 String.format("Mock %s Route in %s", formattedMood, formattedCity);
         };
     }
 
     /**
-     * Generate detailed mock descriptions with specific POI mentions
+     * Generate detailed mock descriptions for each day with specific POI mentions
      */
-    private static String generateMockDescription(String mood, String city, List<EnrichedPoi> pois) {
+    private static Map<Integer, String> generateMockDayDescriptions(String mood, String city, List<EnrichedPoi> pois, int tripDays) {
         String formattedCity = city != null && !city.trim().isEmpty() ? city.trim() : "the test location";
-        
-        // If we have POIs, create a detailed description mentioning each one
-        if (pois != null && !pois.isEmpty()) {
+        Map<Integer, String> dayDescriptions = new HashMap<>();
+
+        List<EnrichedPoi> effectivePois = (pois != null) ? pois : List.of();
+        int totalPois = effectivePois.size();
+
+        for (int day = 1; day <= tripDays; day++) {
             StringBuilder description = new StringBuilder();
-            
-            // Intro based on mood
+
+            // Intro based on mood and day
             String intro = switch (mood.toLowerCase()) {
-                case "joyful", "happy" -> 
-                    String.format("Begin your joyful journey through %s, ", formattedCity);
-                case "relaxed", "calm" -> 
-                    String.format("Start your serene exploration of %s, ", formattedCity);
-                case "adventurous", "bold" -> 
-                    String.format("Launch your exciting adventure across %s, ", formattedCity);
-                case "contemplative", "thoughtful" -> 
-                    String.format("Embark on a mindful journey through %s, ", formattedCity);
-                default -> 
-                    String.format("Discover %s through this carefully curated route, ", formattedCity);
+                case "joyful", "happy" ->
+                    day == 1 ? String.format("Begin your joyful journey through %s, ", formattedCity)
+                             : "Continue your energetic exploration, ";
+                case "relaxed", "calm" ->
+                    day == 1 ? String.format("Start your serene exploration of %s, ", formattedCity)
+                             : "Continue your peaceful journey, ";
+                case "adventurous", "bold" ->
+                    day == 1 ? String.format("Launch your exciting adventure across %s, ", formattedCity)
+                             : "Continue your bold exploration, ";
+                case "contemplative", "thoughtful" ->
+                    day == 1 ? String.format("Embark on a mindful journey through %s, ", formattedCity)
+                             : "Continue your reflective exploration, ";
+                default ->
+                    day == 1 ? String.format("Discover %s through this carefully curated route, ", formattedCity)
+                             : "Continue exploring the planned destinations, ";
             };
-            
+
             description.append(intro);
-            
-            // Mention each POI with connection words
-            int poiLimit = Math.min(pois.size(), 5);
-            for (int i = 0; i < poiLimit; i++) {
-                EnrichedPoi poi = pois.get(i);
-                String poiName = poi.poi().name();
-                String poiDesc = poi.description();
-                
-                // Connection words based on position
-                String connector = switch (i) {
-                    case 0 -> "visiting ";
-                    case 1 -> "then exploring ";
-                    case 2 -> "followed by ";
-                    default -> i == poiLimit - 1 ? "and concluding at " : "continuing to ";
-                };
-                
-                description.append(connector).append(poiName);
-                
-                // Add brief description if available
-                if (poiDesc != null && !poiDesc.trim().isEmpty()) {
-                    // Truncate long descriptions
-                    String shortDesc = poiDesc.length() > 80 ? 
-                        poiDesc.substring(0, 77) + "..." : poiDesc;
-                    description.append(" - ").append(shortDesc);
-                }
-                
-                // Add punctuation
-                if (i < poiLimit - 1) {
-                    description.append(", ");
-                } else {
-                    description.append(".");
+
+            // Find POIs for this day using the same formula as GeoJsonRouteMapper
+            int poisInDay = 0;
+            for (int i = 0; i < totalPois; i++) {
+                int poiDay = (int) Math.floor((double) i * tripDays / totalPois) + 1;
+                if (poiDay == day) {
+                    EnrichedPoi poi = effectivePois.get(i);
+                    String poiName = poi.poi().name();
+
+                    String connector = switch (poisInDay) {
+                        case 0 -> "visiting ";
+                        case 1 -> "then exploring ";
+                        default -> "and continuing to ";
+                    };
+
+                    description.append(connector).append(poiName);
+                    poisInDay++;
+
+                    if (i < totalPois - 1) {
+                        // Check if next POI is also in this day
+                        int nextPoiDay = (int) Math.floor((double) (i + 1) * tripDays / totalPois) + 1;
+                        if (nextPoiDay == day) {
+                            description.append(", ");
+                        }
+                    }
                 }
             }
-            
-            return description.toString();
+
+            if (poisInDay == 0) {
+                description.append("enjoying the local atmosphere and taking time to relax");
+            }
+            description.append(".");
+
+            dayDescriptions.put(day, description.toString());
         }
-        
-        // Fallback if no POIs (original behavior)
-        String baseTemplate = switch (mood.toLowerCase()) {
-            case "joyful", "happy" -> 
-                "Experience pure joy through %s's finest attractions. This curated journey combines carefully selected destinations designed to uplift your spirits and create lasting memories.";
-            case "relaxed", "calm" -> 
-                "Unwind in %s's most tranquil settings. This peaceful itinerary features serene locations perfect for rest, reflection, and gentle exploration away from the hustle and bustle.";
-            case "adventurous", "bold" -> 
-                "Embark on an exciting adventure through %s's dynamic landscape. This bold expedition includes thrilling destinations that promise discovery, challenge, and unforgettable experiences.";
-            case "contemplative", "thoughtful" -> 
-                "Journey mindfully through %s's culturally rich environment. This thoughtful route connects meaningful locations that inspire reflection and deeper appreciation for your surroundings.";
-            default -> 
-                "This is a comprehensive mock route in %s for testing purposes. The carefully planned journey includes key locations designed to verify proper functionality, user experience, and system integration.";
-        };
-    
-        String testingContext = " Features include automated testing protocols, system validation checkpoints, and quality assurance measures to ensure optimal performance.";
-    
-        return String.format(baseTemplate + testingContext, formattedCity);
+
+        return dayDescriptions;
     }
 
     // ==================== Helper Methods ====================
@@ -282,7 +303,7 @@ public class RouteTextMapper {
 
     private static String extractMoodFromResponse(String response) {
         String lowerResponse = response.toLowerCase();
-        
+
         if (lowerResponse.contains("joyful") || lowerResponse.contains("happy")) {
             return "Joyful";
         } else if (lowerResponse.contains("relaxed") || lowerResponse.contains("calm")) {
