@@ -25,30 +25,95 @@ public final class OsmTagCategoryMapper {
     );
 
     private static final Set<String> FOOD_AMENITIES = Set.of(
-            "restaurant", "cafe", "bar", "fast_food", "biergarten"
+            "restaurant",
+            "cafe",
+            "biergarten",
+            "ice_cream",
+            "tea_room",
+            "pub"
+    );
+
+    private static final Set<String> FOOD_SHOP_TAGS = Set.of(
+            "confectionery",
+            "cheese",
+            "delicatessen"
     );
 
     private static final Set<String> SHOP_TAGS = Set.of(
-            "supermarket", "department_store", "mall", "clothes", "shoes", "jewelry",
-            "bakery", "butcher", "convenience", "chemist", "books", "gift", "florist"
+            "department_store",
+            "mall",
+            "antique",
+            "art",
+            "craft",
+            "handicraft",
+            "bookstore",
+            "music"
     );
 
     private static final Set<String> HISTORY_HISTORIC = Set.of(
-            "monument", "memorial", "castle", "ruins", "archaeological_site", "wayside_cross", "wayside_shrine"
+            "monument",
+            "memorial",
+            "castle",
+            "ruins",
+            "archaeological_site",
+            "fort",
+            "heritage_site"
     );
-    private static final Set<String> HISTORY_TOURISM = Set.of("museum", "gallery", "attraction", "artwork");
-    private static final Set<String> HISTORY_AMENITY = Set.of("theatre", "arts_centre", "cinema", "library", "place_of_worship");
+
+    private static final Set<String> HISTORY_TOURISM = Set.of(
+            "museum",
+            "gallery",
+            "attraction",
+            "artwork",
+            "heritage_site"
+    );
+
+    private static final Set<String> HISTORY_AMENITY = Set.of(
+            "theatre",
+            "arts_centre",
+            "place_of_worship"
+    );
 
     private static final Set<String> ADVENTURE_LEISURE = Set.of(
-            "sports_centre", "climbing", "water_park", "golf_course", "pitch", "swimming_pool", "fitness_centre", "stadium", "track"
+            "sports_centre",
+            "swimming_pool",
+            "ice_rink",
+            "horse_riding",
+            "high_ropes_course",
+            "track"
+    );
+
+    private static final Set<String> ADVENTURE_TOURISM = Set.of(
+            "alpine_hut",
+            "camp_site",
+            "theme_park"
     );
 
     private static final Set<String> RELAXATION_LEISURE = Set.of(
-            "park", "garden", "nature_reserve", "common", "recreation_ground"
+            "park",
+            "garden",
+            "recreation_ground",
+            "picnic_site",
+            "playground"
+    );
+
+    private static final Set<String> RELAXATION_TOURISM = Set.of(
+            "picnic_site"
     );
 
     private static final Set<String> NATURE_VALUES = Set.of(
-            "wood", "forest", "wetland", "heath", "scrub", "grassland", "meadow", "water", "lake", "fell", "moor", "peak", "valley", "hill"
+            "wood",
+            "grassland",
+            "wetland",
+            "water",
+            "heath",
+            "sand",
+            "scrub"
+    );
+
+    private static final Set<String> NATURE_LANDUSE = Set.of(
+            "forest",
+            "meadow"
     );
 
     private OsmTagCategoryMapper() {
@@ -73,21 +138,44 @@ public final class OsmTagCategoryMapper {
         String tourism = tags.getOrDefault("tourism", "");
         String leisure = tags.getOrDefault("leisure", "");
         String historic = tags.getOrDefault("historic", "");
+        String building = tags.getOrDefault("building", "");
+        String sport = tags.getOrDefault("sport", "");
         String shop = tags.getOrDefault("shop", "");
         String natural = tags.getOrDefault("natural", "");
+        String landuse = tags.getOrDefault("landuse", "");
+        String boundary = tags.getOrDefault("boundary", "");
+        String protectClass = tags.getOrDefault("protect_class", "");
 
         return switch (category) {
-            case FOOD_AND_CULINARY -> !amenity.isBlank() && FOOD_AMENITIES.contains(amenity);
-            case SHOPPING -> (!shop.isBlank() && SHOP_TAGS.contains(shop)) || "marketplace".equals(shop) || "marketplace".equals(amenity);
+            case FOOD_AND_CULINARY -> (
+                    (!amenity.isBlank() && FOOD_AMENITIES.contains(amenity))
+                            || (!shop.isBlank() && FOOD_SHOP_TAGS.contains(shop))
+            );
+            case SHOPPING -> (
+                    (!shop.isBlank() && SHOP_TAGS.contains(shop))
+                            || "marketplace".equals(amenity)
+            );
             case HISTORY_AND_CULTURE -> (!historic.isBlank() && HISTORY_HISTORIC.contains(historic))
                     || (!tourism.isBlank() && HISTORY_TOURISM.contains(tourism))
-                    || (!amenity.isBlank() && HISTORY_AMENITY.contains(amenity));
-            case ADVENTURE -> (!leisure.isBlank() && ADVENTURE_LEISURE.contains(leisure))
-                    || tags.containsKey("sport")
-                    || "zoo".equals(tourism);
-            case RELAXATION -> (!leisure.isBlank() && RELAXATION_LEISURE.contains(leisure))
-                    || "viewpoint".equals(tourism);
-            case NATURE -> !natural.isBlank() && NATURE_VALUES.contains(natural);
+                    || (!amenity.isBlank() && HISTORY_AMENITY.contains(amenity))
+                    || "historic".equals(building);
+            case ADVENTURE -> (
+                    (!leisure.isBlank() && ADVENTURE_LEISURE.contains(leisure))
+                            || (!tourism.isBlank() && ADVENTURE_TOURISM.contains(tourism))
+                            || ("track".equals(leisure) && !sport.isBlank())
+            );
+            case RELAXATION -> (
+                    (!leisure.isBlank() && RELAXATION_LEISURE.contains(leisure))
+                            || (!tourism.isBlank() && RELAXATION_TOURISM.contains(tourism))
+            );
+            case NATURE -> (
+                    "protected_area".equals(boundary)
+                            || !protectClass.isBlank()
+                            || "nature_reserve".equals(leisure)
+                            || (!natural.isBlank() && NATURE_VALUES.contains(natural))
+                            || (!landuse.isBlank() && NATURE_LANDUSE.contains(landuse))
+                            || "viewpoint".equals(tourism)
+            );
         };
     }
 }
