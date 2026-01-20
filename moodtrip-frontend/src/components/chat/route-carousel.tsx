@@ -1,5 +1,5 @@
 import { RouteCard } from "./route-card";
-import type { FeatureCollection } from "geojson";
+import type { FeatureCollection, Feature, Geometry } from "geojson";
 
 export interface RouteCardData {
     id: string;
@@ -32,6 +32,16 @@ export function RouteCarousel({ routes, onRouteClick }: RouteCarouselProps) {
     return "A personalized route based on your mood.";
   };
 
+  // Extract tripDays from geoJson route feature
+  const getTripDays = (geoJson?: FeatureCollection): number => {
+    if (!geoJson?.features) return 1;
+    const routeFeature = geoJson.features.find(
+      (f: Feature<Geometry>) => (f.properties as Record<string, unknown>)?.type === "route"
+    );
+    const tripDays = (routeFeature?.properties as Record<string, unknown>)?.tripDays;
+    return typeof tripDays === "number" ? tripDays : 1;
+  };
+
   return (
     <div className="w-full">
       <div className="w-full flex flex-wrap justify-center gap-4 pb-4">
@@ -54,6 +64,7 @@ export function RouteCarousel({ routes, onRouteClick }: RouteCarouselProps) {
               imageUrl={route.imageUrl || "/placeholder-route.jpg"}
               distanceMeters={route.distanceMeters}
               durationSeconds={route.durationSeconds}
+              tripDays={getTripDays(route.geoJson)}
               onClick={() => onRouteClick(route)}
             />
           </div>
