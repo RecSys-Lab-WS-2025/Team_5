@@ -80,7 +80,7 @@ export function HomePage() {
                     if (!user) {
                       navigate("/login");
                     } else {
-                      navigate("/chat");
+                      navigate("/chat", { state: { resetChat: true } });
                     }
                   }}
                   className="custom-swipe-btn"
@@ -93,7 +93,7 @@ export function HomePage() {
               <button
                 type="button"
                 onClick={() => navigate("/demo")}
-                className="flex items-center gap-3 group !bg-blue-50 !border-0 !p-0 focus:outline-none" 
+                className="flex items-center gap-3 group !bg-blue-50 !border-0 !p-0 focus:outline-none"
               >
                 {/* Play Icon Wrapper - FORCED PAGE BACKGROUND COLOR */}
                 <div className="w-10 h-10 rounded-full border-2 border-blue-400 flex items-center justify-center group-hover:scale-105 transition-all duration-200 !bg-blue-50">

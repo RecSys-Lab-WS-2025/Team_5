@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import * as React from "react";
+import * as React from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -10,42 +10,59 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { NavMain } from "@/components/sidebar/nav-main";
-import { NavSecondary } from "@/components/sidebar/nav-secondary";
-import { NavUser } from "@/components/sidebar/nav-user";
-import { NavChats } from "@/components/sidebar/nav-chats";
-import { Plus } from "lucide-react";
+} from "@/components/ui/sidebar"
+import { NavMain } from "@/components/sidebar/nav-main"
+import { NavSecondary } from "@/components/sidebar/nav-secondary"
+import { NavUser } from "@/components/sidebar/nav-user"
+import { NavChats } from "@/components/sidebar/nav-chats"
+import { Plus } from "lucide-react"
+
+import { getUser, saveUser, type AuthUser } from "@/api/auth"
+import { fetchCurrentUser, type UserProfile } from "@/api/user"
+import { onUserUpdated } from "@/lib/user-events"
 
 export type ChatSummary = {
-  id: string;
-  title: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  preview?: string;
-  emotion?: string;
-};
+  id: string
+  title: string
+  icon?: React.ComponentType<{ className?: string }>
+  preview?: string
+  emotion?: string
+}
 
-type NavMainProps = React.ComponentProps<typeof NavMain>;
-type NavSecondaryProps = React.ComponentProps<typeof NavSecondary>;
+type NavMainProps = React.ComponentProps<typeof NavMain>
+type NavSecondaryProps = React.ComponentProps<typeof NavSecondary>
 
 type Props = React.ComponentProps<typeof Sidebar> & {
-  user: { name: string; email: string; avatar?: string };
-  navMain: NavMainProps["items"];
-  navSecondary: NavSecondaryProps["items"];
-  chats: ChatSummary[];
-  selectedChatId: string | null;
-  onNewChat: () => void;
-  onSelectChat: (id: string) => void;
-  onRenameChat?: (id: string, currentTitle: string) => void;
-  onDeleteChat?: (id: string) => void;
-  onShareChat?: (id: string) => void;
-  onIntroductionClick?: () => void;
-  onQuickStartClick?: () => void;
-  onRefreshChats?: () => void;
-};
+  navMain: NavMainProps["items"]
+  navSecondary: NavSecondaryProps["items"]
+  chats: ChatSummary[]
+  selectedChatId: string | null
+  onNewChat: () => void
+  onSelectChat: (id: string) => void
+  onRenameChat?: (id: string, currentTitle: string) => void
+  onDeleteChat?: (id: string) => void
+  onShareChat?: (id: string) => void
+  onIntroductionClick?: () => void
+  onQuickStartClick?: () => void
+  onRefreshChats?: () => void
+}
+
+type LocalAuthUser = AuthUser & { avatarUrl?: string | null }
+
+function mergeServerIntoLocal(
+  server: UserProfile,
+  prev: LocalAuthUser | null,
+): LocalAuthUser {
+  return {
+    id: Number(server.id),
+    username: server.username,
+    email: server.email,
+    createdAt: server.createdAt ?? prev?.createdAt,
+    avatarUrl: server.avatarUrl ?? prev?.avatarUrl ?? null,
+  }
+}
 
 export function AppSidebar({
-  user,
   navMain,
   navSecondary,
   chats,
@@ -60,13 +77,50 @@ export function AppSidebar({
   onRefreshChats,
   ...props
 }: Props) {
-  const { open } = useSidebar();
+  const { open } = useSidebar()
+
+  const [authUser, setAuthUser] = React.useState<LocalAuthUser | null>(() => {
+    return (getUser() as LocalAuthUser | null) ?? null
+  })
 
   React.useEffect(() => {
-    if (open && onRefreshChats) {
-      onRefreshChats();
+    let cancelled = false
+
+    ;(async () => {
+      const server = await fetchCurrentUser()
+      if (cancelled) return
+
+      if (server) {
+        const next = mergeServerIntoLocal(server, authUser)
+
+        // saveUser expects AuthUser; runtime JSON can still include extra fields.
+        saveUser(next as AuthUser)
+
+        // Ensure avatarUrl is persisted even if AuthUser doesn't include it in TS type.
+        localStorage.setItem("auth_user", JSON.stringify(next))
+
+        setAuthUser(next)
+      } else {
+        const local = getUser() as LocalAuthUser | null
+        setAuthUser(local)
+      }
+    })()
+
+    const off = onUserUpdated(() => {
+      const local = getUser() as LocalAuthUser | null
+      setAuthUser(local)
+    })
+
+    return () => {
+      cancelled = true
+      off()
     }
-  }, [open, onRefreshChats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  React.useEffect(() => {
+    if (open && onRefreshChats) onRefreshChats()
+  }, [open, onRefreshChats])
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -108,8 +162,16 @@ export function AppSidebar({
 
       <SidebarFooter>
         <NavSecondary items={navSecondary} className="border-t pt-2" />
-        <NavUser user={user} />
+        {authUser ? (
+          <NavUser
+            user={{
+              username: authUser.username,
+              email: authUser.email,
+              avatarUrl: authUser.avatarUrl ?? null,
+            }}
+          />
+        ) : null}
       </SidebarFooter>
     </Sidebar>
-  );
+  )
 }

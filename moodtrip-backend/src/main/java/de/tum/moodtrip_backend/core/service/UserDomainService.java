@@ -58,6 +58,7 @@ public class UserDomainService {
                                         email,
                                         LocalDateTime.now(),
                                         hash,
+                                        null,
                                         null
                                 );
                                 return userPort.save(user)
@@ -87,21 +88,82 @@ public class UserDomainService {
                 .switchIfEmpty(Mono.error(new UserNotFoundException("User not found with Id: " + id)))
                 .then(userPort.deleteById(id));
     }
-
+  
     /**
      * Create or link user profile from Spotify OAuth
      */
-    public Mono<UserProfile> createOrLinkSpotifyUser(
-            Long spotifyTokenId,
-            String spotifyEmail,
-            String spotifyDisplayName
-    ) {
+    public Mono<UserProfile> updateUsername(Long userId, String newUsername) {
+        String username = newUsername == null ? "" : newUsername.trim();
+
+        if (username.isBlank()) {
+            return Mono.error(new IllegalArgumentException("Username cannot be blank"));
+        }
+        if (username.length() < 2 || username.length() > 50) {
+            return Mono.error(new IllegalArgumentException("Username must be between 2 and 50 characters"));
+        }
+
+        LOGGER.info("Updating username for user {} -> {}", userId, username);
+
+        return userPort.existsByUsername(username)
+                .flatMap(exists -> {
+                    if (exists) {
+                        return userPort.findById(userId)
+                                .switchIfEmpty(Mono.error(new UserNotFoundException("User not found with Id: " + userId)))
+                                .flatMap(user -> {
+                                    if (username.equals(user.username())) {
+                                        return Mono.just(user);
+                                    }
+                                    return Mono.error(new IllegalArgumentException("Username already exists: " + username));
+                                });
+                    }
+
+                    return userPort.findById(userId)
+                            .switchIfEmpty(Mono.error(new UserNotFoundException("User not found with Id: " + userId)))
+                            .flatMap(user -> {
+                                UserProfile updated = new UserProfile(
+                                        user.id(),
+                                        username,
+                                        user.email(),
+                                        user.createdAt(),
+                                        user.passwordHash(),
+                                        user.spotifyTokenId(),
+                                        user.avatarUrl()
+                                );
+                                return userPort.save(updated)
+                                        .doOnSuccess(u -> LOGGER.info("Username updated successfully for user {}", u.id()));
+                            });
+                });
+    }
+
+    public Mono<UserProfile> updateAvatarUrl(Long userId, String avatarUrl) {
+        String url = avatarUrl == null ? null : avatarUrl.trim();
+
+        LOGGER.info("Updating avatarUrl for user {} -> {}", userId, url);
+
+        return userPort.findById(userId)
+                .switchIfEmpty(Mono.error(new UserNotFoundException("User not found with Id: " + userId)))
+                .flatMap(user -> {
+                    UserProfile updated = new UserProfile(
+                            user.id(),
+                            user.username(),
+                            user.email(),
+                            user.createdAt(),
+                            user.passwordHash(),
+                            user.spotifyTokenId(),
+                            url
+                    );
+                    return userPort.save(updated)
+                            .doOnSuccess(u -> LOGGER.info("Avatar updated successfully for user {}", u.id()));
+                });
+    }
+
+    public Mono<UserProfile> createOrLinkSpotifyUser(Long spotifyTokenId, String spotifyEmail, String spotifyDisplayName) {
         LOGGER.info("Linking/Creating user from Spotify. Email: {}", spotifyEmail);
         // 1. Check if already linked
         return userPort.findBySpotifyTokenId(spotifyTokenId)
                 .doOnNext(u -> LOGGER.info("User already linked to token {}: {}", spotifyTokenId, u.username()))
                 .switchIfEmpty(Mono.defer(() -> {
-                    // 2. Try to link to existing user by email
+                // 2. Try to link to existing user by email
                     if (spotifyEmail != null && !spotifyEmail.isBlank()) {
                         return userPort.findByEmail(spotifyEmail)
                                 .doOnNext(u -> LOGGER.info("Found existing user by email {}, linking spotify account", spotifyEmail))
@@ -113,9 +175,6 @@ public class UserDomainService {
                 }));
     }
 
-    /**
-     * Link Spotify account to existing user
-     */
     private Mono<UserProfile> linkSpotifyAccount(Long userId, Long spotifyTokenId) {
         return userPort.findById(userId)
                 .flatMap(user -> {
@@ -125,21 +184,15 @@ public class UserDomainService {
                             user.email(),
                             user.createdAt(),
                             user.passwordHash(),
-                            spotifyTokenId
+                            spotifyTokenId,
+                            user.avatarUrl()
                     );
                     return userPort.save(updated)
                             .doOnSuccess(u -> LOGGER.info("Linked Spotify token {} to user {}", spotifyTokenId, u.id()));
                 });
     }
 
-    /**
-     * Create new user from Spotify information
-     */
-    private Mono<UserProfile> createUserFromSpotify(
-            Long spotifyTokenId,
-            String spotifyEmail,
-            String spotifyDisplayName
-    ) {
+    private Mono<UserProfile> createUserFromSpotify(Long spotifyTokenId, String spotifyEmail, String spotifyDisplayName) {
         String username = generateUsernameFromSpotify(spotifyEmail, spotifyDisplayName);
         LOGGER.info("Creating new Spotify user with username: {}", username);
 
@@ -149,29 +202,24 @@ public class UserDomainService {
                 spotifyEmail,
                 LocalDateTime.now(),
                 null,
-                spotifyTokenId
+                spotifyTokenId,
+                null
         );
 
         return userPort.save(newUser)
                 .doOnSuccess(u -> LOGGER.info("Created new Spotify user {}", u.id()));
     }
 
-    /**
-     * Generate username from Spotify display name or email
-     */
     private String generateUsernameFromSpotify(String spotifyEmail, String spotifyDisplayName) {
-        // 1. If display name is valid (only contains allowed characters), use it directly
         if (spotifyDisplayName != null && !spotifyDisplayName.isBlank() && spotifyDisplayName.matches("[a-zA-Z0-9_-]+")) {
             return spotifyDisplayName;
         }
 
-        // 2. If display name is invalid (needs sanitization), try to use email prefix
         if (spotifyEmail != null && !spotifyEmail.isBlank() && spotifyEmail.contains("@")) {
             String emailPrefix = spotifyEmail.split("@")[0];
             return sanitizeUsername(emailPrefix);
         }
 
-        // 3. Fallback: use sanitized display name
         if (spotifyDisplayName != null && !spotifyDisplayName.isBlank()) {
             return sanitizeUsername(spotifyDisplayName);
         }
@@ -179,11 +227,9 @@ public class UserDomainService {
         return "spotify_user_" + System.currentTimeMillis();
     }
 
-    /**
-     * Sanitize username to remove special characters
-     */
     private String sanitizeUsername(String displayName) {
-        return displayName.replaceAll("[^a-zA-Z0-9_-]", "_").substring(0, Math.min(50, displayName.length()));
+        return displayName.replaceAll("[^a-zA-Z0-9_-]", "_")
+                .substring(0, Math.min(50, displayName.length()));
     }
 
     public Mono<LoginResponse> authenticate(UserProfile user, String rawPassword) {

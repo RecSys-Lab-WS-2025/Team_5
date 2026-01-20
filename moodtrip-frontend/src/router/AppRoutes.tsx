@@ -6,6 +6,10 @@ import LoginPage from "@/app/login/page";
 import SignupPage from "@/app/signup/page";
 import { RouteDetailsPage } from "@/app/route-details/RouteDetailsPage";
 
+import AboutPage from "@/app/about/page";
+import FAQPage from "@/app/faq/page";
+import ContactPage from "@/app/contact/page";
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -15,6 +19,10 @@ export function AppRoutes() {
         <Route path="/route-details" element={<RouteDetailsPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/faq" element={<FAQPage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

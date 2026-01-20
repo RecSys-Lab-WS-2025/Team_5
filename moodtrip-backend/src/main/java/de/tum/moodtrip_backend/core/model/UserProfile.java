@@ -8,12 +8,45 @@ public record UserProfile(
         String email,
         LocalDateTime createdAt,
         String passwordHash,
-        Long spotifyTokenId
+        Long spotifyTokenId,
+        String avatarUrl
 ) {
+
     public UserProfile withId(Long id) {
-        return new UserProfile(id, username, email, createdAt, passwordHash, spotifyTokenId);
+        return new UserProfile(
+                id,
+                username,
+                email,
+                createdAt,
+                passwordHash,
+                spotifyTokenId,
+                avatarUrl
+        );
     }
 
+    public UserProfile withUsername(String username) {
+        return new UserProfile(
+                id,
+                username,
+                email,
+                createdAt,
+                passwordHash,
+                spotifyTokenId,
+                avatarUrl
+        );
+    }
+
+    public UserProfile withAvatarUrl(String avatarUrl) {
+        return new UserProfile(
+                id,
+                username,
+                email,
+                createdAt,
+                passwordHash,
+                spotifyTokenId,
+                avatarUrl
+        );
+    }
 
     public boolean hasSpotifyAuthorization() {
         return spotifyTokenId != null;

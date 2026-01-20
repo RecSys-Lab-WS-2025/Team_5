@@ -1,12 +1,14 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Send } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
+import React, { useState, useRef, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Send } from "lucide-react"
+import { useSidebar } from "@/components/ui/sidebar"
+import { getUser } from "@/api/auth"
+import { USER_UPDATED_EVENT } from "@/lib/user-events"
 
 interface WelcomeScreenProps {
-  onSuggestionClick: (suggestion: string) => void;
-  userName?: string | null;
+  onSuggestionClick: (suggestion: string) => void
+  userName?: string | null
 }
 
 type Mood =
@@ -18,7 +20,7 @@ type Mood =
   | "tired"
   | "stressed"
   | "anxious"
-  | "overwhelmed";
+  | "overwhelmed"
 
 const suggestions: { title: string; mood: Mood }[] = [
   {
@@ -66,11 +68,8 @@ const suggestions: { title: string; mood: Mood }[] = [
       "I'm overwhelmed and need a simple, low-pressure getaway where everything feels taken care of.",
     mood: "overwhelmed",
   },
-];
+]
 
-// ---------------------------
-// EXPRESSIVE MOOD ICONS
-// ---------------------------
 function MoodIcon({ mood }: { mood: Mood }) {
   const styles: Record<Mood, { bg: string; color: string }> = {
     joyful: { bg: "bg-yellow-100", color: "text-yellow-600" },
@@ -82,9 +81,9 @@ function MoodIcon({ mood }: { mood: Mood }) {
     stressed: { bg: "bg-red-100", color: "text-red-600" },
     anxious: { bg: "bg-cyan-100", color: "text-cyan-600" },
     overwhelmed: { bg: "bg-rose-100", color: "text-rose-600" },
-  };
+  }
 
-  const { bg, color } = styles[mood];
+  const { bg, color } = styles[mood]
 
   const mouthPath: Record<Mood, string> = {
     joyful: "M6 15 Q12 20 18 15",
@@ -96,7 +95,7 @@ function MoodIcon({ mood }: { mood: Mood }) {
     stressed: "M6 18 Q9 14 12 17 Q15 20 18 14",
     anxious: "M6 18 Q10 16 12 18 Q14 20 18 16",
     overwhelmed: "M6 19 Q12 9 18 19",
-  };
+  }
 
   const eyes: Record<Mood, React.ReactNode> = {
     joyful: (
@@ -131,75 +130,34 @@ function MoodIcon({ mood }: { mood: Mood }) {
     ),
     tired: (
       <>
-        <path
-          d="M7 9 Q8 8 9 9"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
-        <path
-          d="M15 9 Q16 8 17 9"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
+        <path d="M7 9 Q8 8 9 9" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+        <path d="M15 9 Q16 8 17 9" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
       </>
     ),
     stressed: (
       <>
-        <path
-          d="M7 9 Q9 7 11 9"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
-        <path
-          d="M13 9 Q15 7 17 9"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
+        <path d="M7 9 Q9 7 11 9" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+        <path d="M13 9 Q15 7 17 9" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
       </>
     ),
     anxious: (
       <>
         <circle cx="9" cy="9" r="1.5" fill="currentColor" />
         <circle cx="15" cy="9" r="1.5" fill="currentColor" />
-        <path
-          d="M6 8 Q12 5 18 8"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
+        <path d="M6 8 Q12 5 18 8" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
       </>
     ),
     overwhelmed: (
       <>
-        <path
-          d="M7 8 L11 10"
-          stroke="currentColor"
-          strokeWidth={2.2}
-          strokeLinecap="round"
-        />
-        <path
-          d="M17 8 L13 10"
-          stroke="currentColor"
-          strokeWidth={2.2}
-          strokeLinecap="round"
-        />
+        <path d="M7 8 L11 10" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
+        <path d="M17 8 L13 10" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
       </>
     ),
-  };
+  }
 
   return (
-    <div
-      className={`flex h-10 w-10 items-center justify-center rounded-full ${bg}`}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        className={`h-7 w-7 ${color}`}
-        aria-hidden="true"
-      >
+    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${bg}`}>
+      <svg viewBox="0 0 24 24" className={`h-7 w-7 ${color}`} aria-hidden="true">
         {eyes[mood]}
         <path
           d={mouthPath[mood]}
@@ -211,49 +169,64 @@ function MoodIcon({ mood }: { mood: Mood }) {
         />
       </svg>
     </div>
-  );
+  )
 }
 
-// ---------------------------
-// MAIN COMPONENT
-// ---------------------------
-export function WelcomeScreen({
-  onSuggestionClick,
-  userName,
-}: WelcomeScreenProps) {
-  const [value, setValue] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const sidebar = useSidebar();
-  const { setOpen, state, isMobile } = sidebar;
-  const [mounted, setMounted] = useState(false);
+export function WelcomeScreen({ onSuggestionClick, userName }: WelcomeScreenProps) {
+  const [value, setValue] = useState("")
+  const inputRef = useRef<HTMLInputElement>(null)
+  const sidebar = useSidebar()
+  const { setOpen, state, isMobile } = sidebar
+  const [mounted, setMounted] = useState(false)
+
+  const [liveName, setLiveName] = useState<string | null>(() => {
+    const u = getUser()
+    return u?.username ?? (userName ?? null)
+  })
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const sync = () => {
+      const u = getUser()
+      setLiveName(u?.username ?? null)
+    }
+
+    sync()
+    window.addEventListener(USER_UPDATED_EVENT, sync)
+    return () => window.removeEventListener(USER_UPDATED_EVENT, sync)
+  }, [])
+
+  useEffect(() => {
+    if (userName != null && userName !== liveName) {
+      setLiveName(userName)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userName])
 
   const handlePick = (text: string) => {
-    setOpen(false);
-    onSuggestionClick(text);
-  };
+    setOpen(false)
+    onSuggestionClick(text)
+  }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const text = value.trim();
-    if (!text) return;
-    setOpen(false);
-    onSuggestionClick(text);
-    setValue("");
-  };
+    e.preventDefault()
+    const text = value.trim()
+    if (!text) return
+    setOpen(false)
+    onSuggestionClick(text)
+    setValue("")
+  }
 
-  const displayName = userName?.trim() || "John";
+  const displayName = (liveName ?? "").trim() || "John"
 
   const fixedBarStyle = !isMobile
     ? {
-        left: `var(${
-          state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"
-        })`,
+        left: `var(${state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"})`,
       }
-    : undefined;
+    : undefined
 
   const renderCard = (item: (typeof suggestions)[number], index: number) => (
     <Button
@@ -283,7 +256,7 @@ export function WelcomeScreen({
         </p>
       </div>
     </Button>
-  );
+  )
 
   return (
     <div className="relative flex h-full bg-white flex-1 flex-col">
@@ -298,8 +271,7 @@ export function WelcomeScreen({
           </div>
 
           <p className="text-base text-gray-600">
-            Hi, {displayName}! I'm <span className="font-medium">MoMo</span>,
-            your mood-based travel buddy.
+            Hi, {displayName}! I'm <span className="font-medium">MoMo</span>, your mood-based travel buddy.
           </p>
 
           <h2 className="mt-4 text-2xl font-semibold text-gray-900">
@@ -308,21 +280,16 @@ export function WelcomeScreen({
         </div>
 
         <div className="mx-auto w-full max-w-5xl">
-          {/* Small screens: 2×2 (first 4) */}
           <div className="hidden sm:grid grid-cols-2 gap-4 md:hidden">
-            {suggestions.slice(0, 4).map((item, index) =>
-              renderCard(item, index)
-            )}
+            {suggestions.slice(0, 4).map((item, index) => renderCard(item, index))}
           </div>
 
-          {/* Medium and up: full 3×3 */}
           <div className="hidden md:grid md:grid-cols-3 gap-4">
             {suggestions.map((item, index) => renderCard(item, index))}
           </div>
         </div>
       </div>
 
-      {/* bottom input */}
       <div
         className={`fixed bottom-10 z-50 flex justify-center transition-all duration-300 ${
           isMobile ? "left-3 right-3" : "right-4"
@@ -351,5 +318,5 @@ export function WelcomeScreen({
         </form>
       </div>
     </div>
-  );
+  )
 }
