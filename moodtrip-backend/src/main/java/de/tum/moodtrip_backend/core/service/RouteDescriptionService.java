@@ -24,7 +24,7 @@ public class RouteDescriptionService {
 
     public Mono<RouteText> generateRouteText(String mood, String city, List<EnrichedPoi> pois, int tripDays, boolean isMocked) {
         LOGGER.info("Generating route text for mood: {}, city: {}, with {} POIs, {} days (isMocked={})",
-            mood, city, pois.size(), tripDays, isMocked);
+            mood, city, pois != null ? pois.size() : 0, tripDays, isMocked);
 
         // Call the port to generate the route text
         return routeDescriptionGeneratorPort.generateRouteText(mood, city, pois, tripDays, isMocked)
