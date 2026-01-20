@@ -19,7 +19,17 @@ interface RouteCarouselProps {
 export function RouteCarousel({ routes, onRouteClick }: RouteCarouselProps) {
   // Get the first day's description for card preview
   const getPreviewDescription = (dayDescriptions: Record<string, string>) => {
-    return dayDescriptions?.["1"] || Object.values(dayDescriptions || {})[0] || "A personalized route based on your mood.";
+    const firstDayDescription = dayDescriptions?.["1"];
+    if (firstDayDescription) {
+      return firstDayDescription;
+    }
+
+    const descriptions = Object.values(dayDescriptions || {});
+    if (descriptions.length > 0 && descriptions[0]) {
+      return descriptions[0];
+    }
+
+    return "A personalized route based on your mood.";
   };
 
   return (
