@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.Iterator;
+import java.util.Map;
 
 @Service
 public class WikipediaAdapter implements WikipediaPort {
@@ -67,7 +69,10 @@ public class WikipediaAdapter implements WikipediaPort {
         return fetchWikipediaSummary(wikipediaTag, JsonNode.class)
                 .flatMap(json -> {
                     String url = WikipediaMediaMapper.mapImageFromWikipediaJson(json);
-                    return url != null ? Mono.just(url) : Mono.empty();
+                    if (url == null || url.isBlank()) {
+                        return Mono.empty();
+                    }
+                    return resolveCommonsImageUrl(url).switchIfEmpty(Mono.just(url));
                 });
     }
 
@@ -96,7 +101,10 @@ public class WikipediaAdapter implements WikipediaPort {
                 .bodyToMono(JsonNode.class)
                 .flatMap(json -> {
                     String url = WikipediaMediaMapper.mapImageFromWikidataJson(json, id);
-                    return url != null ? Mono.just(url) : Mono.empty();
+                    if (url == null || url.isBlank()) {
+                        return Mono.empty();
+                    }
+                    return resolveCommonsImageUrl(url).switchIfEmpty(Mono.just(url));
                 })
                 .doOnError(e -> LOGGER.warn("Failed to fetch Wikidata image for ID {}: {}", id, e.getMessage()))
                 .onErrorResume(e -> Mono.empty());
@@ -120,12 +128,181 @@ public class WikipediaAdapter implements WikipediaPort {
         }
 
         String trimmed = commonsTag.trim();
+        if (isCommonsCategoryTag(trimmed)) {
+            return fetchImageFromCommonsCategory(trimmed);
+        }
         // Build a basic Commons page URL and delegate normalization to the mapper.
         String title = trimmed.replace(' ', '_');
         String commonsPageUrl = "https://commons.wikimedia.org/wiki/" + title;
 
         String normalized = WikipediaMediaMapper.normalizeCommonsFileUrl(commonsPageUrl);
-        return Mono.just(normalized);
+        if (normalized == null || normalized.isBlank()) {
+            return Mono.empty();
+        }
+        return resolveCommonsImageUrl(normalized).switchIfEmpty(Mono.just(normalized));
+    }
+
+    private static boolean isCommonsCategoryTag(String commonsTag) {
+        String lower = commonsTag.toLowerCase();
+        return lower.startsWith("category:") || lower.startsWith("kategorie:");
+    }
+
+    private Mono<String> fetchImageFromCommonsCategory(String categoryTag) {
+        String title = categoryTag.trim().replace(' ', '_');
+        WebClient commonsClient = buildCommonsClient();
+
+        return commonsClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/w/api.php")
+                        .queryParam("action", "query")
+                        .queryParam("list", "categorymembers")
+                        .queryParam("cmtitle", title)
+                        .queryParam("cmtype", "file")
+                        .queryParam("cmlimit", "1")
+                        .queryParam("format", "json")
+                        .build())
+                .retrieve()
+                .bodyToMono(JsonNode.class)
+                .flatMap(json -> {
+                    JsonNode members = json.path("query").path("categorymembers");
+                    if (!members.isArray() || members.isEmpty()) {
+                        return Mono.empty();
+                    }
+                    String fileTitle = members.get(0).path("title").asText("");
+                    if (fileTitle.isBlank()) {
+                        return Mono.empty();
+                    }
+                    return fetchCommonsImageInfoForTitle(fileTitle)
+                            .switchIfEmpty(Mono.defer(() -> {
+                                String filePageUrl = "https://commons.wikimedia.org/wiki/" + fileTitle.replace(' ', '_');
+                                String normalized = WikipediaMediaMapper.normalizeCommonsFileUrl(filePageUrl);
+                                if (normalized == null || normalized.isBlank()) {
+                                    return Mono.empty();
+                                }
+                                return resolveCommonsImageUrl(normalized).switchIfEmpty(Mono.just(normalized));
+                            }));
+                })
+                .doOnError(e -> LOGGER.warn("Failed to fetch Commons category image for {}: {}", title, e.getMessage()))
+                .onErrorResume(e -> Mono.empty());
+    }
+
+    private WebClient buildCommonsClient() {
+        return wikipediaClient.mutate()
+                .baseUrl("https://commons.wikimedia.org")
+                .build();
+    }
+
+    private Mono<String> resolveCommonsImageUrl(String input) {
+        if (input == null || input.isBlank()) {
+            return Mono.empty();
+        }
+        if (WikipediaMediaMapper.isUploadWikimediaUrl(input)) {
+            return Mono.just(input.trim());
+        }
+        String fileTitle = WikipediaMediaMapper.extractCommonsFileTitle(input);
+        if (fileTitle == null || fileTitle.isBlank()) {
+            return Mono.empty();
+        }
+        return fetchCommonsImageInfoForTitle(fileTitle)
+                .switchIfEmpty(Mono.defer(() -> {
+                    if (hasExtension(fileTitle)) {
+                        return Mono.empty();
+                    }
+                    String prefix = stripFilePrefix(fileTitle);
+                    return fetchCommonsImageInfoByPrefix(prefix);
+                }));
+    }
+
+    private Mono<String> fetchCommonsImageInfoForTitle(String fileTitle) {
+        if (fileTitle == null || fileTitle.isBlank()) {
+            return Mono.empty();
+        }
+        String normalizedTitle = normalizeFileTitle(fileTitle);
+        WebClient commonsClient = buildCommonsClient();
+        return commonsClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/w/api.php")
+                        .queryParam("action", "query")
+                        .queryParam("titles", normalizedTitle)
+                        .queryParam("prop", "imageinfo")
+                        .queryParam("iiprop", "url")
+                        .queryParam("redirects", "1")
+                        .queryParam("format", "json")
+                        .build())
+                .retrieve()
+                .bodyToMono(JsonNode.class)
+                .flatMap(json -> {
+                    String url = extractImageInfoUrl(json);
+                    return (url == null || url.isBlank()) ? Mono.empty() : Mono.just(url);
+                })
+                .doOnError(e -> LOGGER.warn("Failed to fetch Commons image info for {}: {}", normalizedTitle, e.getMessage()))
+                .onErrorResume(e -> Mono.empty());
+    }
+
+    private Mono<String> fetchCommonsImageInfoByPrefix(String prefix) {
+        if (prefix == null || prefix.isBlank()) {
+            return Mono.empty();
+        }
+        WebClient commonsClient = buildCommonsClient();
+        return commonsClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/w/api.php")
+                        .queryParam("action", "query")
+                        .queryParam("generator", "allimages")
+                        .queryParam("gaiprefix", prefix.trim().replace(' ', '_'))
+                        .queryParam("gailimit", "1")
+                        .queryParam("prop", "imageinfo")
+                        .queryParam("iiprop", "url")
+                        .queryParam("format", "json")
+                        .build())
+                .retrieve()
+                .bodyToMono(JsonNode.class)
+                .flatMap(json -> {
+                    String url = extractImageInfoUrl(json);
+                    return (url == null || url.isBlank()) ? Mono.empty() : Mono.just(url);
+                })
+                .doOnError(e -> LOGGER.warn("Failed to fetch Commons image by prefix {}: {}", prefix, e.getMessage()))
+                .onErrorResume(e -> Mono.empty());
+    }
+
+    private static String extractImageInfoUrl(JsonNode json) {
+        if (json == null) {
+            return null;
+        }
+        JsonNode pages = json.path("query").path("pages");
+        if (!pages.isObject()) {
+            return null;
+        }
+        Iterator<Map.Entry<String, JsonNode>> fields = pages.fields();
+        while (fields.hasNext()) {
+            JsonNode page = fields.next().getValue();
+            JsonNode imageinfo = page.path("imageinfo");
+            if (imageinfo.isArray() && !imageinfo.isEmpty()) {
+                String url = imageinfo.get(0).path("url").asText("");
+                if (!url.isBlank()) {
+                    return url;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String normalizeFileTitle(String fileTitle) {
+        String normalized = fileTitle.trim().replace(' ', '_');
+        return normalized.regionMatches(true, 0, "File:", 0, "File:".length())
+                ? normalized
+                : "File:" + normalized;
+    }
+
+    private static boolean hasExtension(String fileTitle) {
+        String name = stripFilePrefix(fileTitle);
+        return name.contains(".");
+    }
+
+    private static String stripFilePrefix(String fileTitle) {
+        int colon = fileTitle.indexOf(':');
+        String name = colon >= 0 ? fileTitle.substring(colon + 1) : fileTitle;
+        return name.trim().replace(' ', '_');
     }
 
     /**
@@ -133,7 +310,7 @@ public class WikipediaAdapter implements WikipediaPort {
      * <p>
      * Resolution strategy:
      * <ol>
-     *   <li>If a valid HTTP(S) imageTag is present, return it (normalizing Commons file-page URLs).</li>
+     *   <li>If an imageTag is present, try to resolve it to a direct image URL.</li>
      *   <li>Otherwise, try to fetch an image URL from the Wikipedia tag.</li>
      *   <li>Otherwise, try to fetch an image URL from the Wikidata entity (P18).</li>
      *   <li>Otherwise, try to derive an image URL from the wikimedia_commons tag.</li>
@@ -147,22 +324,26 @@ public class WikipediaAdapter implements WikipediaPort {
      */
     @Override
     public Mono<String> fetchImageUrl(String imageTag, String wikipediaTag, String wikidataId, String wikimediaCommonsTag) {
-        // 1. Direct image tag, if it looks like a usable URL
-        if (imageTag != null && !imageTag.isBlank() && WikipediaMediaMapper.isValidHttpUrl(imageTag)) {
-            String normalized = WikipediaMediaMapper.normalizeCommonsFileUrl(imageTag);
-            LOGGER.info("Using direct image tag: {}", normalized);
-            return Mono.just(normalized);
+        Mono<String> directImage = Mono.empty();
+        if (imageTag != null && !imageTag.isBlank()) {
+            if (WikipediaMediaMapper.isValidHttpUrl(imageTag)) {
+                String normalized = WikipediaMediaMapper.normalizeCommonsFileUrl(imageTag);
+                directImage = resolveCommonsImageUrl(normalized).switchIfEmpty(Mono.just(normalized));
+            } else {
+                directImage = resolveCommonsImageUrl(imageTag);
+            }
+            directImage = directImage.doOnNext(url -> LOGGER.info("Using direct image tag: {}", url));
         }
 
         // 2. Wikipedia → image (originalimage/thumbnail)
-        return fetchImageFromWikipediaTag(wikipediaTag)
+        return directImage.switchIfEmpty(fetchImageFromWikipediaTag(wikipediaTag)
                 .doOnNext(url -> LOGGER.info("Found image via Wikipedia tag {}: {}", wikipediaTag, url))
                 // 3. If still empty, fall back to Wikidata → P18 → Commons
                 .switchIfEmpty(fetchImageFromWikidataId(wikidataId)
                         .doOnNext(url -> LOGGER.info("Found image via Wikidata ID {}: {}", wikidataId, url)))
                 // 4. Finally, try Wikimedia Commons tag as a last resort
                 .switchIfEmpty(fetchImageFromWikimediaCommonsTag(wikimediaCommonsTag)
-                        .doOnNext(url -> LOGGER.info("Found image via Commons tag {}: {}", wikimediaCommonsTag, url)));
+                        .doOnNext(url -> LOGGER.info("Found image via Commons tag {}: {}", wikimediaCommonsTag, url))));
     }
 
     /**

@@ -4,6 +4,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 public final class WikipediaMediaMapper {
 
+    private static final String[] FILE_NAMESPACE_PREFIXES = {
+            "File:",
+            "Datei:",
+            "Image:",
+            "Fichier:",
+            "Archivo:",
+            "Dosiero:",
+            "Bestand:",
+            "Plik:"
+    };
+
     /**
      * Helper to check if a string is a valid HTTP(S) URL.
      *
@@ -58,6 +69,75 @@ public final class WikipediaMediaMapper {
         String filePath = "https://commons.wikimedia.org/wiki/Special:FilePath/" + filename;
         return appendDefaultExtensionIfMissing(filePath);
     }
+
+    /**
+     * Extract a Commons file title (File:...) from a URL or title-like input.
+     *
+     * @param input URL or title fragment
+     * @return normalized file title, or null if it cannot be determined
+     */
+    public static String extractCommonsFileTitle(String input) {
+        if (input == null || input.isBlank()) {
+            return null;
+        }
+        String trimmed = input.trim();
+        if (looksLikeUrl(trimmed) && !isCommonsUrl(trimmed)) {
+            return null;
+        }
+
+        String directTitle = normalizeFileTitle(trimmed);
+        if (directTitle != null) {
+            return directTitle;
+        }
+
+        int filePathIndex = trimmed.indexOf("Special:FilePath/");
+        if (filePathIndex >= 0) {
+            String filename = trimmed.substring(filePathIndex + "Special:FilePath/".length());
+            filename = stripQueryAndFragment(filename);
+            filename = decodeUrlComponent(filename);
+            if (!filename.isBlank()) {
+                return "File:" + filename.replace(' ', '_');
+            }
+        }
+
+        String titleFromParam = extractFilenameFromTitleParam(trimmed);
+        if (titleFromParam != null) {
+            return "File:" + titleFromParam;
+        }
+
+        int wikiIndex = trimmed.indexOf("/wiki/");
+        if (wikiIndex >= 0) {
+            String titleSegment = trimmed.substring(wikiIndex + "/wiki/".length());
+            titleSegment = stripQueryAndFragment(titleSegment);
+            titleSegment = decodeUrlComponent(titleSegment);
+            String fromTitle = normalizeFileTitle(titleSegment);
+            if (fromTitle != null) {
+                return fromTitle;
+            }
+        }
+
+        if (looksLikeFilename(trimmed)) {
+            return "File:" + trimmed.replace(' ', '_');
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if the URL points to a direct Wikimedia upload.
+     */
+    public static boolean isUploadWikimediaUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return false;
+        }
+        try {
+            java.net.URI uri = new java.net.URI(url.trim());
+            String host = uri.getHost();
+            return host != null && host.endsWith("upload.wikimedia.org");
+        } catch (Exception e) {
+            return url.contains("upload.wikimedia.org");
+        }
+    }
     
     private static String appendDefaultExtensionIfMissing(String url) {
         int slash = url.lastIndexOf('/');
@@ -92,6 +172,60 @@ public final class WikipediaMediaMapper {
         // Defensive cleanup
         filename = filename.replace(' ', '_');
         return filename;
+    }
+
+    private static String normalizeFileTitle(String input) {
+        String candidate = input.trim().replace(' ', '_');
+        for (String prefix : FILE_NAMESPACE_PREFIXES) {
+            if (candidate.regionMatches(true, 0, prefix, 0, prefix.length())) {
+                String name = candidate.substring(prefix.length());
+                return name.isBlank() ? null : "File:" + name;
+            }
+        }
+        return null;
+    }
+
+    private static String stripQueryAndFragment(String value) {
+        int hashIndex = value.indexOf('#');
+        if (hashIndex >= 0) {
+            value = value.substring(0, hashIndex);
+        }
+        int queryIndex = value.indexOf('?');
+        if (queryIndex >= 0) {
+            value = value.substring(0, queryIndex);
+        }
+        return value;
+    }
+
+    private static boolean looksLikeFilename(String value) {
+        int lastSlash = value.lastIndexOf('/');
+        String basename = lastSlash >= 0 ? value.substring(lastSlash + 1) : value;
+        return basename.contains(".");
+    }
+
+    private static boolean looksLikeUrl(String value) {
+        return value.startsWith("http://") || value.startsWith("https://");
+    }
+
+    private static boolean isCommonsUrl(String value) {
+        try {
+            java.net.URI uri = new java.net.URI(value);
+            String host = uri.getHost();
+            return host != null && (host.endsWith("commons.wikimedia.org") || host.endsWith("upload.wikimedia.org"));
+        } catch (Exception e) {
+            return value.contains("commons.wikimedia.org") || value.contains("upload.wikimedia.org");
+        }
+    }
+
+    private static String decodeUrlComponent(String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+        try {
+            return java.net.URLDecoder.decode(value, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return value;
+        }
     }
 
     private static String extractFilenameFromTitleParam(String url) {
