@@ -122,42 +122,47 @@ public class RouteTextMapper {
 
                     // Extract each day's description
                     for (int day = 1; day <= tripDays; day++) {
-                        String dayKey = "\"" + day + "\"";
-                        int dayKeyPos = dayDescBlock.indexOf(dayKey);
-                        if (dayKeyPos == -1) {
-                            dayKey = "'" + day + "'";
-                            dayKeyPos = dayDescBlock.indexOf(dayKey);
+                        // Use pattern with colon to avoid partial matches (e.g., "1" matching "10")
+                        String dayKeyPattern = "\"" + day + "\"\\s*:";
+                        java.util.regex.Pattern keyPattern = java.util.regex.Pattern.compile(dayKeyPattern);
+                        java.util.regex.Matcher keyMatcher = keyPattern.matcher(dayDescBlock);
+
+                        if (!keyMatcher.find()) {
+                            // Try single quotes
+                            dayKeyPattern = "'" + day + "'\\s*:";
+                            keyPattern = java.util.regex.Pattern.compile(dayKeyPattern);
+                            keyMatcher = keyPattern.matcher(dayDescBlock);
                         }
 
-                        if (dayKeyPos != -1) {
-                            // Find the value after the colon
-                            int colonPos = dayDescBlock.indexOf(":", dayKeyPos);
-                            if (colonPos != -1) {
-                                // Find the opening quote
-                                int quoteStart = dayDescBlock.indexOf("\"", colonPos);
-                                char quoteChar = '"';
-                                if (quoteStart == -1) {
-                                    quoteStart = dayDescBlock.indexOf("'", colonPos);
+                        if (keyMatcher.find()) {
+                            int colonEnd = keyMatcher.end();
+                            // Find the opening quote after the colon
+                            int quoteStart = dayDescBlock.indexOf("\"", colonEnd);
+                            char quoteChar = '"';
+                            if (quoteStart == -1 || quoteStart > colonEnd + 10) {
+                                int singleQuoteStart = dayDescBlock.indexOf("'", colonEnd);
+                                if (singleQuoteStart != -1 && (quoteStart == -1 || singleQuoteStart < quoteStart)) {
+                                    quoteStart = singleQuoteStart;
                                     quoteChar = '\'';
                                 }
+                            }
 
-                                if (quoteStart != -1) {
-                                    // Find the closing quote (handle escaped quotes)
-                                    int quoteEnd = quoteStart + 1;
-                                    while (quoteEnd < dayDescBlock.length()) {
-                                        char c = dayDescBlock.charAt(quoteEnd);
-                                        if (c == quoteChar && (quoteEnd == quoteStart + 1 || dayDescBlock.charAt(quoteEnd - 1) != '\\')) {
-                                            break;
-                                        }
-                                        quoteEnd++;
+                            if (quoteStart != -1) {
+                                // Find the closing quote (handle escaped quotes)
+                                int quoteEnd = quoteStart + 1;
+                                while (quoteEnd < dayDescBlock.length()) {
+                                    char c = dayDescBlock.charAt(quoteEnd);
+                                    if (c == quoteChar && (quoteEnd == 0 || dayDescBlock.charAt(quoteEnd - 1) != '\\')) {
+                                        break;
                                     }
+                                    quoteEnd++;
+                                }
 
-                                    if (quoteEnd < dayDescBlock.length()) {
-                                        String description = dayDescBlock.substring(quoteStart + 1, quoteEnd);
-                                        // Unescape quotes
-                                        description = description.replace("\\\"", "\"").replace("\\'", "'");
-                                        dayDescriptions.put(day, description);
-                                    }
+                                if (quoteEnd < dayDescBlock.length()) {
+                                    String description = dayDescBlock.substring(quoteStart + 1, quoteEnd);
+                                    // Unescape quotes
+                                    description = description.replace("\\\"", "\"").replace("\\'", "'");
+                                    dayDescriptions.put(day, description);
                                 }
                             }
                         }
