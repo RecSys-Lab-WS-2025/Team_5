@@ -7,6 +7,7 @@ import java.util.Map;
 import org.geojson.FeatureCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
@@ -51,9 +52,14 @@ public class SurveyController {
     private final MusicRecommendationService musicRecommendationService;
     private final EmotionToFeatureMapper emotionToFeatureMapper;
     private static final Logger logger = LoggerFactory.getLogger(SurveyController.class);
-    private static final double DEFAULT_ENERGY_FACTOR = 1.0;
-    private static final double HIGH_ENERGY_FACTOR = 1.3;
-    private static final double LOW_ENERGY_FACTOR = 0.7;
+    @Value("${app.energy.factor.default:1.0}")
+    private double defaultEnergyFactor;
+
+    @Value("${app.energy.factor.high:1.3}")
+    private double highEnergyFactor;
+
+    @Value("${app.energy.factor.low:0.7}")
+    private double lowEnergyFactor;
 
 
     public SurveyController(final SurveyPort surveyPort, final SurveyDtoMapper surveyDtoMapper, final GeoJsonRouteMapper geoJsonRouteMapper, final JwtService jwtService, final ConversationDomainService conversationDomainService, final RouteService routeService, final UserDomainService userDomainService, final MusicRecommendationService musicRecommendationService, final EmotionToFeatureMapper emotionToFeatureMapper) {
@@ -103,9 +109,9 @@ public class SurveyController {
                                                 double energyScore = emotionWeights.entrySet().stream()
                                                         .mapToDouble(entry -> {
                                                             double factor = switch (entry.getKey()) {
-                                                                case ENERGIZED, JOYFUL, CURIOUS -> HIGH_ENERGY_FACTOR;
-                                                                case NEUTRAL, NOSTALGIC -> DEFAULT_ENERGY_FACTOR;
-                                                                case TIRED, SAD, STRESSED, CALM -> LOW_ENERGY_FACTOR;
+                                                                case ENERGIZED, JOYFUL, CURIOUS -> highEnergyFactor;
+                                                                case NEUTRAL, NOSTALGIC -> defaultEnergyFactor;
+                                                                case TIRED, SAD, STRESSED, CALM -> lowEnergyFactor;
                                                             };
                                                             return entry.getValue() * factor;
                                                         })
