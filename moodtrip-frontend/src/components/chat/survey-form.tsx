@@ -359,7 +359,7 @@ export function SurveyForm({
                                     setRange(km * 1000);
                                     setRangeInput(km.toString());
                                 }}
-                                max={100}
+                                max={30}
                                 min={1}
                                 step={1}
                                 disabled={isDisabled}
@@ -375,10 +375,10 @@ export function SurveyForm({
 
                                     const val = parseFloat(valStr);
                                     if (!isNaN(val)) {
-                                        if (val > 100) {
-                                            // Clamp > 100 immediately to 100 for better UX
-                                            setRange(100000);
-                                            setRangeInput("100");
+                                        if (val > 30) {
+                                            // Clamp > 30 immediately to 30 for better UX
+                                            setRange(30000);
+                                            setRangeInput("30");
                                         } else if (val >= 1) {
                                             // Valid range update
                                             setRange(val * 1000);
@@ -394,14 +394,14 @@ export function SurveyForm({
                                     } else {
                                         // Clamp on blur
                                         if (val < 1) val = 1;
-                                        if (val > 100) val = 100;
+                                        if (val > 30) val = 30;
                                     }
                                     setRange(val * 1000);
                                     setRangeInput(val.toString());
                                 }}
                                 disabled={isDisabled}
                                 min={1}
-                                max={100}
+                                max={30}
                                 step={1}
                             />
                             <span className="text-sm font-medium text-gray-700">km</span>
