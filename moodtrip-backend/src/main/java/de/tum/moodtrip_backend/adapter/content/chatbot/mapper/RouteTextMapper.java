@@ -74,132 +74,52 @@ public class RouteTextMapper {
 
     // ==================== Private Parsing Methods ====================
 
+    private static final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /**
+     * DTO for parsing JSON response
+     */
+    private static class RouteTextDto {
+        public String title;
+        public Map<String, String> dayDescriptions;
+    }
+
     /**
      * Attempt to parse JSON format with dayDescriptions:
      * {"title": "...", "dayDescriptions": {"1": "...", "2": "..."}}
      */
     private static RouteText tryParseJsonFormat(String response, int tripDays) {
-        if (!response.startsWith("{") || !response.endsWith("}")) {
-            LOGGER.debug("Not JSON format (no braces)");
-            return null;
+        if (!response.trim().startsWith("{")) {
+             LOGGER.debug("Not JSON format (does not start with brace)");
+             return null;
         }
 
         try {
-            // Extract title
-            String titlePattern = "\"title\"\\s*:\\s*\"([^\"]*)\"|'title'\\s*:\\s*'([^']*)'";
-            java.util.regex.Pattern titleRe = java.util.regex.Pattern.compile(titlePattern);
-            java.util.regex.Matcher titleMatcher = titleRe.matcher(response);
+            // Configure loose parsing to handle potential AI inconsistencies
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-            String extractedTitle = null;
-            if (titleMatcher.find()) {
-                extractedTitle = titleMatcher.group(1) != null ? titleMatcher.group(1) : titleMatcher.group(2);
-            }
-
-            // Extract dayDescriptions object
-            Map<Integer, String> dayDescriptions = new HashMap<>();
-
-            // Find the dayDescriptions block
-            int dayDescStart = response.indexOf("\"dayDescriptions\"");
-            if (dayDescStart == -1) {
-                dayDescStart = response.indexOf("'dayDescriptions'");
-            }
-
-            if (dayDescStart != -1) {
-                // Find the opening brace of the dayDescriptions object
-                int braceStart = response.indexOf("{", dayDescStart);
-                if (braceStart != -1) {
-                    // Find the matching closing brace
-                    int braceCount = 1;
-                    int braceEnd = braceStart + 1;
-                    boolean inString = false;
-                    char stringChar = 0;
-                    boolean escaped = false;
-                    while (braceEnd < response.length() && braceCount > 0) {
-                        char c = response.charAt(braceEnd);
-
-                        if (inString) {
-                            if (escaped) {
-                                escaped = false;
-                            } else if (c == '\\') {
-                                escaped = true;
-                            } else if (c == stringChar) {
-                                inString = false;
-                            }
-                        } else {
-                            if (c == '"' || c == '\'') {
-                                inString = true;
-                                stringChar = c;
-                            } else if (c == '{') {
-                                braceCount++;
-                            } else if (c == '}') {
-                                braceCount--;
-                            }
-                        }
-                        braceEnd++;
-                    }
-
-                    String dayDescBlock = response.substring(braceStart, braceEnd);
-
-                    // Extract each day's description
-                    for (int day = 1; day <= tripDays; day++) {
-                        // Use pattern with colon to avoid partial matches (e.g., "1" matching "10")
-                        String dayKeyPattern = "\"" + day + "\"\\s*:";
-                        java.util.regex.Pattern keyPattern = java.util.regex.Pattern.compile(dayKeyPattern);
-                        java.util.regex.Matcher keyMatcher = keyPattern.matcher(dayDescBlock);
-                        boolean found = keyMatcher.find();
-
-                        if (!found) {
-                            // Try single quotes
-                            dayKeyPattern = "'" + day + "'\\s*:";
-                            keyPattern = java.util.regex.Pattern.compile(dayKeyPattern);
-                            keyMatcher = keyPattern.matcher(dayDescBlock);
-                            found = keyMatcher.find();
-                        }
-
-                        if (found) {
-                            int colonEnd = keyMatcher.end();
-                            // Find the opening quote after the colon
-                            int quoteStart = dayDescBlock.indexOf("\"", colonEnd);
-                            char quoteChar = '"';
-                            if (quoteStart == -1 || quoteStart > colonEnd + 10) {
-                                int singleQuoteStart = dayDescBlock.indexOf("'", colonEnd);
-                                if (singleQuoteStart != -1 && (quoteStart == -1 || singleQuoteStart < quoteStart)) {
-                                    quoteStart = singleQuoteStart;
-                                    quoteChar = '\'';
-                                }
-                            }
-
-                            if (quoteStart != -1) {
-                                // Find the closing quote (handle escaped quotes)
-                                int quoteEnd = quoteStart + 1;
-                                while (quoteEnd < dayDescBlock.length()) {
-                                    char c = dayDescBlock.charAt(quoteEnd);
-                                    if (c == quoteChar && (quoteEnd == 0 || dayDescBlock.charAt(quoteEnd - 1) != '\\')) {
-                                        break;
-                                    }
-                                    quoteEnd++;
-                                }
-
-                                if (quoteEnd < dayDescBlock.length()) {
-                                    String description = dayDescBlock.substring(quoteStart + 1, quoteEnd);
-                                    // Unescape quotes
-                                    description = description.replace("\\\"", "\"").replace("\\'", "'");
-                                    dayDescriptions.put(day, description);
-                                }
-                            }
-                        }
+            RouteTextDto dto = objectMapper.readValue(response, RouteTextDto.class);
+            
+            if (dto.title != null && dto.dayDescriptions != null && !dto.dayDescriptions.isEmpty()) {
+                // Convert Map<String, String> to Map<Integer, String>
+                Map<Integer, String> intDayDescriptions = new HashMap<>();
+                for (Map.Entry<String, String> entry : dto.dayDescriptions.entrySet()) {
+                    try {
+                        intDayDescriptions.put(Integer.parseInt(entry.getKey()), entry.getValue());
+                    } catch (NumberFormatException e) {
+                        LOGGER.warn("Invalid day key in JSON: {}", entry.getKey());
                     }
                 }
-            }
-
-            if (extractedTitle != null && !dayDescriptions.isEmpty()) {
+                
                 LOGGER.info("Successfully parsed JSON format - Title: '{}', {} day descriptions",
-                    extractedTitle, dayDescriptions.size());
-                return new RouteText(extractedTitle, dayDescriptions);
-            } else {
-                LOGGER.warn("JSON format detected but fields not found - title: {}, dayDescriptions: {}",
-                    extractedTitle != null, dayDescriptions.size());
+                    dto.title, intDayDescriptions.size());
+                return new RouteText(dto.title, intDayDescriptions);
             }
+             
+            LOGGER.warn("JSON parsed but missing required fields");
+
         } catch (Exception e) {
             LOGGER.warn("Failed to parse as JSON format: {}", e.getMessage());
         }
