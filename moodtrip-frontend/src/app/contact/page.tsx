@@ -32,7 +32,7 @@ export default function ContactPage() {
                 href="mailto:hello@moodtrip.app"
                 className="!block !mt-2 !text-lg !font-semibold !underline !underline-offset-4"
               >
-                hello@moodtrip.com
+                hello@moodtrip.app
               </a>
             </div>
 
