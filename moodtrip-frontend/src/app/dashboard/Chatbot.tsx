@@ -52,7 +52,7 @@ type AnyFeature = Feature<Geometry, GeoJsonProperties>;
 type RouteProperties = {
   type?: "route";
   name?: string;
-  description?: string;
+  dayDescriptions?: Record<string, string>;
   image?: string;
   distanceMeters?: number;
   durationSeconds?: number;

@@ -128,12 +128,14 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {routeData.description &&
+        {routeData.dayDescriptions &&
           (() => {
-            const description = routeData.description
-            const shouldCollapse = description.length > 150
+            const dayDescription = routeData.dayDescriptions[String(selectedDay)] ||
+              Object.values(routeData.dayDescriptions)[0] ||
+              "Explore and enjoy the planned activities."
+            const shouldCollapse = dayDescription.length > 150
             const displayText =
-              shouldCollapse && !isDescriptionExpanded ? description.substring(0, 150) + "..." : description
+              shouldCollapse && !isDescriptionExpanded ? dayDescription.substring(0, 150) + "..." : dayDescription
 
             return (
               <SidebarGroup className="mb-6">
@@ -146,7 +148,9 @@ export function AppSidebar({
                           onClick={() => setIsDescriptionExpanded((v) => !v)}
                           className="w-full flex items-center justify-between p-4 pb-3 text-left"
                         >
-                          <span className="text-sm font-medium text-gray-700">Description</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            {totalDays > 1 ? `Day ${selectedDay} Description` : "Description"}
+                          </span>
                           {isDescriptionExpanded ? (
                             <ChevronUp className="h-4 w-4 text-gray-500" />
                           ) : (
@@ -159,8 +163,10 @@ export function AppSidebar({
                       </>
                     ) : (
                       <div className="p-4">
-                        <div className="text-sm font-medium text-gray-700 mb-3">Description</div>
-                        <p className="text-sm leading-relaxed text-gray-600">{description}</p>
+                        <div className="text-sm font-medium text-gray-700 mb-3">
+                          {totalDays > 1 ? `Day ${selectedDay} Description` : "Description"}
+                        </div>
+                        <p className="text-sm leading-relaxed text-gray-600">{dayDescription}</p>
                       </div>
                     )}
                   </div>
