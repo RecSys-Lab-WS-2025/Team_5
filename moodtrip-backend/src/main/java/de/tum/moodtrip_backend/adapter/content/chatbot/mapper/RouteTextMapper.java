@@ -126,15 +126,17 @@ public class RouteTextMapper {
                         String dayKeyPattern = "\"" + day + "\"\\s*:";
                         java.util.regex.Pattern keyPattern = java.util.regex.Pattern.compile(dayKeyPattern);
                         java.util.regex.Matcher keyMatcher = keyPattern.matcher(dayDescBlock);
+                        boolean found = keyMatcher.find();
 
-                        if (!keyMatcher.find()) {
+                        if (!found) {
                             // Try single quotes
                             dayKeyPattern = "'" + day + "'\\s*:";
                             keyPattern = java.util.regex.Pattern.compile(dayKeyPattern);
                             keyMatcher = keyPattern.matcher(dayDescBlock);
+                            found = keyMatcher.find();
                         }
 
-                        if (keyMatcher.find()) {
+                        if (found) {
                             int colonEnd = keyMatcher.end();
                             // Find the opening quote after the colon
                             int quoteStart = dayDescBlock.indexOf("\"", colonEnd);
