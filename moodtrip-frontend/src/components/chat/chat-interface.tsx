@@ -21,6 +21,7 @@ interface ChatInterfaceProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
+  isInputLocked?: boolean;
   routeGeoJson?: FeatureCollection | null;
   onSurveySubmit?: (data: SurveyData) => Promise<void> | void;
   currentEmotion?: string | null;
@@ -188,6 +189,7 @@ export function ChatInterface({
   handleInputChange,
   handleSubmit,
   isLoading,
+  isInputLocked = false,
   routeGeoJson,
   onSurveySubmit,
   currentEmotion,
@@ -529,20 +531,20 @@ export function ChatInterface({
             <Input
               value={input}
               onChange={handleInputChange}
-              placeholder="Ask anything"
+              placeholder={isInputLocked ? "Trip generated" : "Ask anything"}
               className="
                 h-auto flex-1 border-0 bg-transparent px-0
                 text-sm
                 shadow-none
                 focus-visible:ring-0 focus-visible:ring-offset-0
               "
-              disabled={isLoading}
+              disabled={isLoading || isInputLocked}
             />
 
             <Button
               type="submit"
               size="icon"
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || isInputLocked}
               className="
                 ml-1 h-9 w-9 rounded-full
                 !bg-black text-white

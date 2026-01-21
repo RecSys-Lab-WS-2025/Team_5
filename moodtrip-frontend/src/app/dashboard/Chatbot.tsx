@@ -231,6 +231,17 @@ export default function Chatbot() {
   const [currentEmotion, setCurrentEmotion] = useState<string | null>(
     initialSnapshot?.currentEmotion ?? null
   );
+  const [isChatLocked, setIsChatLocked] = useState(() => {
+    const snapshotMessages = initialSnapshot?.messages ?? [];
+    return snapshotMessages.some(
+      (message) =>
+        message.role !== "user" &&
+        message.parts.some(
+          (part) =>
+            part.type === "text" && (part.text || "").includes("[ROUTE_CARDS]")
+        )
+    );
+  });
 
   const [spotifyUrlByChat, setSpotifyUrlByChat] = useState<
     Record<string, string | null>
@@ -249,6 +260,7 @@ export default function Chatbot() {
       setPendingChatId(null);
       setRouteGeoJson(null);
       setCurrentEmotion(null);
+      setIsChatLocked(false);
 
       navigate(".", { replace: true, state: null });
     }
@@ -289,17 +301,27 @@ export default function Chatbot() {
     return match[1].toLowerCase() === "true";
   }, []);
 
-  const didEmotionExtractionSucceed = useCallback((
-    messages: Array<{ sender: string; content: string }>
-  ) => {
-    let latestSuccess: boolean | null = null;
-    for (const message of messages) {
-      if (message.sender !== "BOT") continue;
-      const success = parseEmotionResultSuccess(message.content);
-      if (success !== null) latestSuccess = success;
-    }
-    return latestSuccess === true;
-  }, [parseEmotionResultSuccess]);
+  const didEmotionExtractionSucceed = useCallback(
+    (messages: Array<{ sender: string; content: string }>) => {
+      let latestSuccess: boolean | null = null;
+      for (const message of messages) {
+        if (message.sender !== "BOT") continue;
+        const success = parseEmotionResultSuccess(message.content);
+        if (success !== null) latestSuccess = success;
+      }
+      return latestSuccess === true;
+    },
+    [parseEmotionResultSuccess]
+  );
+
+  const didGenerateRoute = useCallback(
+    (messages: Array<{ sender: string; content: string }>) =>
+      messages.some(
+        (message) =>
+          message.sender === "BOT" && message.content.includes("[ROUTE_CARDS]")
+      ),
+    []
+  );
 
   const getEmotionIcon = (emotion?: string) => {
     if (!emotion) return undefined;
@@ -351,11 +373,13 @@ export default function Chatbot() {
       }));
       setMessages(uiMsgs);
       setEmotionExtracted(didEmotionExtractionSucceed(msgs));
+      setIsChatLocked(didGenerateRoute(msgs));
     } catch (e) {
       console.error("Failed to load messages", e);
       setMessages([]);
+      setIsChatLocked(false);
     }
-  }, [didEmotionExtractionSucceed]);
+  }, [didEmotionExtractionSucceed, didGenerateRoute]);
 
   useEffect(() => {
     if (!selectedChatId) return;
@@ -377,6 +401,7 @@ export default function Chatbot() {
     setPendingChatId(null);
     setRouteGeoJson(null);
     setCurrentEmotion(null);
+    setIsChatLocked(false);
     clearSnapshot();
   };
 
@@ -392,7 +417,7 @@ export default function Chatbot() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text || !selectedChatId) return;
+    if (!text || !selectedChatId || isChatLocked) return;
 
     setInput("");
 
@@ -672,6 +697,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
         setPendingChatId(null);
         setRouteGeoJson(null);
         setCurrentEmotion(null);
+        setIsChatLocked(false);
         clearSnapshot();
       }
     } catch (e) {
@@ -762,6 +788,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
               handleInputChange={handleInputChange}
               handleSubmit={handleSubmit}
               isLoading={isLoading}
+              isInputLocked={isChatLocked}
               routeGeoJson={routeGeoJson}
               currentEmotion={currentEmotion}
               spotifyPlaylistUrl={
@@ -957,6 +984,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     parts: [{ type: "text", text: cardsPayload }],
                   };
                   setMessages((prev) => [...prev, cardsMsg]);
+                  setIsChatLocked(true);
                 } catch (e) {
                   console.error("Failed to submit survey", e);
                   setRouteGeoJson(null);
