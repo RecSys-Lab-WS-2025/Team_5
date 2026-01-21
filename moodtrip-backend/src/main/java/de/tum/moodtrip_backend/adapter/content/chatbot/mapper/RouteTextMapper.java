@@ -60,7 +60,7 @@ public class RouteTextMapper {
         if (cleanedResponse.startsWith("```")) {
             // Strip a leading code fence with optional language/metadata, then a trailing closing fence.
             cleanedResponse = cleanedResponse
-                .replaceFirst("^```[a-zA-Z0-9_+\\-]*\\s*", "")
+                .replaceFirst("^```[a-zA-Z0-9_+-]*\\s*", "")
                 .replaceFirst("```\\s*$", "")
                 .trim();
         }
