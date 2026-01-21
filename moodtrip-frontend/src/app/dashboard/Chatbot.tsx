@@ -282,6 +282,25 @@ export default function Chatbot() {
     return content;
   };
 
+  const parseEmotionResultSuccess = useCallback((content: string) => {
+    if (!content.startsWith("EmotionResult[")) return null;
+    const match = content.match(/success=(true|false)/i);
+    if (!match) return null;
+    return match[1].toLowerCase() === "true";
+  }, []);
+
+  const didEmotionExtractionSucceed = useCallback((
+    messages: Array<{ sender: string; content: string }>
+  ) => {
+    let latestSuccess: boolean | null = null;
+    for (const message of messages) {
+      if (message.sender !== "BOT") continue;
+      const success = parseEmotionResultSuccess(message.content);
+      if (success !== null) latestSuccess = success;
+    }
+    return latestSuccess === true;
+  }, [parseEmotionResultSuccess]);
+
   const getEmotionIcon = (emotion?: string) => {
     if (!emotion) return undefined;
     const e = emotion.toUpperCase();
@@ -323,7 +342,6 @@ export default function Chatbot() {
   }, [loadChats]);
 
   const loadMessages = useCallback(async (chatId: string) => {
-    setIsLoading(true);
     try {
       const msgs = await getConversationMessages(Number(chatId));
       const uiMsgs: UIMessage[] = msgs.map((m) => ({
@@ -332,20 +350,15 @@ export default function Chatbot() {
         parts: [{ type: "text", text: parseMessageContent(m.content) }],
       }));
       setMessages(uiMsgs);
-      setEmotionExtracted(uiMsgs.length > 0);
+      setEmotionExtracted(didEmotionExtractionSucceed(msgs));
     } catch (e) {
       console.error("Failed to load messages", e);
       setMessages([]);
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
+  }, [didEmotionExtractionSucceed]);
 
   useEffect(() => {
-    if (!selectedChatId) {
-      if (messages.length === 0) return;
-      return;
-    }
+    if (!selectedChatId) return;
 
     if (skipLoadRef.current) {
       skipLoadRef.current = false;
@@ -355,7 +368,7 @@ export default function Chatbot() {
     loadMessages(selectedChatId);
     const chat = chats.find((c) => c.id === selectedChatId);
     if (chat) setCurrentEmotion(chat.emotion || null);
-  }, [selectedChatId, loadMessages, chats, messages.length]);
+  }, [selectedChatId, loadMessages, chats]);
 
   const handleNewChat = async () => {
     setSelectedChatId(null);
