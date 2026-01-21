@@ -32,7 +32,7 @@ public class ScoringConfigFactory {
     private double discoveryEmotionMultiplier;
     @Value("${app.route-type.discovery.category-boost-multiplier:0.3}")
     private double discoveryCategoryBoostMultiplier;
-    @Value("${app.route-type.discovery.mmr-lambda:0.50}")
+    @Value("${app.route-type.discovery.mmr-lambda:0.4}")
     private double discoveryMmrLambda;
 
     public ScoringConfig balanced() {
