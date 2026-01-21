@@ -902,16 +902,6 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   };
                   setMessages((prev) => [...prev, successMsg]);
 
-                  const mapPayload = `[ROUTE_MAP] ${JSON.stringify(routeData)}`;
-                  await apiSendMessage(conversationId, mapPayload, false);
-
-                  const mapMsg: UIMessage = {
-                    id: (Date.now() + 2).toString(),
-                    role: "assistant",
-                    parts: [{ type: "text", text: mapPayload }],
-                  };
-                  setMessages((prev) => [...prev, mapMsg]);
-
                   const routeFc = routeData as FeatureCollection;
                   const allFeatures = (routeFc.features ?? []) as AnyFeature[];
 
