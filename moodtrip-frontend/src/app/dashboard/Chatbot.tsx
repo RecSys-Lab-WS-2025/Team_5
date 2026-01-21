@@ -28,6 +28,7 @@ import {
 
 import { getUser } from "@/api/auth";
 import { onUserUpdated } from "@/lib/user-events";
+import { normalizePoiCategories } from "@/lib/poi-categories";
 import {
   startConversation,
   getMyConversations,
@@ -186,11 +187,7 @@ function normalizeRangeMeters(rangeMeters: unknown) {
 }
 
 function normalizeCategories(cats: unknown): string[] {
-  if (!Array.isArray(cats)) return [];
-  return cats
-    .map((x) => (typeof x === "string" ? x.trim() : ""))
-    .filter(Boolean)
-    .map((x) => x.toUpperCase());
+  return normalizePoiCategories(cats);
 }
 
 export default function Chatbot() {
