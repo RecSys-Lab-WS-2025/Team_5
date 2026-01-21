@@ -933,7 +933,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   setMessages((prev) => [...prev, successMsg]);
 
                   // Check if routes array exists (it should be present in the response type now)
-                  const routesArray = (res.routes && res.routes.length > 0) ? res.routes : [routeData];
+                  const routesArray = Array.isArray(res.routes) ? res.routes : [routeData];
 
                   // Track used images to prioritize diversity
                   const usedImages = new Set<string>();
