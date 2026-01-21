@@ -4,8 +4,6 @@ public enum Emotion {
     JOYFUL,
     ENERGIZED,
     CALM,
-    CURIOUS,
-    NOSTALGIC,
     NEUTRAL,
     STRESSED,
     SAD,

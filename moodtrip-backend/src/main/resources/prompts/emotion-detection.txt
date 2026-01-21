@@ -38,14 +38,12 @@ Output keys
     - if success = false: short follow-up message to the user asking for more input
 
 Tie-break precedence (from strongest to weakest when scores are equal):
-STRESSED > SAD > TIRED > NEUTRAL > CURIOUS > NOSTALGIC > CALM > ENERGIZED > JOYFUL.
+STRESSED > SAD > TIRED > NEUTRAL > CALM > ENERGIZED > JOYFUL.
 
 Mood Spectrum (label → what ideas to look for → example keywords/phrases)
 JOYFUL → high-energy positive affect, celebration, delight, satisfaction, gratitude → happy, joyful, thrilled, ecstatic, delighted, amazing, great news, content, satisfied, thankful, blessed
 ENERGIZED → activation/motivation to act → energized, pumped, motivated, ready, fired up, productive
 CALM → low-arousal positive/peaceful state → calm, relaxed, peaceful, serene, at ease, unwinding, tranquil
-CURIOUS → seeking to know/explore → curious, interested, wondering, exploring, want to learn
-NOSTALGIC → longing for the past/bittersweet memories → nostalgic, reminisce, miss the old days, memories, bittersweet
 NEUTRAL → factual/impersonal/no clear affect, uncertainty → just info, matter-of-fact, schedule details, no feelings indicated, confused, unsure
 STRESSED → pressure, fear, worry, tension, cognitive overload, frustration, anger → stressed, anxious, worried, nervous, panic, overwhelmed, under pressure, tense, frustrated, annoyed, angry, mad
 SAD → low mood, grief, social disconnection → sad, down, blue, unhappy, heartbroken, lonely, alone, isolated
@@ -53,7 +51,7 @@ TIRED → fatigue, low energy, low interest → tired, exhausted, sleepy, draine
 
 Output format (single line JSON):
 - When the model is confident (success = true), for example:
-{"scores":{"JOYFUL":0.000,"ENERGIZED":0.000,"CALM":0.000,"CURIOUS":0.000,"NOSTALGIC":0.000,"NEUTRAL":1.000,"TIRED":0.000,"SAD":0.000,"STRESSED":0.000},"top_label":"NEUTRAL","top_score":1.000,"success":true,"content":"Wow, I noticed that you're feeling very neutral right now. Let's proceed to the survey so I can prepare you a wonderful travel plan."}
-{"scores":{"JOYFUL":0.000,"ENERGIZED":0.000,"CALM":0.000,"CURIOUS":0.000,"NOSTALGIC":0.000,"NEUTRAL":1.000,"TIRED":0.000,"SAD":0.000,"STRESSED":0.000},"top_label":"NEUTRAL","top_score":1.000,"success":true,"content":"I get that you feel rather neutral right now. If you answer a few questions, I can prepare a small plan for you."}
+{"scores":{"JOYFUL":0.000,"ENERGIZED":0.000,"CALM":0.000,"NEUTRAL":1.000,"TIRED":0.000,"SAD":0.000,"STRESSED":0.000},"top_label":"NEUTRAL","top_score":1.000,"success":true,"content":"Wow, I noticed that you're feeling very neutral right now. Let's proceed to the survey so I can prepare you a wonderful travel plan."}
+{"scores":{"JOYFUL":0.000,"ENERGIZED":0.000,"CALM":0.000,"NEUTRAL":1.000,"TIRED":0.000,"SAD":0.000,"STRESSED":0.000},"top_label":"NEUTRAL","top_score":1.000,"success":true,"content":"I get that you feel rather neutral right now. If you answer a few questions, I can prepare a small plan for you."}
 - When the model is not confident (success = false), for example:
-{"scores":{"JOYFUL":0.050,"ENERGIZED":0.020,"CALM":0.050,"CURIOUS":0.100,"NOSTALGIC":0.010,"NEUTRAL":0.740,"TIRED":0.010,"SAD":0.010,"STRESSED":0.010},"top_label":"NEUTRAL","top_score":0.740,"success":false,"content":"It's good to hear that! Can you tell me a bit more about how you’re feeling?"}
+{"scores":{"JOYFUL":0.050,"ENERGIZED":0.020,"CALM":0.050,"NEUTRAL":0.850,"TIRED":0.010,"SAD":0.010,"STRESSED":0.010},"top_label":"NEUTRAL","top_score":0.850,"success":false,"content":"It's good to hear that! Can you tell me a bit more about how you’re feeling?"}

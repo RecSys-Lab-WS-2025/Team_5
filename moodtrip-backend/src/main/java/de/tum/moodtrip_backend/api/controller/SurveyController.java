@@ -110,8 +110,8 @@ public class SurveyController {
                                                 double energyScore = emotionWeights.entrySet().stream()
                                                         .mapToDouble(entry -> {
                                                             double factor = switch (entry.getKey()) {
-                                                                case ENERGIZED, JOYFUL, CURIOUS -> highEnergyFactor;
-                                                                case NEUTRAL, NOSTALGIC -> defaultEnergyFactor;
+                                                                case ENERGIZED, JOYFUL -> highEnergyFactor;
+                                                                case NEUTRAL -> defaultEnergyFactor;
                                                                 case TIRED, SAD, STRESSED, CALM -> lowEnergyFactor;
                                                             };
                                                             return entry.getValue() * factor;

@@ -158,9 +158,9 @@ public class RouteTextMapper {
                 String.format("%s %s Adventure", formattedMood, formattedCity);
             case "relaxed", "calm", "peaceful", "tired", "stressed" ->
                 String.format("Serene %s Escape", formattedCity);
-            case "adventurous", "bold", "exploratory", "curious" ->
+            case "adventurous", "bold", "exploratory" ->
                 String.format("%s Discovery Quest", formattedCity);
-            case "contemplative", "thoughtful", "reflective", "nostalgic", "sad" ->
+            case "contemplative", "thoughtful", "reflective", "sad" ->
                 String.format("Mindful %s Journey", formattedCity);
             default ->
                 String.format("Mock %s Route in %s", formattedMood, formattedCity);

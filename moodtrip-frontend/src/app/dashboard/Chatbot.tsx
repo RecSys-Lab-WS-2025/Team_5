@@ -291,8 +291,6 @@ export default function Chatbot() {
         return Laugh;
       case "CALM":
         return Smile;
-      case "CURIOUS":
-      case "NOSTALGIC":
       case "NEUTRAL":
       case "SAD":
       case "TIRED":
