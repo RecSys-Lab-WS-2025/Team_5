@@ -25,20 +25,17 @@ public class PoiRatingService {
     private final UserPreferenceOffsetService offsetService;
     private final TransactionalOperator transactionalOperator;
     private final double globalLearningRate;
-    private final double globalRegularization;
 
     public PoiRatingService(PoiRatingPort poiRatingPort,
                             EmotionCategoryScorePort scorePort,
                             UserPreferenceOffsetService offsetService,
                             TransactionalOperator transactionalOperator,
-                            @Value("${app.global-mapping.learning-rate:0.01}") double globalLearningRate,
-                            @Value("${app.global-mapping.regularization:0.001}") double globalRegularization) {
+                            @Value("${app.global-mapping.learning-rate:0.01}") double globalLearningRate) {
         this.poiRatingPort = poiRatingPort;
         this.scorePort = scorePort;
         this.offsetService = offsetService;
         this.transactionalOperator = transactionalOperator;
         this.globalLearningRate = globalLearningRate;
-        this.globalRegularization = globalRegularization;
     }
 
     public Mono<PoiRating> getRating(Long userId, String poiId, Emotion emotion) {
@@ -97,12 +94,16 @@ public class PoiRatingService {
     private Mono<Void> updateGlobalScore(EmotionCategoryScore mapping, UserPreferenceOffsetUpdateResult offsetResult, boolean incrementCount) {
         double wOld = mapping.score();
         double error = offsetResult.error();
-        double wNew = wOld + globalLearningRate * (error - globalRegularization * wOld);
+        double wNew = clampGlobalScore(wOld + globalLearningRate * error);
 
         long currentCount = mapping.ratingCount() == null ? 0L : mapping.ratingCount();
         long newCount = currentCount + (incrementCount ? 1 : 0);
 
         EmotionCategoryScore updated = mapping.withScore(wNew).withCount(newCount);
         return scorePort.save(updated).then();
+    }
+
+    private double clampGlobalScore(double value) {
+        return Math.max(0.0, Math.min(5.0, value));
     }
 }
