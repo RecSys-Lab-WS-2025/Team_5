@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/tooltip";
 
 import { Slider } from "@/components/ui/slider";
+import { POI_CATEGORIES, normalizePoiCategories } from "@/lib/poi-categories";
+
+import type { SurveyData } from "@/api/conversation";
 
 type LocationSuggestion = {
     place_id: number;
@@ -35,19 +38,6 @@ type SelectedLocation = {
     label: string;
     locationName: string;
 };
-
-const POI_CATEGORIES = [
-    "Nature",
-    "History & Culture",
-    "Adventure",
-    "Relaxation",
-    "Food & Culinary",
-    "Shopping",
-];
-
-
-
-import type { SurveyData } from "@/api/conversation";
 
 export function SurveyForm({
     onSubmit,
@@ -67,7 +57,9 @@ export function SurveyForm({
 
     const [startDate, setStartDate] = React.useState<string>(initialData?.startDate ?? getTodayString());
     const [endDate, setEndDate] = React.useState<string>(initialData?.endDate ?? getTodayString());
-    const [selectedCategories, setSelectedCategories] = React.useState<string[]>(initialData?.poiCategories ?? []);
+    const [selectedCategories, setSelectedCategories] = React.useState<string[]>(
+        () => normalizePoiCategories(initialData?.poiCategories)
+    );
     const [locationQuery, setLocationQuery] = React.useState<string>("");
     const [selectedLocation, setSelectedLocation] = React.useState<SelectedLocation | null>(null);
     const [locationSuggestions, setLocationSuggestions] = React.useState<LocationSuggestion[]>([]);
@@ -91,7 +83,7 @@ export function SurveyForm({
         });
         setLocationQuery(label);
         if (initialData.rangeMeters) setRange(initialData.rangeMeters);
-        if (initialData.poiCategories) setSelectedCategories(initialData.poiCategories);
+        setSelectedCategories(normalizePoiCategories(initialData.poiCategories));
     }, [initialData]);
 
     // Fetch location suggestions (debounced)
