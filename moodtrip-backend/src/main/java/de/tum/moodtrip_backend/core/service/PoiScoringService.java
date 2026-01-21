@@ -133,12 +133,12 @@ public class PoiScoringService {
         Map<Emotion, Double> emotionWeights = normalizeEmotionWeights(rawEmotionWeights);
 
         // Apply emotion multiplier to the weights
-        Map<Emotion, Double> adjustedEmotionWeights = new HashMap<>();
+        Map<Emotion, Double> finalEmotionWeights = new HashMap<>();
         for (Map.Entry<Emotion, Double> entry : emotionWeights.entrySet()) {
-            adjustedEmotionWeights.put(entry.getKey(), entry.getValue() * emotionMultiplier);
+            finalEmotionWeights.put(entry.getKey(), entry.getValue() * emotionMultiplier);
         }
-        // Re-normalize after applying multiplier
-        Map<Emotion, Double> finalEmotionWeights = normalizeEmotionWeights(adjustedEmotionWeights);
+        // Do NOT re-normalize here, otherwise the multiplier effect is cancelled out.
+        // We want the total weight sum to scale with emotionMultiplier.
 
         // Compute effective category boost
         double effectiveCategoryBoost = weightSelectedCategory * categoryBoostMultiplier;

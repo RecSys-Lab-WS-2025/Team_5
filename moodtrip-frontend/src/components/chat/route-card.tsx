@@ -35,40 +35,29 @@ export function RouteCard({
     onClick,
 }: RouteCardProps) {
     // Calculate difficulty based on DAILY AVERAGE distance and duration
-    // This makes multi-day trips easier than single-day trips with the same total distance
     const getDifficulty = (meters: number, seconds: number, days: number) => {
-        const dailyKm = (meters / 1000) / days;
-        const dailyHours = (seconds / 3600) / days;
+        if (!meters && !seconds) return 1.0;
 
-        // Calculate daily effort score combining distance and time
-        // Distance weight: 1 point per km
-        // Time weight: 0.3 points per hour (accounts for pace/terrain)
+        const dailyKm = (meters / 1000) / Math.max(1, days);
+        const dailyHours = (seconds / 3600) / Math.max(1, days);
+
         const dailyEffortScore = dailyKm + (dailyHours * 0.3);
 
-        // Difficulty levels based on DAILY effort score (Harder thresholds):
-        // 1.0 star:  Very Easy (< 3)
-        // 1.5 stars: Easy-Moderate (3 - 5)
-        // 2.0 stars: Easy-Moderate (5 - 7)
-        // 2.5 stars: Moderate (7 - 9)
-        // 3.0 stars: Moderate-Hard (9 - 11.5)
-        // 3.5 stars: Hard (11.5 - 14)
-        // 4.0 stars: Very Hard (14 - 16.5)
-        // 4.5 stars: Expert (16.5 - 19)
-        // 5.0 stars: Extreme (> 19)
         if (dailyEffortScore < 3) return 1.0;
         if (dailyEffortScore < 5) return 1.5;
         if (dailyEffortScore < 7) return 2.0;
         if (dailyEffortScore < 9) return 2.5;
-        if (dailyEffortScore < 11.5) return 3.0;
-        if (dailyEffortScore < 14) return 3.5;
-        if (dailyEffortScore < 16.5) return 4.0;
-        if (dailyEffortScore < 19) return 4.5;
+        if (dailyEffortScore < 11) return 3.0;
+        if (dailyEffortScore < 13) return 3.5;
+        if (dailyEffortScore < 15) return 4.0;
+        if (dailyEffortScore < 17) return 4.5;
         return 5.0;
     };
 
-    const difficulty = getDifficulty(distanceMeters, durationSeconds, tripDays);
+    const difficulty = getDifficulty(distanceMeters || 0, durationSeconds || 0, tripDays);
 
-    const formatDuration = (seconds: number) => {
+    const formatDuration = (seconds?: number) => {
+        if (!seconds) return "N/A";
         const hours = Math.floor(seconds / 3600);
         const mins = Math.round((seconds % 3600) / 60);
         if (hours === 0) return `${mins} min`;
@@ -87,7 +76,7 @@ export function RouteCard({
                 return (
                     <StarHalf
                         key={i}
-                        className="w-4 h-4 fill-yellow-400 text-yellow-400"
+                        className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400"
                     />
                 );
             }
@@ -95,64 +84,83 @@ export function RouteCard({
             return (
                 <Star
                     key={i}
-                    className={`w-4 h-4 ${isFull ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                    className={`w-3.5 h-3.5 ${isFull ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
                 />
             );
         });
     };
 
+    const hasError = !title && !description;
+
     return (
         <Card
-            className="w-full h-full overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white border-gray-100 flex flex-col"
-            onClick={onClick}
+            className={`
+                w-full h-full min-h-[320px] flex flex-col 
+                overflow-hidden bg-white border-gray-200/60 shadow-sm
+                hover:shadow-xl hover:border-emerald-500/30 hover:-translate-y-1
+                transition-all duration-300 cursor-pointer group rounded-xl
+                ${hasError ? "opacity-70 grayscale" : ""}
+            `}
+            onClick={hasError ? undefined : onClick}
         >
             {/* Image Section */}
-            <div className="w-full h-40 relative flex-shrink-0 overflow-hidden">
+            <div className="w-full h-44 relative flex-shrink-0 overflow-hidden bg-gray-100">
                 {index !== undefined && (
-                    <div className="absolute top-2 left-2 z-10 bg-black/50 text-white px-2 py-1 rounded-md text-xs font-bold backdrop-blur-sm">
+                    <div className="absolute top-3 left-3 z-10 bg-white/90 text-gray-900 px-2.5 py-1 rounded-full text-xs font-bold shadow-sm backdrop-blur-sm border border-white/50">
                         #{index}
                     </div>
                 )}
                 {routeType && routeTypeTitle && (
-                    <div className={`absolute top-2 right-2 z-10 ${routeTypeColors[routeType]?.bg ?? "bg-gray-500"} ${routeTypeColors[routeType]?.text ?? "text-white"} px-2 py-1 rounded-md text-xs font-semibold backdrop-blur-sm`}>
+                    <div className={`absolute top-3 right-3 z-10 ${routeTypeColors[routeType]?.bg ?? "bg-gray-600"} ${routeTypeColors[routeType]?.text ?? "text-white"} px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm backdrop-blur-sm border border-white/20`}>
                         {routeTypeTitle}
                     </div>
                 )}
-                <img
-                    src={imageUrl}
-                    alt={title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.png";
-                    }}
-                />
+                {imageUrl ? (
+                    <img
+                        src={imageUrl}
+                        alt={title || "Route Image"}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/placeholder-route.jpg";
+                        }}
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50">
+                        <span className="text-sm">No Image</span>
+                    </div>
+                )}
             </div>
 
             {/* Content Section */}
-            <div className="flex-1 p-4 flex flex-col justify-between">
-                <div>
-                    <div className="flex justify-between items-start gap-2">
-                        <h3 className="text-base font-bold text-gray-900 group-hover:text-emerald-600 transition-colors line-clamp-1 leading-tight">
-                            {title}
+            <div className="flex-1 p-5 flex flex-col relative">
+                <div className="flex-1">
+                    <div className="flex justify-between items-start gap-3 mb-2">
+                        <h3 className="text-lg font-bold text-gray-800 group-hover:text-emerald-600 transition-colors line-clamp-1 leading-tight tracking-tight">
+                            {title || "Untitled Route"}
                         </h3>
-                        <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ExternalLink className="w-4 h-4 text-emerald-500/50 flex-shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0" />
                     </div>
-                    <p className="mt-1.5 text-xs text-gray-600 line-clamp-2 leading-relaxed h-8">
-                        {description}
+
+                    <p className="text-xs text-gray-500 line-clamp-3 leading-relaxed mb-4 min-h-[3.6em]">
+                        {description || "No description available for this route."}
                     </p>
                 </div>
 
-                <div className="mt-4 space-y-2">
-                    {/* Difficulty */}
-                    <div className="flex items-center gap-2 text-xs">
-                        <span className="font-medium text-gray-500 w-16">Difficulty:</span>
-                        <div className="flex gap-0.5">{renderStars(difficulty)}</div>
-                    </div>
+                <div className="pt-4 mt-auto border-t border-gray-50">
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Difficulty */}
+                        <div className="flex flex-col space-y-1">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Difficulty</span>
+                            <div className="flex gap-0.5" title={`${difficulty} Stars`}>
+                                {renderStars(difficulty)}
+                            </div>
+                        </div>
 
-                    {/* Duration */}
-                    <div className="flex items-center gap-2 text-xs">
-                        <span className="font-medium text-gray-500 w-16">Duration:</span>
-                        <span className="text-gray-700 font-medium">{durationText}</span>
+                        {/* Duration */}
+                        <div className="flex flex-col space-y-1 text-right">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Duration</span>
+                            <span className="text-sm font-bold text-gray-700">{durationText}</span>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -14,7 +14,7 @@ public class ScoringConfigFactory {
     // Balanced route config
     @Value("${app.route-type.balanced.emotion-multiplier:1.0}")
     private double balancedEmotionMultiplier;
-    @Value("${app.route-type.balanced.category-boost-multiplier:0.5}")
+    @Value("${app.route-type.balanced.category-boost-multiplier:0.3}")
     private double balancedCategoryBoostMultiplier;
     @Value("${app.route-type.balanced.mmr-lambda:0.6}")
     private double balancedMmrLambda;
