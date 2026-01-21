@@ -49,13 +49,6 @@ public class RouteTextMapper {
         public Map<String, String> dayDescriptions;
     }
 
-    private static class BatchRouteTextDto {
-        // Map keys will be route types (e.g., "BALANCED"), values are the route text objects
-        // Using Map<String, RouteTextDto> to catch all dynamic keys
-        @com.fasterxml.jackson.annotation.JsonAnySetter
-        public Map<String, RouteTextDto> routes = new HashMap<>();
-    }
-
     /**
      * Parse batch AI response string into a Map of RouteType to RouteText.
      */
