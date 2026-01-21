@@ -28,7 +28,7 @@ public class ScoringConfigFactory {
     private double yourPicksMmrLambda;
 
     // Discovery route config
-    @Value("${app.route-type.discovery.emotion-multiplier:1.0}")
+    @Value("${app.route-type.discovery.emotion-multiplier:0.8}")
     private double discoveryEmotionMultiplier;
     @Value("${app.route-type.discovery.category-boost-multiplier:0.3}")
     private double discoveryCategoryBoostMultiplier;
