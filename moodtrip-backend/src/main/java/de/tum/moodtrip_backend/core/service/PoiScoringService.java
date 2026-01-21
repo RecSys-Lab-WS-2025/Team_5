@@ -122,7 +122,8 @@ public class PoiScoringService {
                                               double originLon,
                                               int limit,
                                               ScoringConfig config) {
-        LOGGER.info("[START] Scoring POIs for user: {}", userId);
+        String routeTypeName = config != null && config.routeType() != null ? config.routeType().name() : "DEFAULT";
+        LOGGER.info("[START] Scoring POIs for user: {} (RouteType={})", userId, routeTypeName);
 
         // Apply emotion multiplier from config
         double emotionMultiplier = config != null ? config.emotionMultiplier() : 1.0;
@@ -162,9 +163,14 @@ public class PoiScoringService {
                         .doOnNext(list -> {
                             String top3 = list.stream()
                                     .limit(3)
-                                    .map(p -> String.format("%s(%.2f)", p.poi().name(), p.score().finalScore()))
-                                    .collect(Collectors.joining(", "));
-                            LOGGER.info("[COMPLETE] Scoring finished for user {}. Candidates: {}. Top 3: [{}]", userId, list.size(), top3);
+                                    .map(p -> String.format("%s(Total=%.2f, Cat=%.2f, Tag=%.2f, Dist=%.2f)", 
+                                            p.poi().name(), 
+                                            p.score().finalScore(),
+                                            p.score().categoryScore(),
+                                            p.score().tagScore(),
+                                            p.score().distanceScore()))
+                                    .collect(Collectors.joining(" | "));
+                            LOGGER.info("[COMPLETE] Scoring finished for user {} (RouteType={}). Candidates: {}. Top 3: [{}]", userId, routeTypeName, list.size(), top3);
                             list.forEach(this::logTopPoi);
                         })
         );
