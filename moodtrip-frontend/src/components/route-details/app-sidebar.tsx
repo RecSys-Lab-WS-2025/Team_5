@@ -63,6 +63,42 @@ export function AppSidebar({
 }) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false)
 
+  const getPoiCoords = React.useCallback((poi: PoiFeature) => {
+    const coords = poi.geometry?.coordinates
+    if (!coords || coords.length < 2) return null
+    const [lon, lat] = coords
+    return { lat, lon }
+  }, [])
+
+  const navigationPoints = React.useMemo(
+    () => dayPois.map(getPoiCoords).filter(Boolean) as Array<{ lat: number; lon: number }>,
+    [dayPois, getPoiCoords]
+  )
+
+  const canNavigate = navigationPoints.length >= 2
+
+  const handleStartNavigation = () => {
+    if (!canNavigate) return
+    const origin = navigationPoints[0]
+    const destination = navigationPoints[navigationPoints.length - 1]
+    const waypoints = navigationPoints.slice(1, -1)
+
+    const params = new URLSearchParams()
+    params.set("api", "1")
+    params.set("origin", `${origin.lat},${origin.lon}`)
+    params.set("destination", `${destination.lat},${destination.lon}`)
+    if (waypoints.length > 0) {
+      params.set(
+        "waypoints",
+        waypoints.map((p) => `${p.lat},${p.lon}`).join("|")
+      )
+    }
+    params.set("travelmode", "walking")
+
+    const url = `https://www.google.com/maps/dir/?${params.toString()}`
+    window.open(url, "_blank", "noopener,noreferrer")
+  }
+
   return (
     <Sidebar
       {...props}
@@ -212,7 +248,12 @@ export function AppSidebar({
       </SidebarContent>
 
       <div className="shrink-0 border-t border-gray-200/50 bg-white/70 backdrop-blur-xl px-6 pt-4 pb-6">
-        <Button size="lg" className={cn("w-full rounded-lg py-6 font-medium !bg-gray-900 !text-white")}>
+        <Button
+          size="lg"
+          onClick={handleStartNavigation}
+          disabled={!canNavigate}
+          className={cn("w-full rounded-lg py-6 font-medium !bg-gray-900 !text-white")}
+        >
           <Navigation className="h-4 w-4 mr-2" />
           Start Navigation
         </Button>
