@@ -26,15 +26,21 @@ public class UserPreferenceOffsetAdapter implements UserPreferenceOffsetPort {
 
     @Override
     public Mono<UserPreferenceOffset> findByUserEmotionAndCategoryForUpdate(Long userId, Emotion emotion, PoiCategory category) {
-        return repository.findByUserIdAndEmotionAndCategory(userId, emotion.name(), category.name())
+        return repository.findByUserIdAndEmotionAndCategoryForUpdate(userId, emotion.name(), category.name())
                 .map(UserPreferenceOffsetMapper::toDomain);
     }
 
     @Override
     public Mono<UserPreferenceOffset> insertIfAbsent(UserPreferenceOffset offset) {
-        return repository.findByUserIdAndEmotionAndCategory(offset.userId(), offset.emotion().name(), offset.category().name())
-                .flatMap(existing -> Mono.just(UserPreferenceOffsetMapper.toDomain(existing)))
-                .switchIfEmpty(repository.save(UserPreferenceOffsetMapper.toEntity(offset)).map(UserPreferenceOffsetMapper::toDomain));
+        return repository.insertIfAbsent(
+                        offset.userId(),
+                        offset.emotion().name(),
+                        offset.category().name(),
+                        offset.userPreferenceOffset(),
+                        offset.count(),
+                        offset.updatedAt()
+                )
+                .map(UserPreferenceOffsetMapper::toDomain);
     }
 
     @Override

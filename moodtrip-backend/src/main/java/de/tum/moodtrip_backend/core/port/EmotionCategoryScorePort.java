@@ -7,5 +7,6 @@ import reactor.core.publisher.Mono;
 
 public interface EmotionCategoryScorePort {
     Mono<EmotionCategoryScore> findByEmotionAndCategory(Emotion emotion, PoiCategory category);
+    Mono<EmotionCategoryScore> findByEmotionAndCategoryForUpdate(Emotion emotion, PoiCategory category);
     Mono<EmotionCategoryScore> save(EmotionCategoryScore score);
 }

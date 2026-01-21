@@ -90,7 +90,7 @@ public class PoiRatingService {
     }
 
     private Mono<EmotionCategoryScore> initGlobalScore(Emotion emotion, PoiCategory category) {
-        return scorePort.findByEmotionAndCategory(emotion, category)
+        return scorePort.findByEmotionAndCategoryForUpdate(emotion, category)
                 .defaultIfEmpty(new EmotionCategoryScore(null, emotion, category, 3.5, 0L));
     }
 
