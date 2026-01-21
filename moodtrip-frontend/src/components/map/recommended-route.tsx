@@ -1,25 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
-import type { FeatureCollection, GeoJsonObject, Feature, Point } from "geojson";
+import {useEffect, useMemo, useState} from "react";
+import type {Feature, FeatureCollection, GeoJsonObject, Point} from "geojson";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { GeoJSON, useMap } from "react-leaflet";
+import {GeoJSON, useMap} from "react-leaflet";
 import {
   Map,
   MapLayers,
   MapLayersControl,
   MapLocateControl,
-  MapTileLayer,
-  MapZoomControl,
   MapMarker,
   MapPopup,
+  MapTileLayer,
+  MapZoomControl,
 } from "@/components/ui/map";
-import { Star, Loader2 } from "lucide-react";
-import { submitPoiRating, fetchPoiRating } from "@/api/emotion";
+import {Loader2, MapPin, Star} from "lucide-react";
+import {fetchPoiRating, submitPoiRating} from "@/api/emotion";
 
 type Props = {
   data?: FeatureCollection | null;
   emotion?: string;
   invalidateKey?: unknown; // ✅ was any
+  selectedDay?: number;
 };
 
 function FitToData({ data }: { data?: FeatureCollection | null }) {
@@ -131,6 +132,19 @@ function StarItem({
   );
 }
 
+function normalizeLineCoords(coords: unknown): [number, number][] | null {
+  if (!Array.isArray(coords)) return null;
+  const normalized: [number, number][] = [];
+  for (const coord of coords) {
+    if (!Array.isArray(coord) || coord.length < 2) continue;
+    const lon = coord[0];
+    const lat = coord[1];
+    if (typeof lon !== "number" || typeof lat !== "number") continue;
+    normalized.push([lon, lat]);
+  }
+  return normalized.length ? normalized : null;
+}
+
 function PoiRating({
   poiId,
   category,
@@ -224,7 +238,12 @@ function PoiRating({
   );
 }
 
-export function RecommendedRouteMap({ data, emotion, invalidateKey }: Props) {
+export function RecommendedRouteMap({
+  data,
+  emotion,
+  invalidateKey,
+  selectedDay,
+}: Props) {
   const activeEmotion = useMemo(() => {
     if (emotion) return emotion;
     const routeFeature = data?.features.find((f) => f.properties?.type === "route");
@@ -270,9 +289,109 @@ export function RecommendedRouteMap({ data, emotion, invalidateKey }: Props) {
             imageUrl: props.imageUrl ?? "",
             category: props.category ?? "NATURE",
             position: [lat, lon] as [number, number],
+            day: typeof props.day === "number" ? props.day : 1,
           };
         }) ?? [],
     [safeData?.features]
+  );
+
+  const routeLineCoords = useMemo(() => {
+    const routeFeature = safeData?.features?.find(
+      (f) => f.properties?.type === "route" && f.geometry?.type === "LineString"
+    );
+    if (!routeFeature || routeFeature.geometry?.type !== "LineString") return null;
+    return normalizeLineCoords(
+        (routeFeature.geometry as { coordinates?: unknown }).coordinates
+    );
+  }, [safeData?.features]);
+
+  const activeDay =
+    Number.isFinite(selectedDay) && Number(selectedDay) > 0
+      ? Number(selectedDay)
+      : null;
+  const dayPois = useMemo(
+    () => (activeDay ? pois.filter((poi) => poi.day === activeDay) : pois),
+    [activeDay, pois]
+  );
+  const inactivePois = useMemo(
+    () => (activeDay ? pois.filter((poi) => poi.day !== activeDay) : []),
+    [activeDay, pois]
+  );
+
+  const findNearestLineIndex = (
+    point: [number, number],
+    coords: [number, number][]
+  ) => {
+    let closestIndex = -1;
+    let closestDistance = Number.POSITIVE_INFINITY;
+    const [lat, lon] = point;
+
+    for (let i = 0; i < coords.length; i++) {
+      const [coordLon, coordLat] = coords[i];
+      const dLat = lat - coordLat;
+      const dLon = lon - coordLon;
+      const distance = dLat * dLat + dLon * dLon;
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = i;
+      }
+    }
+
+    return closestIndex;
+  };
+
+  const dayLineData = useMemo(() => {
+    if (!activeDay || dayPois.length < 2 || !routeLineCoords) return null;
+    const indices = dayPois
+      .map((poi) => findNearestLineIndex(poi.position, routeLineCoords))
+      .filter((idx) => idx >= 0);
+    if (indices.length < 2) return null;
+
+    const minIdx = Math.min(...indices);
+    const maxIdx = Math.max(...indices);
+    if (maxIdx <= minIdx) return null;
+
+    return {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: routeLineCoords.slice(minIdx, maxIdx + 1),
+          },
+          properties: { type: "day-route" },
+        },
+      ],
+    } as FeatureCollection;
+  }, [activeDay, dayPois, routeLineCoords]);
+
+  const fitData = useMemo(() => {
+    if (!safeData) return null;
+    if (!activeDay) return safeData;
+    const features: Feature[] = [];
+    if (dayLineData?.features?.length) {
+      features.push(...(dayLineData.features as Feature[]));
+    }
+    for (const poi of dayPois) {
+      features.push({
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [poi.position[1], poi.position[0]],
+        },
+        properties: { type: "poi" },
+      } as Feature);
+    }
+    return { type: "FeatureCollection", features } as FeatureCollection;
+  }, [activeDay, dayLineData, dayPois, safeData]);
+
+  const renderMarkerIcon = (isActive: boolean) => (
+    <MapPin
+      className={`h-6 w-6 ${
+        isActive ? "text-blue-600 drop-shadow" : "text-slate-400 opacity-50"
+      }`}
+    />
   );
 
   return (
@@ -293,8 +412,36 @@ export function RecommendedRouteMap({ data, emotion, invalidateKey }: Props) {
 
         <MapZoomControl />
 
-        {pois.map((poi) => (
-          <MapMarker key={poi.id} position={poi.position}>
+        {inactivePois.map((poi) => (
+          <MapMarker key={poi.id} position={poi.position} icon={renderMarkerIcon(false)}>
+            <MapPopup className="w-64">
+              <div className="space-y-2">
+                {poi.imageUrl && (
+                  <img
+                    src={poi.imageUrl}
+                    alt={poi.name}
+                    className="h-32 w-full rounded-md object-cover"
+                  />
+                )}
+                <div>
+                  <h3 className="line-clamp-1 text-sm font-semibold">{poi.name}</h3>
+                  {poi.description && (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {poi.description}
+                    </p>
+                  )}
+                </div>
+
+                {activeEmotion && (
+                  <PoiRating poiId={poi.id} category={poi.category} emotion={activeEmotion} />
+                )}
+              </div>
+            </MapPopup>
+          </MapMarker>
+        ))}
+
+        {dayPois.map((poi) => (
+          <MapMarker key={poi.id} position={poi.position} icon={renderMarkerIcon(true)}>
             <MapPopup className="w-64">
               <div className="space-y-2">
                 {poi.imageUrl && (
@@ -325,10 +472,22 @@ export function RecommendedRouteMap({ data, emotion, invalidateKey }: Props) {
           <>
             <GeoJSON
               data={safeData as GeoJsonObject}
-              style={() => ({ color: "#2563eb", weight: 4 })}
+              style={() => ({
+                color: activeDay ? "#94a3b8" : "#2563eb",
+                weight: activeDay ? 3 : 4,
+                opacity: activeDay ? 0.5 : 1,
+              })}
               filter={(feature) => feature.geometry?.type !== "Point"}
             />
-            <FitToData data={safeData} />
+            {dayLineData && (
+              <GeoJSON
+                key={`day-route-${activeDay ?? "all"}`}
+                data={dayLineData as GeoJsonObject}
+                style={() => ({ color: "#2563eb", weight: 5, opacity: 0.95 })}
+                filter={(feature) => feature.geometry?.type !== "Point"}
+              />
+            )}
+            <FitToData data={fitData} />
           </>
         )}
       </Map>

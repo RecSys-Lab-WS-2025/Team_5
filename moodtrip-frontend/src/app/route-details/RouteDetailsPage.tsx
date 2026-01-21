@@ -19,13 +19,23 @@ import { AppSidebar } from "@/components/route-details/app-sidebar";
 import type { FeatureCollection } from "geojson";
 import type { RouteRecommendation, PoiFeature, RouteFeature } from "@/api/conversation";
 
-function MapPane({ geoJson }: { geoJson: FeatureCollection }) {
+function MapPane({
+  geoJson,
+  selectedDay,
+}: {
+  geoJson: FeatureCollection;
+  selectedDay: number;
+}) {
   const { isMobile, openMobile, state } = useSidebar();
   const invalidateKey = isMobile ? (openMobile ? "open" : "closed") : state;
 
   return (
     <div className="h-full w-full min-w-0">
-      <RecommendedRouteMap data={geoJson} invalidateKey={invalidateKey} />
+      <RecommendedRouteMap
+        data={geoJson}
+        invalidateKey={invalidateKey}
+        selectedDay={selectedDay}
+      />
     </div>
   );
 }
@@ -109,7 +119,7 @@ export const RouteDetailsPage = () => {
 
         <main className="h-[calc(100vh-4rem)] min-h-0 w-full">
           {routeData.geoJson ? (
-            <MapPane geoJson={routeData.geoJson} />
+            <MapPane geoJson={routeData.geoJson} selectedDay={selectedDay} />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-gray-400">
               Map Preview
