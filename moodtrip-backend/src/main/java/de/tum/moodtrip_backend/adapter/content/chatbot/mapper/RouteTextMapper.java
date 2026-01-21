@@ -56,9 +56,13 @@ public class RouteTextMapper {
         LOGGER.info("Parsing batch AI response, length: {} chars", response.length());
         String cleanedResponse = response.trim();
         
-        // Remove markdown code blocks if present (e.g. ```json ... ```)
+        // Remove markdown code blocks if present (e.g. ```json ..., ```JSON ..., ```json extra-metadata ... ```).
         if (cleanedResponse.startsWith("```")) {
-            cleanedResponse = cleanedResponse.replaceAll("^```json", "").replaceAll("^```", "").replaceAll("```$", "").trim();
+            // Strip a leading code fence with optional language/metadata, then a trailing closing fence.
+            cleanedResponse = cleanedResponse
+                .replaceFirst("^```[a-zA-Z0-9_+\\-]*\\s*", "")
+                .replaceFirst("```\\s*$", "")
+                .trim();
         }
 
         Map<de.tum.moodtrip_backend.core.model.RouteType, RouteText> result = new HashMap<>();
