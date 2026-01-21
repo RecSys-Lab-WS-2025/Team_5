@@ -39,7 +39,7 @@ import {
   renameConversation,
   deleteConversation,
 } from "@/api/conversation";
-import type { RouteRecommendation } from "@/api/conversation";
+import type { RouteRecommendation, AppRouteType } from "@/api/conversation";
 import type {
   Feature,
   FeatureCollection,
@@ -57,6 +57,9 @@ type RouteProperties = {
   image?: string;
   distanceMeters?: number;
   durationSeconds?: number;
+  routeType?: AppRouteType;
+  routeTypeTitle?: string;
+  routeTypeDescription?: string;
 };
 
 type PoiProperties = {
@@ -929,51 +932,38 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   };
                   setMessages((prev) => [...prev, successMsg]);
 
-                  const routeFc = routeData as FeatureCollection;
-                  const allFeatures = (routeFc.features ?? []) as AnyFeature[];
+                  // Check if routes array exists (it should be present in the response type now)
+                  const routesArray = (res.routes && res.routes.length > 0) ? res.routes : [routeData];
 
-                  const rf = allFeatures.find(isRouteFeature);
-                  const routeProps = rf?.properties;
+                  // Helper to extract route card data from a FeatureCollection
+                  const extractRouteCardData = (fc: FeatureCollection, idx: number): RouteRecommendation => {
+                    const features = (fc.features ?? []) as AnyFeature[];
+                    const routeFeature = features.find(isRouteFeature);
+                    const props = routeFeature?.properties as RouteProperties | undefined;
 
-                  const poiFeatures = allFeatures.filter(isPoiFeature);
-                  const firstPoiWithImage = poiFeatures.find(
-                    (f) => !!f.properties?.imageUrl
+                    const poiFeats = features.filter(isPoiFeature);
+                    const firstPoiImg = poiFeats.find((f) => !!f.properties?.imageUrl);
+                    const fallbackImg = firstPoiImg?.properties?.imageUrl;
+                    const thumbnail = props?.image || fallbackImg || "/placeholder.png";
+
+                    const dayDescs = props?.dayDescriptions || { "1": "A personalized route based on your mood." };
+
+                    return {
+                      id: String(idx + 1),
+                      title: props?.name || "Your Personalized Trip",
+                      dayDescriptions: dayDescs,
+                      imageUrl: thumbnail,
+                      distanceMeters: props?.distanceMeters || 0,
+                      durationSeconds: props?.durationSeconds || 0,
+                      geoJson: fc,
+                      routeType: props?.routeType,
+                      routeTypeTitle: props?.routeTypeTitle,
+                    };
+                  };
+
+                  const cardDataList: RouteRecommendation[] = routesArray.map((fc, idx) =>
+                    extractRouteCardData(fc as FeatureCollection, idx)
                   );
-                  const fallbackPoiImage = firstPoiWithImage?.properties?.imageUrl;
-                  const finalThumbnail =
-                    routeProps?.image || fallbackPoiImage || "/placeholder.png";
-
-                  const dayDescriptions = routeProps?.dayDescriptions || { "1": "A personalized route based on your mood." };
-
-                  const cardDataList: RouteRecommendation[] = [
-                    {
-                      id: "1",
-                      title: routeProps?.name || "Your Personalized Trip",
-                      dayDescriptions,
-                      imageUrl: finalThumbnail,
-                      distanceMeters: routeProps?.distanceMeters || 0,
-                      durationSeconds: routeProps?.durationSeconds || 0,
-                      geoJson: routeFc,
-                    },
-                    {
-                      id: "2",
-                      title: routeProps?.name || "Your Personalized Trip",
-                      dayDescriptions,
-                      imageUrl: finalThumbnail,
-                      distanceMeters: routeProps?.distanceMeters || 0,
-                      durationSeconds: routeProps?.durationSeconds || 0,
-                      geoJson: routeFc,
-                    },
-                    {
-                      id: "3",
-                      title: routeProps?.name || "Your Personalized Trip",
-                      dayDescriptions,
-                      imageUrl: finalThumbnail,
-                      distanceMeters: routeProps?.distanceMeters || 0,
-                      durationSeconds: routeProps?.durationSeconds || 0,
-                      geoJson: routeFc,
-                    },
-                  ];
 
                   const cardsPayload = `[ROUTE_CARDS] ${JSON.stringify(cardDataList)}`;
                   await apiSendMessage(conversationId, cardsPayload, false);

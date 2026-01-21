@@ -2,7 +2,9 @@ package de.tum.moodtrip_backend.api.controller;
 
 
 import static java.time.temporal.ChronoUnit.DAYS;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.geojson.FeatureCollection;
 import org.slf4j.Logger;
@@ -54,11 +56,19 @@ public class SurveyController {
     private static final Logger logger = LoggerFactory.getLogger(SurveyController.class);
     @Value("${app.energy.factor.default:1.0}")
     private double defaultEnergyFactor;
+    @Value("${app.energy.factor.happy:1.1}")
+    private double happyEnergyFactor;
+
+    @Value("${app.energy.factor.sad:0.9}")
+    private double sadEnergyFactor;
+
+    @Value("${app.energy.factor.stressed:1.2}")
+    private double stressedEnergyFactor;
 
     @Value("${app.energy.factor.high:1.3}")
     private double highEnergyFactor;
 
-    @Value("${app.energy.factor.low:0.7}")
+    @Value("${app.energy.factor.low:0.6}")
     private double lowEnergyFactor;
 
 
@@ -104,15 +114,18 @@ public class SurveyController {
                                         .map(weights -> weights.isEmpty() ? Map.of(fallbackEmotion, 1.0) : weights)
                                         .defaultIfEmpty(Map.of(fallbackEmotion, 1.0));
 
-                                Mono<RouteGenerationResult> routeResultMono = emotionWeightsMono.flatMap(emotionWeights -> {
+                                Mono<List<RouteGenerationResult>> routeResultsMono = emotionWeightsMono.flatMap(emotionWeights -> {
                                                 long days = DAYS.between(surveyDomain.startDate(), surveyDomain.endDate()) + 1;
 
                                                 double energyScore = emotionWeights.entrySet().stream()
                                                         .mapToDouble(entry -> {
                                                             double factor = switch (entry.getKey()) {
-                                                                case ENERGIZED, JOYFUL -> highEnergyFactor;
-                                                                case NEUTRAL -> defaultEnergyFactor;
-                                                                case TIRED, SAD, STRESSED, CALM -> lowEnergyFactor;
+                                                                case ENERGIZED -> highEnergyFactor;
+                                                                case JOYFUL -> happyEnergyFactor;
+                                                                case NEUTRAL,CALM -> defaultEnergyFactor;
+                                                                case STRESSED -> stressedEnergyFactor;
+                                                                case SAD -> sadEnergyFactor;
+                                                                case TIRED -> lowEnergyFactor;
                                                             };
                                                             return entry.getValue() * factor;
                                                         })
@@ -120,14 +133,14 @@ public class SurveyController {
 
 
                                                 int dynamicLimit = (int) Math.round((2 + (days - 1) * 3) * energyScore);
-                                                logger.info("Trip duration: {} days, Mood energy score: {}. Set dynamic POI limit to: {}", 
+                                                logger.info("Trip duration: {} days, Mood energy score: {}. Set dynamic POI limit to: {}",
                                                         days, String.format("%.2f", energyScore), dynamicLimit);
 
                                                 // Determine if we're in mock mode by checking if the EmotionResult content contains mock indicator
                                                 boolean isMocked = conversation.emotionResult().content().contains("THIS IS A MOCK RESPONSE");
                                                 logger.info("Mock mode for route generation: {} (detected from emotion result content)", isMocked);
 
-                                                return routeService.getRoute(conversationId,
+                                                return routeService.getMultipleRoutes(conversationId,
                                                         userId,
                                                         surveyDomain.latitude(), surveyDomain.longitude(), surveyDomain.poiCategories(),
                                                         surveyDomain.rangeMeters(),
@@ -139,9 +152,9 @@ public class SurveyController {
                                             })
                                         .cache();
 
-                                Mono<String> spotifyMono = routeResultMono
-                                        .filter(result -> result.status() == RouteStatus.SUCCEEDED)
-                                        .flatMap(result -> userDomainService.findById(userId)
+                                Mono<String> spotifyMono = routeResultsMono
+                                        .filter(results -> results.stream().anyMatch(r -> r.status() == RouteStatus.SUCCEEDED))
+                                        .flatMap(results -> userDomainService.findById(userId)
                                                 .flatMap(user -> {
                                                     if (user.hasSpotifyAuthorization()) {
                                                         logger.info("Generating spotify recommendation for user: {}", userId);
@@ -161,23 +174,39 @@ public class SurveyController {
                                             return Mono.empty();
                                         });
 
-                                return routeResultMono.flatMap(result -> {
-                                    if (result.status() == RouteStatus.SUCCEEDED && result.route() != null) {
+                                return routeResultsMono.flatMap(results -> {
+                                    // Filter successful results
+                                    List<RouteGenerationResult> successfulResults = results.stream()
+                                            .filter(r -> r.status() == RouteStatus.SUCCEEDED && r.route() != null)
+                                            .collect(Collectors.toList());
+
+                                    if (!successfulResults.isEmpty()) {
                                         long days = DAYS.between(surveyDomain.startDate(), surveyDomain.endDate()) + 1;
                                         String emotionStr = conversation.emotion().name();
-                                        FeatureCollection routeCollection = geoJsonRouteMapper.toFeatureCollection(result.route(), emotionStr, (int) days);
+
+                                        // Map each successful route to a FeatureCollection with route type
+                                        List<FeatureCollection> routeCollections = successfulResults.stream()
+                                                .map(result -> geoJsonRouteMapper.toFeatureCollection(
+                                                        result.route(), emotionStr, (int) days, result.routeType()))
+                                                .collect(Collectors.toList());
+
                                         return spotifyMono.defaultIfEmpty("")
-                                                .map(link -> SurveyResponse.success(routeCollection, link.isEmpty() ? null : link));
+                                                .map(link -> SurveyResponse.successMultiple(routeCollections, link.isEmpty() ? null : link));
                                     }
 
-                                    String userMessage = result.userMessage() != null ? result.userMessage()
-                                            : "I couldn't generate a route due to a routing service error. Please try again.";
+                                    // If no routes succeeded, return failure with the first error message
+                                    String userMessage = results.stream()
+                                            .filter(r -> r.userMessage() != null)
+                                            .map(RouteGenerationResult::userMessage)
+                                            .findFirst()
+                                            .orElse("I couldn't generate a route due to a routing service error. Please try again.");
                                     return Mono.just(SurveyResponse.failure(userMessage));
                                 }).onErrorResume(e -> {
                                     logger.error("Route generation failed for conversationId: {}", conversationId, e);
                                     return Mono.just(SurveyResponse.failure("I couldn't generate a route due to a routing service error. Please try again."));
                                 });
-                            });
+                            })
+                            .doOnSuccess(r -> logger.info("Survey processing completed. Sending response for conversationId: {}", conversationId));
                 });
     }
 }

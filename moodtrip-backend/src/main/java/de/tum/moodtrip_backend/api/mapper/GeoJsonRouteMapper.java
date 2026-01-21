@@ -6,6 +6,7 @@ import de.tum.moodtrip_backend.core.model.Poi;
 import de.tum.moodtrip_backend.core.model.PoiScore;
 import de.tum.moodtrip_backend.core.model.Route;
 import de.tum.moodtrip_backend.core.model.RouteCoordinate;
+import de.tum.moodtrip_backend.core.model.RouteType;
 import org.geojson.Feature;
 import org.geojson.FeatureCollection;
 import org.geojson.LineString;
@@ -32,6 +33,19 @@ public final class GeoJsonRouteMapper {
      * @return GeoJSON FeatureCollection
      */
     public FeatureCollection toFeatureCollection(PoiRouteResult poiRouteResult, String emotion, int tripDays) {
+        return toFeatureCollection(poiRouteResult, emotion, tripDays, null);
+    }
+
+    /**
+     * Build a GeoJSON FeatureCollection from enriched POIs and an optional route with route type.
+     *
+     * @param poiRouteResult domain object containing enriched POIs and the route
+     * @param emotion current emotion for styling
+     * @param tripDays total duration of the trip in days
+     * @param routeType the type of route (emotion-focused, category-focused, balanced)
+     * @return GeoJSON FeatureCollection
+     */
+    public FeatureCollection toFeatureCollection(PoiRouteResult poiRouteResult, String emotion, int tripDays, RouteType routeType) {
         FeatureCollection featureCollection = new FeatureCollection();
 
         if (poiRouteResult == null) {
@@ -103,7 +117,14 @@ public final class GeoJsonRouteMapper {
             routeFeature.setProperty("durationSeconds", route.durationSeconds());
             routeFeature.setProperty("emotion", emotion);
             routeFeature.setProperty("tripDays", tripDays);
-            
+
+            // Add route type properties
+            if (routeType != null) {
+                routeFeature.setProperty("routeType", routeType.name());
+                routeFeature.setProperty("routeTypeTitle", routeType.getDisplayTitle());
+                routeFeature.setProperty("routeTypeDescription", routeType.getDescription());
+            }
+
             // Add title and day descriptions to the route feature
             if (route.title() != null) {
                 routeFeature.setProperty("name", route.title());

@@ -1,5 +1,6 @@
-import { Star, ExternalLink } from "lucide-react";
+import { Star, ExternalLink, StarHalf } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import type { AppRouteType } from "@/api/conversation";
 
 export interface RouteCardProps {
     title: string;
@@ -9,8 +10,17 @@ export interface RouteCardProps {
     durationSeconds: number;
     tripDays?: number;
     index?: number;
+    routeType?: AppRouteType;
+    routeTypeTitle?: string;
     onClick?: () => void;
 }
+
+// Map route types to colors
+const routeTypeColors: Record<AppRouteType, { bg: string; text: string }> = {
+    BALANCED: { bg: "bg-emerald-500", text: "text-white" },
+    YOUR_PICKS: { bg: "bg-blue-500", text: "text-white" },
+    DISCOVERY: { bg: "bg-purple-500", text: "text-white" },
+};
 
 export function RouteCard({
     title,
@@ -20,6 +30,8 @@ export function RouteCard({
     durationSeconds,
     tripDays = 1,
     index,
+    routeType,
+    routeTypeTitle,
     onClick,
 }: RouteCardProps) {
     // Calculate difficulty based on DAILY AVERAGE distance and duration
@@ -33,17 +45,25 @@ export function RouteCard({
         // Time weight: 0.3 points per hour (accounts for pace/terrain)
         const dailyEffortScore = dailyKm + (dailyHours * 0.3);
 
-        // Difficulty levels based on DAILY effort score:
-        // 1 star: Very Easy (< 2 daily effort) - leisurely walks under 2km/day
-        // 2 stars: Easy (2-4 daily effort) - casual walks 2-4km/day
-        // 3 stars: Moderate (4-7 daily effort) - decent walks 4-7km/day
-        // 4 stars: Challenging (7-12 daily effort) - active days 7-12km/day
-        // 5 stars: Demanding (> 12 daily effort) - intense hiking 12km+/day
-        if (dailyEffortScore < 2) return 1;
-        if (dailyEffortScore < 4) return 2;
-        if (dailyEffortScore < 7) return 3;
-        if (dailyEffortScore < 12) return 4;
-        return 5;
+        // Difficulty levels based on DAILY effort score (Harder thresholds):
+        // 1.0 star:  Very Easy (< 3)
+        // 1.5 stars: Easy-Moderate (3 - 5)
+        // 2.0 stars: Easy-Moderate (5 - 7)
+        // 2.5 stars: Moderate (7 - 9)
+        // 3.0 stars: Moderate-Hard (9 - 11.5)
+        // 3.5 stars: Hard (11.5 - 14)
+        // 4.0 stars: Very Hard (14 - 16.5)
+        // 4.5 stars: Expert (16.5 - 19)
+        // 5.0 stars: Extreme (> 19)
+        if (dailyEffortScore < 3) return 1.0;
+        if (dailyEffortScore < 4.5) return 1.5;
+        if (dailyEffortScore < 6) return 2.0;
+        if (dailyEffortScore < 7.5) return 2.5;
+        if (dailyEffortScore < 9) return 3.0;
+        if (dailyEffortScore < 10.5) return 3.5;
+        if (dailyEffortScore < 12) return 4.0;
+        if (dailyEffortScore < 13.5) return 4.5;
+        return 5.0;
     };
 
     const difficulty = getDifficulty(distanceMeters, durationSeconds, tripDays);
@@ -58,12 +78,27 @@ export function RouteCard({
     const durationText = formatDuration(durationSeconds);
 
     const renderStars = (rating: number) => {
-        return Array.from({ length: 5 }).map((_, i) => (
-            <Star
-                key={i}
-                className={`w-4 h-4 ${i < rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
-            />
-        ));
+        return Array.from({ length: 5 }).map((_, i) => {
+            const starValue = i + 1;
+            const isFull = rating >= starValue;
+            const isHalf = rating >= starValue - 0.5 && rating < starValue;
+
+            if (isHalf) {
+                return (
+                    <StarHalf
+                        key={i}
+                        className="w-4 h-4 fill-yellow-400 text-yellow-400"
+                    />
+                );
+            }
+
+            return (
+                <Star
+                    key={i}
+                    className={`w-4 h-4 ${isFull ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                />
+            );
+        });
     };
 
     return (
@@ -76,6 +111,11 @@ export function RouteCard({
                 {index !== undefined && (
                     <div className="absolute top-2 left-2 z-10 bg-black/50 text-white px-2 py-1 rounded-md text-xs font-bold backdrop-blur-sm">
                         #{index}
+                    </div>
+                )}
+                {routeType && routeTypeTitle && (
+                    <div className={`absolute top-2 right-2 z-10 ${routeTypeColors[routeType]?.bg || "bg-gray-500"} ${routeTypeColors[routeType]?.text || "text-white"} px-2 py-1 rounded-md text-xs font-semibold backdrop-blur-sm`}>
+                        {routeTypeTitle}
                     </div>
                 )}
                 <img

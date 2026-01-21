@@ -1,19 +1,22 @@
 import { RouteCard } from "./route-card";
 import type { FeatureCollection, Feature, Geometry } from "geojson";
+import type { AppRouteType } from "@/api/conversation";
 
 export interface RouteCardData {
-    id: string;
-    title: string;
-    dayDescriptions: Record<string, string>;
-    imageUrl: string;
-    distanceMeters: number;
-    durationSeconds: number;
-    geoJson?: FeatureCollection;
+  id: string;
+  title: string;
+  dayDescriptions: Record<string, string>;
+  imageUrl: string;
+  distanceMeters: number;
+  durationSeconds: number;
+  geoJson?: FeatureCollection;
+  routeType?: AppRouteType;
+  routeTypeTitle?: string;
 }
 
 interface RouteCarouselProps {
-    routes: RouteCardData[];
-    onRouteClick: (route: RouteCardData) => void;
+  routes: RouteCardData[];
+  onRouteClick: (route: RouteCardData) => void;
 }
 
 export function RouteCarousel({ routes, onRouteClick }: RouteCarouselProps) {
@@ -65,6 +68,8 @@ export function RouteCarousel({ routes, onRouteClick }: RouteCarouselProps) {
               distanceMeters={route.distanceMeters}
               durationSeconds={route.durationSeconds}
               tripDays={getTripDays(route.geoJson)}
+              routeType={route.routeType}
+              routeTypeTitle={route.routeTypeTitle}
               onClick={() => onRouteClick(route)}
             />
           </div>

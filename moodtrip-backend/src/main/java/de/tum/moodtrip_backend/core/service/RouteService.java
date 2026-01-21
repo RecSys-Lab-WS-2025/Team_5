@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
+import de.tum.moodtrip_backend.core.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -12,14 +13,6 @@ import org.springframework.stereotype.Service;
 import de.tum.moodtrip_backend.core.exception.MapProviderUnavailableException;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteCoordinatesMapper;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteResultRouteRecommendationMapper;
-import de.tum.moodtrip_backend.core.model.Emotion;
-import de.tum.moodtrip_backend.core.model.EnrichedPoi;
-import de.tum.moodtrip_backend.core.model.Poi;
-import de.tum.moodtrip_backend.core.model.PoiCategory;
-import de.tum.moodtrip_backend.core.model.PoiRouteResult;
-import de.tum.moodtrip_backend.core.model.Route;
-import de.tum.moodtrip_backend.core.model.RouteGenerationResult;
-import de.tum.moodtrip_backend.core.model.ScoredPoi;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.RouteRecommendationPort;
 import de.tum.moodtrip_backend.core.port.RoutingPort;
@@ -45,22 +38,31 @@ public class RouteService {
     private final RouteRecommendationPort routeRecommendationPort;
     private final PoiScoringService poiScoringService;
     private final RouteDescriptionService routeDescriptionService;
+    private final ScoringConfigFactory scoringConfigFactory;
 
     public RouteService(OsmPort osmPort,
                         WikipediaPort wikipediaPort,
                         RoutingPort routingPort,
                         RouteRecommendationPort routeRecommendationPort,
                         PoiScoringService poiScoringService,
-                        RouteDescriptionService routeDescriptionService) {
+                        RouteDescriptionService routeDescriptionService,
+                        ScoringConfigFactory scoringConfigFactory) {
         this.osmPort = osmPort;
         this.wikipediaPort = wikipediaPort;
         this.routingPort = routingPort;
         this.routeRecommendationPort = routeRecommendationPort;
         this.poiScoringService = poiScoringService;
         this.routeDescriptionService = routeDescriptionService;
+        this.scoringConfigFactory = scoringConfigFactory;
     }
 
-    public Mono<RouteGenerationResult> getRoute(
+
+
+    /**
+     * Generates multiple routes with different scoring strategies.
+     * Returns 3 routes: emotion-focused, category-focused, and balanced.
+     */
+    public Mono<List<RouteGenerationResult>> getMultipleRoutes(
             long conversationId,
             long userId,
             double lat,
@@ -73,57 +75,91 @@ public class RouteService {
             int tripDays,
             boolean isMocked
     ) {
-        poiLimit = Math.min(poiLimit, MAX_POI_RESULTS);
-        poiLimit = Math.max(poiLimit, MIN_POI_RESULTS);
-        LOGGER.info("Getting route for conversationId: {}, lat: {}, lon: {}, radius: {}, limit: {}, city: {}, isMocked: {}", 
-                conversationId, lat, lon, radiusMeters, poiLimit, city, isMocked);
+        int normalizedPoiLimit = Math.min(Math.max(poiLimit, MIN_POI_RESULTS), MAX_POI_RESULTS);
+        LOGGER.info("[START] Generating 3 routes for conversationId: {}; city: {}; poiLimit: {}; lat/lon: {},{}",
+                conversationId, city, normalizedPoiLimit, lat, lon);
 
-        return buildRoute(userId, lat, lon, poiCategories, radiusMeters, emotionWeights, poiLimit)
-                .timeout(ROUTE_TIMEOUT)
-                .flatMap(route -> {
-                    // Get the top emotion from the weights to use as mood
-                    String mood = getTopEmotion(emotionWeights);
-                    
-                    // Use the actual city name passed as parameter
-                    String cityName = "Unknown City";
-                    if (city != null) {
-                        String trimmedCity = city.trim();
-                        if (!trimmedCity.isEmpty()) {
-                            cityName = trimmedCity;
-                        }
+        // Fetch POIs once and cache for all 3 routes
+        Flux<Poi> cachedPoiFlux = osmPort.findAmenitiesAround(lat, lon, poiCategories, radiusMeters)
+                .cache();
+
+        // Get all scoring configurations from properties
+        ScoringConfig[] configs = scoringConfigFactory.allConfigs();
+
+        String mood = getTopEmotion(emotionWeights);
+        String cityName = (city != null && !city.trim().isEmpty()) ? city.trim() : "Unknown City";
+
+        // 1. Generate geometry-only routes in parallel
+        return Flux.fromArray(configs)
+                .flatMap(config -> buildRouteWithConfig(userId, lat, lon, poiCategories, radiusMeters, emotionWeights, normalizedPoiLimit, cachedPoiFlux, config)
+                        .timeout(ROUTE_TIMEOUT)
+                        .map(route -> new ConfiguredRoute(config, route))
+                        .onErrorResume(ex -> {
+                            LOGGER.error("Error generating {} route for conversationId: {}", config.routeType(), conversationId, ex);
+                            // We return empty so we can continue with other routes
+                            return Mono.empty();
+                        })
+                )
+                .collectList()
+                .flatMap(configuredRoutes -> {
+                    if (configuredRoutes.isEmpty()) {
+                        return Mono.just(List.of(RouteGenerationResult.failure("Failed to generate any routes.")));
                     }
-                    
-                    // Generate route title and day descriptions using AI
-                    return routeDescriptionService.generateRouteText(mood, cityName, route.pois(), tripDays, isMocked)
-                            .map(routeText -> {
-                                // Create a new Route object with title and day descriptions
-                                Route originalRoute = route.route();
-                                Route routeWithTitleAndDesc = new Route(
-                                    originalRoute.distanceMeters(),
-                                    originalRoute.durationSeconds(),
-                                    originalRoute.geometry(),
-                                    originalRoute.legDistances(),
-                                    originalRoute.legDurations(),
-                                    originalRoute.waypointOrder(),
-                                    routeText.title(),
-                                    routeText.dayDescriptions()
-                                );
 
-                                return new PoiRouteResult(route.pois(), routeWithTitleAndDesc);
+                    // 2. Prepare context for batch AI generation
+                    List<RouteGenerationContext> contexts = configuredRoutes.stream()
+                            .map(cr -> new RouteGenerationContext(
+                                    cr.config.routeType(),
+                                    cr.route.pois(),
+                                    tripDays
+                            ))
+                            .toList();
+
+                    // 3. Call batch generation service
+                    return routeDescriptionService.generateBatchRouteText(mood, cityName, contexts, isMocked)
+                            .flatMapMany(descriptions -> {
+                                // 4. Map descriptions back to routes and save
+                                return Flux.fromIterable(configuredRoutes)
+                                        .flatMap(configuredRoute -> {
+                                            RouteText text = descriptions.get(configuredRoute.config.routeType());
+                                            // Fallback to default if text is missing
+                                            if (text == null) {
+                                                text = new RouteText("Route", Map.of());
+                                            }
+
+                                            Route originalRoute = configuredRoute.route.route();
+                                            Route routeWithTitleAndDesc = new Route(
+                                                    originalRoute.distanceMeters(),
+                                                    originalRoute.durationSeconds(),
+                                                    originalRoute.geometry(),
+                                                    originalRoute.legDistances(),
+                                                    originalRoute.legDurations(),
+                                                    originalRoute.waypointOrder(),
+                                                    text.title(),
+                                                    text.dayDescriptions()
+                                            );
+                                            PoiRouteResult finalResult = new PoiRouteResult(configuredRoute.route.pois(), routeWithTitleAndDesc);
+
+                                            return routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(finalResult, conversationId))
+                                                    .doOnNext(saved -> LOGGER.info("[STEP] Route ({}) generated and saved successfully for conversationId: {}", configuredRoute.config.routeType(), saved.conversationId()))
+                                                    .map(saved -> RouteGenerationResult.success(finalResult, configuredRoute.config.routeType()));
+                                        });
                             })
-                            .defaultIfEmpty(route) // Fallback if route text generation fails
-                            .flatMap(processedRoute ->
-                                routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(processedRoute, conversationId))
-                                        .doOnNext(saved -> LOGGER.info("Route generated successfully for conversationId: {}", saved.conversationId()))
-                                        .map(saved -> RouteGenerationResult.success(processedRoute))
-                            );
+                            .collectList();
                 })
-                .onErrorResume(ex -> {
-                    LOGGER.error("Unexpected error during route generation for conversationId: {}", conversationId, ex);
-                    return Mono.just(RouteGenerationResult.failure(mapErrorToUserMessage(ex)));
-                });
+                .map(results -> {
+                    // Sort results to maintain consistent order: EMOTION_FOCUSED, CATEGORY_FOCUSED, BALANCED
+                    results.sort((a, b) -> {
+                        if (a.routeType() == null && b.routeType() == null) return 0;
+                        if (a.routeType() == null) return 1;
+                        if (b.routeType() == null) return -1;
+                        return a.routeType().ordinal() - b.routeType().ordinal();
+                    });
+                    return results;
+                })
+                .doOnNext(results -> LOGGER.info("[COMPLETE] Batch generation finished for conversationId: {}. Generated {} routes.", conversationId, results.size()));
     }
-
+    
     private String getTopEmotion(Map<Emotion, Double> emotionWeights) {
         return emotionWeights.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
@@ -131,21 +167,21 @@ public class RouteService {
                 .orElse("NEUTRAL");
     }
 
-    private Mono<PoiRouteResult> buildRoute(
+
+    private record ConfiguredRoute(ScoringConfig config, PoiRouteResult route) {}
+
+    private Mono<PoiRouteResult> buildRouteWithConfig(
             long userId,
             double lat,
             double lon,
             List<PoiCategory> poiCategories,
             int radiusMeters,
             Map<Emotion, Double> emotionWeights,
-            int poiLimit
+            int poiLimit,
+            Flux<Poi> cachedPoiFlux,
+            ScoringConfig config
     ) {
-        // Frontend-selected categories are intentionally ignored by the Overpass adapter for now;
-        // keep plumbing intact so we can re-enable client-side filtering later.
-        Flux<Poi> poiFlux = osmPort.findAmenitiesAround(lat, lon, poiCategories, radiusMeters)
-                .cache();
-
-        return poiScoringService.scoreAndRank(poiFlux, userId, emotionWeights, poiCategories, lat, lon, poiLimit)
+        return poiScoringService.scoreAndRank(cachedPoiFlux, userId, emotionWeights, poiCategories, lat, lon, poiLimit, config)
                 .flatMap(scoredPois -> {
                     if (scoredPois.isEmpty()) {
                         return Mono.error(new NotEnoughPoisException("No POIs found after categorization and scoring"));
@@ -157,7 +193,6 @@ public class RouteService {
                                     return Mono.error(new NotEnoughPoisException("Not enough POIs to build a route"));
                                 }
 
-                                // Reorder enrichedPois to start with the one closest to the user's survey coordinate
                                 List<EnrichedPoi> reorderedInputPois = new java.util.ArrayList<>(enrichedPois);
                                 reorderedInputPois.sort((p1, p2) -> {
                                     double dist1 = calculateHaversineDistance(lat, lon, p1.poi().latitude(), p1.poi().longitude());
@@ -165,31 +200,25 @@ public class RouteService {
                                     return Double.compare(dist1, dist2);
                                 });
 
-                                // Move the closest POI to the first position, keep others.
-                                // OSRM 'source=first' will force the route to start at this closest POI.
                                 return routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(
                                                 reorderedInputPois.stream().map(EnrichedPoi::poi).toList()
                                         ))
                                         .map(route -> {
-                                            // Use OSRM's duration as travel time, then add POI visiting time
                                             double totalDuration = route.durationSeconds() + (enrichedPois.size() * POI_VISITING_TIME_SECONDS);
-
-                                            // Reorder POIs based on the optimized route order from OSRM
-                                            // waypointOrder refers to indices in reorderedInputPois (which was sent to OSRM)
                                             List<EnrichedPoi> orderedPOIs = route.waypointOrder().stream()
                                                     .filter(index -> index >= 0 && index < reorderedInputPois.size())
                                                     .map(reorderedInputPois::get)
                                                     .toList();
 
                                             return new PoiRouteResult(orderedPOIs, new Route(
-                                                    route.distanceMeters(), 
-                                                    totalDuration, 
+                                                    route.distanceMeters(),
+                                                    totalDuration,
                                                     route.geometry(),
                                                     route.legDistances(),
                                                     route.legDurations(),
                                                     route.waypointOrder(),
-                                                    null, // title placeholder - will be filled later
-                                                    null  // description placeholder - will be filled later
+                                                    null,
+                                                    null
                                             ));
                                         });
                             });

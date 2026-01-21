@@ -60,6 +60,20 @@ public class MmrRerankingService {
      *         {@code null}
      */
     public List<ScoredPoi> rerank(List<ScoredPoi> candidates, int k) {
+        return rerankWithLambda(candidates, k, this.lambda);
+    }
+
+    /**
+     * Re-ranks a list of candidate POIs using Maximal Marginal Relevance (MMR) with a custom lambda.
+     * <p>
+     * Higher lambda values favor relevance over diversity. Lower values favor diversity.
+     *
+     * @param candidates the list of candidate {@link ScoredPoi} to re-rank
+     * @param k          the maximum number of POIs to return
+     * @param customLambda the lambda value to use for this reranking (0.0-1.0)
+     * @return a list of re-ranked {@link ScoredPoi}
+     */
+    public List<ScoredPoi> rerankWithLambda(List<ScoredPoi> candidates, int k, double customLambda) {
         if (candidates == null || candidates.isEmpty() || k <= 0) {
             return List.of();
         }
@@ -92,7 +106,8 @@ public class MmrRerankingService {
                         .max()
                         .orElse(0.0);
 
-                double mmr = lambda * relNorm - (1 - lambda) * maxSim;
+                double effectiveLambda = clamp01(customLambda);
+                double mmr = effectiveLambda * relNorm - (1 - effectiveLambda) * maxSim;
                 if (mmr > bestScore) {
                     bestScore = mmr;
                     best = candidate;
