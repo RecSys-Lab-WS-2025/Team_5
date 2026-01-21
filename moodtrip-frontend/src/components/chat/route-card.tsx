@@ -114,7 +114,7 @@ export function RouteCard({
                     </div>
                 )}
                 {routeType && routeTypeTitle && (
-                    <div className={`absolute top-2 right-2 z-10 ${routeTypeColors[routeType]?.bg || "bg-gray-500"} ${routeTypeColors[routeType]?.text || "text-white"} px-2 py-1 rounded-md text-xs font-semibold backdrop-blur-sm`}>
+                    <div className={`absolute top-2 right-2 z-10 ${routeTypeColors[routeType]?.bg ?? "bg-gray-500"} ${routeTypeColors[routeType]?.text ?? "text-white"} px-2 py-1 rounded-md text-xs font-semibold backdrop-blur-sm`}>
                         {routeTypeTitle}
                     </div>
                 )}
