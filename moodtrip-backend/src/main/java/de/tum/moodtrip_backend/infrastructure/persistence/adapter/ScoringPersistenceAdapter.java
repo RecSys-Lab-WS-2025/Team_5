@@ -35,6 +35,13 @@ public class ScoringPersistenceAdapter implements EmotionCategoryScorePort, PoiR
     }
 
     @Override
+    public Mono<EmotionCategoryScore> findByEmotionAndCategoryForUpdate(Emotion emotion, PoiCategory category) {
+        LOGGER.debug("Fetching emotion_category_score for update: emotion={}, category={}", emotion, category);
+        return scoreRepository.findByEmotionAndCategoryForUpdate(emotion.name(), category.name())
+                .map(ScoringMapper::toDomain);
+    }
+
+    @Override
     public Mono<EmotionCategoryScore> save(EmotionCategoryScore score) {
         LOGGER.debug("Saving emotion_category_score: emotion={}, category={}, score={}", score.emotion(), score.category(), score.score());
         return scoreRepository.save(ScoringMapper.toEntity(score))
