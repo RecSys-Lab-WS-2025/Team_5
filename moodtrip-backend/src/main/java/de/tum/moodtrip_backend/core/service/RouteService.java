@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
-import de.tum.moodtrip_backend.core.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -13,6 +12,17 @@ import org.springframework.stereotype.Service;
 import de.tum.moodtrip_backend.core.exception.MapProviderUnavailableException;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteCoordinatesMapper;
 import de.tum.moodtrip_backend.core.mapper.PoiRouteResultRouteRecommendationMapper;
+import de.tum.moodtrip_backend.core.model.Emotion;
+import de.tum.moodtrip_backend.core.model.EnrichedPoi;
+import de.tum.moodtrip_backend.core.model.Poi;
+import de.tum.moodtrip_backend.core.model.PoiCategory;
+import de.tum.moodtrip_backend.core.model.PoiRouteResult;
+import de.tum.moodtrip_backend.core.model.Route;
+import de.tum.moodtrip_backend.core.model.RouteGenerationResult;
+import de.tum.moodtrip_backend.core.model.RouteText;
+import de.tum.moodtrip_backend.core.model.RouteGenerationContext;
+import de.tum.moodtrip_backend.core.model.ScoredPoi;
+import de.tum.moodtrip_backend.core.model.ScoringConfig;
 import de.tum.moodtrip_backend.core.port.OsmPort;
 import de.tum.moodtrip_backend.core.port.RouteRecommendationPort;
 import de.tum.moodtrip_backend.core.port.RoutingPort;
@@ -25,7 +35,7 @@ import reactor.core.publisher.Mono;
 public class RouteService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RouteService.class);
-    private static final Duration ROUTE_TIMEOUT = Duration.ofSeconds(60);
+    private static final Duration ROUTE_TIMEOUT = Duration.ofSeconds(90);
     private static final String GENERIC_ERROR_MESSAGE = "I couldn't generate a route due to a routing service error. Please try again.";
     private static final int MAX_POI_RESULTS = 15;
     private static final int MIN_POI_RESULTS = 2;

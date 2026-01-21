@@ -56,13 +56,13 @@ export function RouteCard({
         // 4.5 stars: Expert (16.5 - 19)
         // 5.0 stars: Extreme (> 19)
         if (dailyEffortScore < 3) return 1.0;
-        if (dailyEffortScore < 4.5) return 1.5;
-        if (dailyEffortScore < 6) return 2.0;
-        if (dailyEffortScore < 7.5) return 2.5;
-        if (dailyEffortScore < 9) return 3.0;
-        if (dailyEffortScore < 10.5) return 3.5;
-        if (dailyEffortScore < 12) return 4.0;
-        if (dailyEffortScore < 13.5) return 4.5;
+        if (dailyEffortScore < 5) return 1.5;
+        if (dailyEffortScore < 7) return 2.0;
+        if (dailyEffortScore < 9) return 2.5;
+        if (dailyEffortScore < 11.5) return 3.0;
+        if (dailyEffortScore < 14) return 3.5;
+        if (dailyEffortScore < 16.5) return 4.0;
+        if (dailyEffortScore < 19) return 4.5;
         return 5.0;
     };
 

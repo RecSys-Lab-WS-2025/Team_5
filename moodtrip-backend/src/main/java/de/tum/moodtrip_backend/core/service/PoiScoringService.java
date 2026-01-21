@@ -122,6 +122,8 @@ public class PoiScoringService {
                                               double originLon,
                                               int limit,
                                               ScoringConfig config) {
+        LOGGER.info("[START] Scoring POIs for user: {}", userId);
+
         // Apply emotion multiplier from config
         double emotionMultiplier = config != null ? config.emotionMultiplier() : 1.0;
         double categoryBoostMultiplier = config != null ? config.categoryBoostMultiplier() : 1.0;
@@ -162,7 +164,7 @@ public class PoiScoringService {
                                     .limit(3)
                                     .map(p -> String.format("%s(%.2f)", p.poi().name(), p.score().finalScore()))
                                     .collect(Collectors.joining(", "));
-                            LOGGER.info("Scoring complete for user {}. Candidates: {}. Top 3: [{}]", userId, list.size(), top3);
+                            LOGGER.info("[COMPLETE] Scoring finished for user {}. Candidates: {}. Top 3: [{}]", userId, list.size(), top3);
                             list.forEach(this::logTopPoi);
                         })
         );

@@ -935,16 +935,42 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   // Check if routes array exists (it should be present in the response type now)
                   const routesArray = (res.routes && res.routes.length > 0) ? res.routes : [routeData];
 
-                  // Helper to extract route card data from a FeatureCollection
-                  const extractRouteCardData = (fc: FeatureCollection, idx: number): RouteRecommendation => {
+                  // Track used images to prioritize diversity
+                  const usedImages = new Set<string>();
+
+                  const cardDataList: RouteRecommendation[] = routesArray.map((fc, idx) => {
                     const features = (fc.features ?? []) as AnyFeature[];
                     const routeFeature = features.find(isRouteFeature);
                     const props = routeFeature?.properties as RouteProperties | undefined;
 
                     const poiFeats = features.filter(isPoiFeature);
-                    const firstPoiImg = poiFeats.find((f) => !!f.properties?.imageUrl);
-                    const fallbackImg = firstPoiImg?.properties?.imageUrl;
-                    const thumbnail = props?.image || fallbackImg || "/placeholder.png";
+
+                    // Find the best image for this card
+                    // Priority 1: Image explicitly set on route props
+                    // Priority 2: First POI image that hasn't been used yet
+                    // Priority 3: First POI image (fallback if all used)
+
+                    let thumbnail = props?.image;
+
+                    if (!thumbnail) {
+                      const availablePoiImages = poiFeats
+                        .map(f => f.properties?.imageUrl)
+                        .filter((url): url is string => !!url);
+
+                      const uniqueImage = availablePoiImages.find(url => !usedImages.has(url));
+
+                      if (uniqueImage) {
+                        thumbnail = uniqueImage;
+                      } else if (availablePoiImages.length > 0) {
+                        thumbnail = availablePoiImages[0];
+                      }
+                    }
+
+                    if (thumbnail) {
+                      usedImages.add(thumbnail);
+                    } else {
+                      thumbnail = "/placeholder.png";
+                    }
 
                     const dayDescs = props?.dayDescriptions || { "1": "A personalized route based on your mood." };
 
@@ -955,15 +981,11 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                       imageUrl: thumbnail,
                       distanceMeters: props?.distanceMeters || 0,
                       durationSeconds: props?.durationSeconds || 0,
-                      geoJson: fc,
+                      geoJson: fc as FeatureCollection,
                       routeType: props?.routeType,
                       routeTypeTitle: props?.routeTypeTitle,
                     };
-                  };
-
-                  const cardDataList: RouteRecommendation[] = routesArray.map((fc, idx) =>
-                    extractRouteCardData(fc as FeatureCollection, idx)
-                  );
+                  });
 
                   const cardsPayload = `[ROUTE_CARDS] ${JSON.stringify(cardDataList)}`;
                   await apiSendMessage(conversationId, cardsPayload, false);

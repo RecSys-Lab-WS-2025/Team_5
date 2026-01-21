@@ -139,6 +139,8 @@ public final class GeoJsonRouteMapper {
             }
 
             List<Map<String, Object>> dailyStats = new ArrayList<>();
+            double totalActiveDistance = 0;
+            double totalActiveDuration = 0;
 
             for (int d = 1; d <= tripDays; d++) {
                 double dayDistance = 0;
@@ -166,11 +168,20 @@ public final class GeoJsonRouteMapper {
                 Map<String, Object> dayStat = new HashMap<>();
                 dayStat.put("day", d);
                 dayStat.put("distanceMeters", Math.round(dayDistance));
-                dayStat.put("durationSeconds", Math.round(dayDuration + (dayPoisCount * POI_VISITING_TIME_SECONDS)));
+                double totalDayTime = dayDuration + (dayPoisCount * POI_VISITING_TIME_SECONDS);
+                dayStat.put("durationSeconds", Math.round(totalDayTime));
                 dailyStats.add(dayStat);
+
+                totalActiveDistance += dayDistance;
+                totalActiveDuration += totalDayTime;
             }
             routeFeature.setProperty("dailyStats", dailyStats);
-
+            
+            // Overwrite total distance/duration with the sum of ACTIVE daily parts
+            // preventing the inclusion of long cross-day travel legs in the difficulty calculation
+            routeFeature.setProperty("distanceMeters", Math.round(totalActiveDistance));
+            routeFeature.setProperty("durationSeconds", Math.round(totalActiveDuration));
+            
             featureCollection.add(routeFeature);
         }
 
