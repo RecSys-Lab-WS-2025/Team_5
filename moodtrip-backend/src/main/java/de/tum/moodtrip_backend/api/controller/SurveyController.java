@@ -122,7 +122,7 @@ public class SurveyController {
                                                             double factor = switch (entry.getKey()) {
                                                                 case ENERGIZED -> highEnergyFactor;
                                                                 case JOYFUL -> happyEnergyFactor;
-                                                                case NEUTRAL,CALM -> defaultEnergyFactor;
+                                                                case NEUTRAL, CALM -> defaultEnergyFactor;
                                                                 case STRESSED -> stressedEnergyFactor;
                                                                 case SAD -> sadEnergyFactor;
                                                                 case TIRED -> lowEnergyFactor;
