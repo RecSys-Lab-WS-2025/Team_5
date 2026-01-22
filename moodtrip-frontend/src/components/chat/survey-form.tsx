@@ -262,7 +262,7 @@ export function SurveyForm({
     return (
         <Card className="w-full max-w-lg mx-auto border border-gray-200 shadow-xl bg-white rounded-2xl overflow-hidden">
             {/* Header */}
-            <CardHeader className="bg-gray-100 border-b border-gray-200 pb-6 pt-6">
+            <CardHeader className="bg-gray-100 border-b border-gray-200 pb-6 pt-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-gray-200 rounded-xl">
                         <Compass className="w-6 h-6 text-gray-700" />
@@ -502,17 +502,12 @@ export function SurveyForm({
                                         type="button"
                                         onClick={() => toggleCategory(cat)}
                                         disabled={isDisabled}
-                                        style={isSelected ? {
-                                            backgroundColor: '#111827',
-                                            color: 'white',
-                                            borderColor: '#111827',
-                                            boxShadow: '0 4px 6px -1px rgba(17, 24, 39, 0.2)'
-                                        } : {}}
+                                        style={isSelected ? { backgroundColor: '#000', color: '#fff', borderColor: '#000' } : {}}
                                         className={`
-                                            px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border
+                                            px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border outline-none
                                             ${isSelected
-                                                ? ""
-                                                : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-900"}
+                                                ? "shadow-md hover:!bg-gray-800 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                                                : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:bg-gray-100 hover:text-gray-900 focus:ring-2 focus:ring-black focus:ring-offset-2"}
                                             ${isDisabled ? "cursor-default opacity-70" : "cursor-pointer"}
                                         `}
                                     >
@@ -529,10 +524,15 @@ export function SurveyForm({
             {!readOnly && !isSubmitted && (
                 <CardFooter className="bg-gray-50 border-t border-gray-100 p-4">
                     <Button
-                        className={`w-full h-12 font-semibold text-base rounded-xl transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed text-white ${
+                        style={
                             isSubmitting || !isFormComplete
-                                ? "bg-gray-400 shadow-none"
-                                : "bg-gray-900 shadow-[0_10px_15px_-3px_rgba(17,24,39,0.2)]"
+                                ? { backgroundColor: '#d1d5db', color: '#6b7280' }
+                                : { backgroundColor: '#000', color: '#fff' }
+                        }
+                        className={`w-full h-12 font-semibold text-base rounded-xl transition-all duration-200 disabled:cursor-not-allowed outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 ${
+                            isSubmitting || !isFormComplete
+                                ? "shadow-none"
+                                : "hover:!bg-gray-800 active:!bg-gray-900 shadow-lg shadow-black/30"
                         }`}
                         onClick={handleSubmit}
                         disabled={isSubmitting || !isFormComplete}
