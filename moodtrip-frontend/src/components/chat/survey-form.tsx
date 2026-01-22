@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Loader2, LocateFixed, MapPin } from "lucide-react";
+import { Calendar, CheckCircle2, Compass, Loader2, LocateFixed, MapPin, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -51,12 +51,24 @@ export function SurveyForm({
     // Helper to get date string YYYY-MM-DD
     const getTodayString = () => new Date().toISOString().split('T')[0];
 
+    // Helper to calculate trip days from start/end dates
+    const calculateTripDays = (start: string, end: string): number => {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const diffTime = endDate.getTime() - startDate.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        return Math.max(1, Math.min(5, diffDays));
+    };
+
     const [range, setRange] = React.useState<number>(initialData?.rangeMeters ?? 5000);
     // Local string state for input to allow empty/typing states
     const [rangeInput, setRangeInput] = React.useState<string>((initialData?.rangeMeters ? initialData.rangeMeters / 1000 : 5).toString());
 
-    const [startDate, setStartDate] = React.useState<string>(initialData?.startDate ?? getTodayString());
-    const [endDate, setEndDate] = React.useState<string>(initialData?.endDate ?? getTodayString());
+    const [tripDays, setTripDays] = React.useState<number>(
+        initialData?.startDate && initialData?.endDate
+            ? calculateTripDays(initialData.startDate, initialData.endDate)
+            : 1
+    );
     const [selectedCategories, setSelectedCategories] = React.useState<string[]>(
         () => normalizePoiCategories(initialData?.poiCategories)
     );
@@ -209,16 +221,14 @@ export function SurveyForm({
             return;
         }
 
-        if (!startDate || !endDate) {
-            return;
-        }
-
         setIsSubmitting(true);
         setLocationError(null);
 
-        // Ensure dates are present
-        const finalStartDate = startDate || getTodayString();
-        const finalEndDate = endDate || getTodayString();
+        // Calculate dates from trip duration
+        const finalStartDate = getTodayString();
+        const endDateObj = new Date();
+        endDateObj.setDate(endDateObj.getDate() + tripDays - 1);
+        const finalEndDate = endDateObj.toISOString().split('T')[0];
 
         try {
             await onSubmit({
@@ -233,8 +243,6 @@ export function SurveyForm({
             setIsSubmitted(true);
         } catch (error) {
             console.error("Survey submission failed", error);
-            // Optionally handle error state here, e.g. show error message
-            // For now, we allow retrying if it failed (by setting isSubmitting back to false)
         } finally {
             setIsSubmitting(false);
         }
@@ -242,34 +250,48 @@ export function SurveyForm({
 
     const hasLocation = Boolean(selectedLocation);
     const hasRange = Number.isFinite(range);
-    const hasDates = Boolean(startDate) && Boolean(endDate);
-    const isFormComplete = hasLocation && hasRange && hasDates;
+    const hasTripDays = tripDays >= 1 && tripDays <= 5;
+    const isFormComplete = hasLocation && hasRange && hasTripDays;
 
     const isDisabled = readOnly || isSubmitting || isSubmitted;
 
     return (
-        <Card className="w-full max-w-lg mx-auto border border-gray-200 shadow-sm bg-white rounded-xl overflow-hidden">
-            <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
-                <CardTitle className="text-lg font-semibold text-gray-800">Trip Preferences</CardTitle>
-                <CardDescription className="text-gray-500 text-sm">
-                    {readOnly || isSubmitted ? "Your submitted preferences" : "Tell us where you're starting and what you're looking for."}
-                </CardDescription>
+        <Card className="w-full max-w-lg mx-auto border border-gray-200 shadow-xl bg-white rounded-2xl overflow-hidden">
+            {/* Header */}
+            <CardHeader className="bg-gray-100 border-b border-gray-200 pb-6 pt-6">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-200 rounded-xl">
+                        <Compass className="w-6 h-6 text-gray-700" />
+                    </div>
+                    <div>
+                        <CardTitle className="text-xl font-bold text-gray-800">Trip Preferences</CardTitle>
+                        <CardDescription className="text-gray-500 text-sm mt-1">
+                            {readOnly || isSubmitted ? "Your submitted preferences" : "Tell us about your ideal trip"}
+                        </CardDescription>
+                    </div>
+                </div>
             </CardHeader>
+
             <CardContent className="p-6 space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Location Picker */}
-                    <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Location</Label>
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-gray-700" />
+                            <Label className="text-sm font-semibold text-gray-700">Starting Location</Label>
+                        </div>
                         {readOnly || isSubmitted ? (
-                            <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 text-sm">
-                                <MapPin className="w-4 h-4 text-gray-400" />
-                                <div className="flex flex-col">
-                                    <span className="font-medium">
+                            <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl bg-gray-50 text-gray-700">
+                                <div className="p-2 bg-gray-200 rounded-lg">
+                                    <MapPin className="w-4 h-4 text-gray-700" />
+                                </div>
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <span className="font-medium text-gray-800 truncate">
                                         {selectedLocation?.label ?? "Location not provided"}
                                     </span>
                                     {selectedLocation && (
                                         <span className="text-xs text-gray-500">
-                                            Lat {selectedLocation.latitude.toFixed(4)}, Lon {selectedLocation.longitude.toFixed(4)}
+                                            {selectedLocation.latitude.toFixed(4)}, {selectedLocation.longitude.toFixed(4)}
                                         </span>
                                     )}
                                 </div>
@@ -277,28 +299,35 @@ export function SurveyForm({
                         ) : (
                             <div className="relative">
                                 <div className="flex gap-2">
-                                    <Input
-                                        value={locationQuery}
-                                        onChange={(e) => {
-                                            setLocationQuery(e.target.value);
-                                            setSelectedLocation(null);
-                                            setLocationError(null);
-                                        }}
-                                        placeholder="Search for a city, address, or place"
-                                        disabled={isDisabled || isFetchingCurrentLocation}
-                                        className="pr-3"
-                                    />
+                                    <div className="relative flex-1">
+                                        <Input
+                                            value={locationQuery}
+                                            onChange={(e) => {
+                                                setLocationQuery(e.target.value);
+                                                setSelectedLocation(null);
+                                                setLocationError(null);
+                                            }}
+                                            placeholder="Search for a city, address, or place..."
+                                            disabled={isDisabled || isFetchingCurrentLocation}
+                                            className="h-11 pl-4 pr-3 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-gray-400 focus-visible:ring-gray-900/10 transition-all"
+                                        />
+                                        {selectedLocation && (
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                            </div>
+                                        )}
+                                    </div>
                                     <TooltipProvider>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <Button
                                                     type="button"
-                                                    variant="secondary"
+                                                    variant="outline"
                                                     size="icon"
                                                     onClick={handleUseCurrentLocation}
                                                     disabled={isDisabled || isFetchingCurrentLocation}
                                                     aria-label={isFetchingCurrentLocation ? "Locating current position" : "Use my current location"}
-                                                    className="h-10 w-10"
+                                                    className="h-11 w-11 rounded-xl border-gray-200 hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900 transition-all"
                                                 >
                                                     {isFetchingCurrentLocation ? (
                                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -308,131 +337,158 @@ export function SurveyForm({
                                                 </Button>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                <p>{isFetchingCurrentLocation ? "Locating…" : "Use my location"}</p>
+                                                <p>{isFetchingCurrentLocation ? "Locating..." : "Use my location"}</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
                                 </div>
                                 {isSearchingLocation && (
-                                    <div className="mt-1 text-xs text-gray-500">Searching…</div>
+                                    <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        Searching...
+                                    </div>
                                 )}
                                 {locationSuggestions.length > 0 && (
-                                    <ul className="absolute z-20 mt-1 w-full max-h-52 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-md">
+                                    <ul className="absolute z-20 mt-2 w-full max-h-52 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
                                         {locationSuggestions.map((suggestion) => (
                                             <li
                                                 key={suggestion.place_id}
-                                                className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                                className="cursor-pointer px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors first:rounded-t-xl last:rounded-b-xl border-b border-gray-100 last:border-0"
                                                 onClick={() => handleLocationSelect(suggestion)}
                                             >
-                                                {suggestion.display_name}
+                                                <div className="flex items-start gap-3">
+                                                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                                    <span className="line-clamp-2">{suggestion.display_name}</span>
+                                                </div>
                                             </li>
                                         ))}
                                     </ul>
                                 )}
-                                <div className="mt-1 text-xs text-gray-500">
-                                    Start typing (min 3 characters) to search worldwide, or use your current location.
-                                </div>
+                                {!selectedLocation && !isSearchingLocation && locationSuggestions.length === 0 && (
+                                    <p className="mt-2 text-xs text-gray-400">
+                                        Type at least 3 characters to search, or use your current location
+                                    </p>
+                                )}
                             </div>
                         )}
                         {locationError && (
-                            <div className="text-xs text-red-600">{locationError}</div>
+                            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                                <span>{locationError}</span>
+                            </div>
                         )}
                     </div>
 
-                    {/* Range */}
-                    <div className="space-y-4">
-                        <Label htmlFor="range-input" className="text-xs font-medium text-gray-500 uppercase tracking-wider">Search Range</Label>
-                        <div className="flex items-center gap-4">
-                            <Slider
-                                className="flex-1"
-                                value={[range / 1000]}
-                                onValueChange={(vals) => {
-                                    const km = vals[0];
-                                    setRange(km * 1000);
-                                    setRangeInput(km.toString());
-                                }}
-                                max={30}
-                                min={1}
-                                step={1}
-                                disabled={isDisabled}
-                            />
-                            <Input
-                                id="range-input"
-                                type="number"
-                                className="w-24 rounded-lg border-gray-200 focus-visible:ring-gray-900"
-                                value={rangeInput}
-                                onChange={(e) => {
-                                    const valStr = e.target.value;
-                                    setRangeInput(valStr);
+                    {/* Divider */}
+                    <div className="border-t border-gray-100" />
 
-                                    const val = parseFloat(valStr);
-                                    if (!isNaN(val)) {
-                                        if (val > 30) {
-                                            // Clamp > 30 immediately to 30 for better UX
-                                            setRange(30000);
-                                            setRangeInput("30");
-                                        } else if (val >= 1) {
-                                            // Valid range update
-                                            setRange(val * 1000);
-                                        }
-                                        // If val < 1 (e.g. 0), keep typing but don't update range yet
-                                    }
-                                }}
-                                onBlur={() => {
-                                    let val = parseFloat(rangeInput);
-                                    if (isNaN(val)) {
-                                        // Invalid/Empty -> revert to last valid state
-                                        val = range / 1000;
-                                    } else {
-                                        // Clamp on blur
-                                        if (val < 1) val = 1;
-                                        if (val > 30) val = 30;
-                                    }
-                                    setRange(val * 1000);
-                                    setRangeInput(val.toString());
-                                }}
-                                disabled={isDisabled}
-                                min={1}
-                                max={30}
-                                step={1}
-                            />
-                            <span className="text-sm font-medium text-gray-700">km</span>
-                        </div>
-                    </div>
-
-                    {/* Dates */}
+                    {/* Trip Duration & Range Row */}
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="start-date" className="text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</Label>
-                            <Input
-                                id="start-date"
-                                type="date"
-                                className="rounded-lg border-gray-200 focus-visible:ring-gray-900"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                required={!isDisabled}
+                        {/* Trip Duration */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-gray-700" />
+                                <Label htmlFor="trip-days" className="text-sm font-semibold text-gray-700">Duration</Label>
+                            </div>
+                            <select
+                                id="trip-days"
+                                className="flex h-11 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-50 transition-all appearance-none cursor-pointer"
+                                style={{
+                                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                    backgroundPosition: 'right 0.75rem center',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundSize: '1.25rem 1.25rem',
+                                }}
+                                value={tripDays}
+                                onChange={(e) => setTripDays(Number(e.target.value))}
                                 disabled={isDisabled}
-                            />
+                            >
+                                <option value={1}>1 day</option>
+                                <option value={2}>2 days</option>
+                                <option value={3}>3 days</option>
+                                <option value={4}>4 days</option>
+                                <option value={5}>5 days</option>
+                            </select>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="end-date" className="text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</Label>
-                            <Input
-                                id="end-date"
-                                type="date"
-                                className="rounded-lg border-gray-200 focus-visible:ring-gray-900"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                required={!isDisabled}
-                                disabled={isDisabled}
-                            />
+
+                        {/* Search Range */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                <Compass className="w-4 h-4 text-gray-700" />
+                                <Label htmlFor="range-input" className="text-sm font-semibold text-gray-700">Range</Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    id="range-input"
+                                    type="number"
+                                    className="h-11 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-gray-400 focus-visible:ring-gray-900/10 text-center font-medium transition-all"
+                                    value={rangeInput}
+                                    onChange={(e) => {
+                                        const valStr = e.target.value;
+                                        setRangeInput(valStr);
+                                        const val = parseFloat(valStr);
+                                        if (!isNaN(val)) {
+                                            if (val > 30) {
+                                                setRange(30000);
+                                                setRangeInput("30");
+                                            } else if (val >= 1) {
+                                                setRange(val * 1000);
+                                            }
+                                        }
+                                    }}
+                                    onBlur={() => {
+                                        let val = parseFloat(rangeInput);
+                                        if (isNaN(val)) {
+                                            val = range / 1000;
+                                        } else {
+                                            if (val < 1) val = 1;
+                                            if (val > 30) val = 30;
+                                        }
+                                        setRange(val * 1000);
+                                        setRangeInput(val.toString());
+                                    }}
+                                    disabled={isDisabled}
+                                    min={1}
+                                    max={30}
+                                    step={1}
+                                />
+                                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">km</span>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Range Slider */}
+                    <div className="px-1">
+                        <Slider
+                            className="w-full"
+                            value={[range / 1000]}
+                            onValueChange={(vals) => {
+                                const km = vals[0];
+                                setRange(km * 1000);
+                                setRangeInput(km.toString());
+                            }}
+                            max={30}
+                            min={1}
+                            step={1}
+                            disabled={isDisabled}
+                        />
+                        <div className="flex justify-between mt-1 text-xs text-gray-400">
+                            <span>1 km</span>
+                            <span>30 km</span>
+                        </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-100" />
 
                     {/* POI Categories */}
                     <div className="space-y-3">
-                        <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Interests <span className="text-[10px] font-normal lowercase italic opacity-70">(Optional)</span>
-                        </Label>
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-gray-700" />
+                            <Label className="text-sm font-semibold text-gray-700">
+                                Interests
+                                <span className="ml-2 text-xs font-normal text-gray-400">(Optional)</span>
+                            </Label>
+                        </div>
                         <div className="flex flex-wrap gap-2">
                             {POI_CATEGORIES.map((cat) => {
                                 const isSelected = selectedCategories.includes(cat);
@@ -442,14 +498,19 @@ export function SurveyForm({
                                         type="button"
                                         onClick={() => toggleCategory(cat)}
                                         disabled={isDisabled}
-                                        style={isSelected ? { backgroundColor: '#4b5563', color: 'white', borderColor: '#4b5563' } : {}}
+                                        style={isSelected ? {
+                                            backgroundColor: '#111827',
+                                            color: 'white',
+                                            borderColor: '#111827',
+                                            boxShadow: '0 4px 6px -1px rgba(17, 24, 39, 0.2)'
+                                        } : {}}
                                         className={`
-                      px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border
-                      ${isSelected
-                                                ? "shadow-sm"
-                                                : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"}
-                      ${isDisabled ? "cursor-default opacity-80" : "cursor-pointer"}
-                    `}
+                                            px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border
+                                            ${isSelected
+                                                ? ""
+                                                : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-900"}
+                                            ${isDisabled ? "cursor-default opacity-70" : "cursor-pointer"}
+                                        `}
                                     >
                                         {cat}
                                     </button>
@@ -459,22 +520,40 @@ export function SurveyForm({
                     </div>
                 </form>
             </CardContent>
+
+            {/* Footer */}
             {!readOnly && !isSubmitted && (
-                <CardFooter className="bg-gray-50/50 border-t border-gray-100 p-4">
+                <CardFooter className="bg-gray-50 border-t border-gray-100 p-4">
                     <Button
-                        style={{ backgroundColor: '#4b5563', color: 'white' }}
-                        className="w-full font-medium py-2.5 rounded-lg transition-all shadow-sm hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                        style={{
+                            backgroundColor: isSubmitting || !isFormComplete ? '#9ca3af' : '#111827',
+                            color: 'white',
+                            boxShadow: isSubmitting || !isFormComplete ? 'none' : '0 10px 15px -3px rgba(17, 24, 39, 0.2)'
+                        }}
+                        className="w-full h-12 font-semibold text-base rounded-xl transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed"
                         onClick={handleSubmit}
                         disabled={isSubmitting || !isFormComplete}
                     >
-                        {isSubmitting ? "Submitting..." : "Find Recommendations"}
+                        {isSubmitting ? (
+                            <span className="flex items-center gap-2">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Finding recommendations...
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-2">
+                                <Sparkles className="w-4 h-4" />
+                                Find Recommendations
+                            </span>
+                        )}
                     </Button>
                 </CardFooter>
             )}
+
             {isSubmitted && (
-                <CardFooter className="bg-gray-50/50 border-t border-gray-100 p-4">
-                    <div className="w-full text-center text-sm text-gray-500 font-medium">
-                        Submitted
+                <CardFooter className="bg-gray-50 border-t border-gray-200 p-4">
+                    <div className="w-full flex items-center justify-center gap-2 text-gray-700 font-medium">
+                        <CheckCircle2 className="w-5 h-5" />
+                        Preferences submitted
                     </div>
                 </CardFooter>
             )}
