@@ -56,7 +56,7 @@ export function SurveyForm({
         const startDate = new Date(start);
         const endDate = new Date(end);
         const diffTime = endDate.getTime() - startDate.getTime();
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
         return Math.max(1, Math.min(5, diffDays));
     };
 
