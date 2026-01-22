@@ -228,7 +228,11 @@ export function SurveyForm({
         const finalStartDate = getTodayString();
         const endDateObj = new Date();
         endDateObj.setDate(endDateObj.getDate() + tripDays - 1);
-        const finalEndDate = endDateObj.toISOString().split('T')[0];
+        const finalEndDate = [
+            endDateObj.getFullYear(),
+            String(endDateObj.getMonth() + 1).padStart(2, "0"),
+            String(endDateObj.getDate()).padStart(2, "0"),
+        ].join("-");
 
         try {
             await onSubmit({
