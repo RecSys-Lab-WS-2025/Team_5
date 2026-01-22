@@ -202,6 +202,60 @@ export function ChatInterface({
   const [typingMessageId, setTypingMessageId] = React.useState<string | null>(null);
   const [typingIndex, setTypingIndex] = React.useState(0);
 
+  // Staggered message reveal: track which messages are visible
+  const [visibleCount, setVisibleCount] = React.useState(messages.length);
+  const prevLengthRef = React.useRef(messages.length);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    const prevLength = prevLengthRef.current;
+    const currentLength = messages.length;
+    prevLengthRef.current = currentLength;
+
+    // Messages were removed or reset - show all immediately
+    if (currentLength <= prevLength) {
+      setVisibleCount(currentLength);
+      return;
+    }
+
+    // New messages arrived
+    const newCount = currentLength - prevLength;
+
+    // If only 1 new message, show immediately
+    if (newCount === 1) {
+      setVisibleCount(currentLength);
+      return;
+    }
+
+    // Multiple new messages - reveal one by one
+    // First, keep visibleCount at prevLength (don't show new ones yet)
+    // Then reveal them with delay
+
+    const revealNext = (targetCount: number) => {
+      if (targetCount > currentLength) return;
+
+      setVisibleCount(targetCount);
+
+      if (targetCount < currentLength) {
+        timerRef.current = setTimeout(() => revealNext(targetCount + 1), 1000);
+      }
+    };
+
+    // Start revealing from the first new message
+    timerRef.current = setTimeout(() => revealNext(prevLength + 1), 100);
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [messages.length]);
+
+  // Get only visible messages
+  const visibleMessages = React.useMemo(() => {
+    return messages.slice(0, visibleCount);
+  }, [messages, visibleCount]);
+
   const chatKey = chatId ?? "__global__";
   const [dismissedUrl, setDismissedUrl] = React.useState<Record<string, string | null>>({});
 
@@ -324,9 +378,19 @@ export function ChatInterface({
     return () => clearInterval(interval);
   }, [typingMessageId, lastAssistantMessage]);
 
+  // Smoothly scroll the bottom marker into view within the scrollable container
+  const smoothScrollToBottom = React.useCallback(() => {
+    if (!bottomRef.current) return;
+
+    bottomRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, []);
+
   React.useEffect(() => {
-    if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: "smooth" });
-  }, [messages, typingIndex]);
+    smoothScrollToBottom();
+  }, [visibleMessages.length, typingIndex, smoothScrollToBottom]);
 
   const renderMessageParts = (message: UIMessage) => {
     const isTypingMessage = message.id === typingMessageId;
@@ -454,7 +518,7 @@ export function ChatInterface({
     <div className="bg-white relative flex flex-1 flex-col">
       <ScrollArea className="flex-1 p-6 pb-32">
         <div className="mx-auto max-w-6xl space-y-4">
-          {messages.map((message) => {
+          {visibleMessages.map((message) => {
             const isUser = message.role === "user";
             const renderedParts = renderMessageParts(message).filter(
               (part) => part !== null && part !== undefined
@@ -478,7 +542,10 @@ export function ChatInterface({
             }
 
             return (
-              <div key={message.id} className={`flex ${isUser ? "justify-end" : "justify-start"} `}>
+              <div
+                key={message.id}
+                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+              >
                 <div
                   className={`${
                     isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
