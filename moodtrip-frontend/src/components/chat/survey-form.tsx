@@ -472,7 +472,7 @@ export function SurveyForm({
                             }}
                             max={30}
                             min={1}
-                            step={1}
+                            step={0.1}
                             disabled={isDisabled}
                         />
                         <div className="flex justify-between mt-1 text-xs text-gray-400">
