@@ -378,35 +378,14 @@ export function ChatInterface({
     return () => clearInterval(interval);
   }, [typingMessageId, lastAssistantMessage]);
 
-  // Custom smooth scroll with adjustable speed
+  // Smoothly scroll the bottom marker into view within the scrollable container
   const smoothScrollToBottom = React.useCallback(() => {
     if (!bottomRef.current) return;
 
-    const target = bottomRef.current;
-    const targetPosition = target.getBoundingClientRect().top + window.scrollY;
-    const startPosition = window.scrollY;
-    const distance = targetPosition - startPosition - window.innerHeight + 100;
-
-    if (distance <= 0) return;
-
-    const duration = 800; // Scroll duration in ms (slower)
-    let startTime: number | null = null;
-
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-    const animateScroll = (currentTime: number) => {
-      if (startTime === null) startTime = currentTime;
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      window.scrollTo(0, startPosition + distance * easeOutCubic(progress));
-
-      if (progress < 1) {
-        requestAnimationFrame(animateScroll);
-      }
-    };
-
-    requestAnimationFrame(animateScroll);
+    bottomRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
   }, []);
 
   React.useEffect(() => {
