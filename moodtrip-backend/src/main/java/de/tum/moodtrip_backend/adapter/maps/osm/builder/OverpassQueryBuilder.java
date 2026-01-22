@@ -11,7 +11,7 @@ import java.util.Locale;
  */
 public final class OverpassQueryBuilder {
 
-    private static final int DEFAULT_TIMEOUT_SECONDS = 25;
+    private static final int DEFAULT_TIMEOUT_SECONDS = 90;
 
     /**
      * Shared query that fetches a broad set of POIs around a location.

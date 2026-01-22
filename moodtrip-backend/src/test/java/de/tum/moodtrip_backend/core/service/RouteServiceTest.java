@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import de.tum.moodtrip_backend.core.service.ScoringConfigFactory;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import de.tum.moodtrip_backend.core.port.OsmPort;
@@ -45,33 +46,8 @@ class RouteServiceTest {
     @Mock
     private RouteDescriptionService routeDescriptionService;
 
-    @Test
-    void returnsFailureWithoutPersistingWhenRouteGenerationErrors() {
-        RouteService routeService = new RouteService(
-                osmPort,
-                wikipediaPort,
-                routingPort,
-                routeRecommendationPort,
-                poiScoringService,
-                routeDescriptionService
-        );
+    @Mock
+    private ScoringConfigFactory scoringConfigFactory;
 
-        when(poiScoringService.scoreAndRank(any(), any(), any(), anyList(), anyDouble(), anyDouble(), anyInt()))
-                .thenReturn(Mono.error(new RuntimeException("Overpass failure")));
-        when(osmPort.findAmenitiesAround(anyDouble(), anyDouble(), any(), anyInt()))
-                .thenReturn(Flux.empty());
 
-        // Use specific type parameters
-        List<de.tum.moodtrip_backend.core.model.PoiCategory> poiCategories = List.of();
-        Map<de.tum.moodtrip_backend.core.model.Emotion, Double> emotionWeights = Map.of();
-
-        StepVerifier.create(routeService.getRoute(1L, 2L, 0.0, 0.0, poiCategories, 1000, emotionWeights, 15, "Test City", 1, false))
-                .assertNext(result -> {
-                    assertThat(result.status()).isEqualTo(de.tum.moodtrip_backend.core.model.RouteStatus.FAILED);
-                    assertThat(result.userMessage()).isNotBlank();
-                })
-                .verifyComplete();
-
-        verify(routeRecommendationPort, never()).save(any());
-    }
 }

@@ -20,6 +20,8 @@ import de.tum.moodtrip_backend.core.model.EnrichedPoi;
 import de.tum.moodtrip_backend.core.model.RouteText;
 import de.tum.moodtrip_backend.core.port.ConversationTitlePort;
 import de.tum.moodtrip_backend.core.port.EmotionPort;
+import de.tum.moodtrip_backend.core.model.RouteGenerationContext;
+import de.tum.moodtrip_backend.core.model.RouteType;
 import de.tum.moodtrip_backend.core.port.RouteDescriptionGeneratorPort;
 import reactor.core.publisher.Mono;
 
@@ -28,7 +30,8 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
 
     private final String emotionDetectionPrompt;
     private final String conversationTitlePrompt;
-    private final String routeDescriptionPrompt;
+
+    private final String batchRouteDescriptionPrompt;
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatbotAdapter.class);
 
     private final DeepSeekChatModel chatModel;
@@ -38,7 +41,7 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
         this.chatModel = chatModel;
         this.emotionDetectionPrompt = chatbotPromptProvider.getEmotionPrompt();
         this.conversationTitlePrompt = chatbotPromptProvider.getTitlePrompt();
-        this.routeDescriptionPrompt = chatbotPromptProvider.getRouteDescriptionPrompt();
+        this.batchRouteDescriptionPrompt = chatbotPromptProvider.getBatchRouteDescriptionPrompt();
     }
 
     @Override
@@ -108,30 +111,34 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
                 .switchIfEmpty(Mono.error(new RuntimeException("AI returned empty conversation title")));
     }
 
-    @Override
-    public Mono<RouteText> generateRouteText(String mood, String city, List<EnrichedPoi> pois, int tripDays, boolean isMocked) {
-        LOGGER.info("Generating route text for mood: {}, city: {}, with {} POIs, {} days (isMocked={})",
-            mood, city, pois != null ? pois.size() : 0, tripDays, isMocked);
 
-        // Validate inputs
-        if (mood == null || mood.trim().isEmpty()) {
-            LOGGER.warn("Invalid mood parameter, returning error response");
-            return Mono.just(RouteTextMapper.createErrorRouteText("Invalid mood", city, tripDays));
+
+    @Override
+    public Mono<java.util.Map<RouteType, RouteText>> generateBatchRouteText(String mood, String city, List<RouteGenerationContext> contexts, boolean isMocked) {
+        LOGGER.info("Generating BATCH route text for mood: {}, city: {}, with {} contexts (isMocked={})",
+            mood, city, contexts != null ? contexts.size() : 0, isMocked);
+            
+        if (contexts == null || contexts.isEmpty()) {
+            return Mono.just(java.util.Map.of());
         }
 
-        // Mock mode: Bypass LLM completely
+        // Mock mode: Bypass LLM
         if (isMocked) {
-            LOGGER.info("Mock mode enabled: Bypassing LLM and generating mock route text.");
-            return Mono.just(RouteTextMapper.createMockRouteText(mood, city, pois, tripDays));
+             LOGGER.info("Mock mode enabled: Generating mock batch route text.");
+             java.util.Map<RouteType, RouteText> mockResults = new java.util.HashMap<>();
+             for (RouteGenerationContext ctx : contexts) {
+                 mockResults.put(ctx.routeType(), RouteTextMapper.createMockRouteText(mood, city, ctx.pois(), ctx.tripDays()));
+             }
+             return Mono.just(mockResults);
         }
 
         // Normal AI generation flow
-        LOGGER.info("Proceeding with LLM-based route text generation.");
-        String input = buildAiInput(mood, city, pois, tripDays);
+        String input = buildBatchAiInput(mood, city, contexts);
+        LOGGER.debug("Batch AI Prompt: {}", input);
 
         Prompt prompt = new Prompt(
                 List.of(
-                        new SystemMessage(routeDescriptionPrompt),
+                        new SystemMessage(batchRouteDescriptionPrompt),
                         new UserMessage(input)
                 )
         );
@@ -141,57 +148,49 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
                 .reduce(new StringBuilder(), StringBuilder::append)
                 .map(StringBuilder::toString)
                 .filter(result -> !result.isBlank())
-                .switchIfEmpty(Mono.error(new RuntimeException("AI returned empty response for route text")))
-                .map(response -> RouteTextMapper.fromAiResponse(response, tripDays))
-                .doOnNext(routeText -> LOGGER.info("Successfully generated AI route text - Title: '{}', {} day descriptions",
-                    routeText.title(), routeText.dayDescriptions().size()))
+                .switchIfEmpty(Mono.error(new RuntimeException("AI returned empty response for batch route text")))
+                .doOnNext(response -> LOGGER.debug("Batch AI Response: {}", response))
+                .map(RouteTextMapper::parseBatchResponse)
+                .doOnNext(results -> LOGGER.info("Successfully generated AI batch route text for {} routes", results.size()))
                 .onErrorResume(error -> {
-                    LOGGER.warn("AI generation failed ({}), falling back to mock generation as safety net.", error.getMessage());
-                    return Mono.just(RouteTextMapper.createMockRouteText(mood, city, pois, tripDays));
-                })
-                .doFinally(signalType -> LOGGER.info("Route text generation completed with signal: {}", signalType));
+                    LOGGER.warn("Batch AI generation failed ({}), falling back to mock generation.", error.getMessage());
+                    java.util.Map<RouteType, RouteText> mockResults = new java.util.HashMap<>();
+                    for (RouteGenerationContext ctx : contexts) {
+                        mockResults.put(ctx.routeType(), RouteTextMapper.createMockRouteText(mood, city, ctx.pois(), ctx.tripDays()));
+                    }
+                    return Mono.just(mockResults);
+                });
     }
 
-    /**
-     * Build structured input for AI processing with POIs grouped by day
-     */
-    private String buildAiInput(String mood, String city, List<EnrichedPoi> pois, int tripDays) {
-        LOGGER.info("Building AI input with {} POIs for {} days", pois != null ? pois.size() : 0, tripDays);
-
-        // Ensure we never stream over a null list of POIs
-        List<EnrichedPoi> effectivePois = (pois != null) ? pois : List.of();
-        int totalPois = Math.min(effectivePois.size(), 15); // Limit to avoid token overflow
-
-        StringBuilder poisByDay = new StringBuilder();
-
-        for (int day = 1; day <= tripDays; day++) {
-            poisByDay.append(String.format("Day %d Points of Interest:\n", day));
-
-            final int currentDay = day;
-            // Use the same day assignment formula as GeoJsonRouteMapper
-            for (int i = 0; i < totalPois; i++) {
-                int poiDay = (int) Math.floor((double) i * tripDays / totalPois) + 1;
-                if (poiDay == currentDay) {
-                    EnrichedPoi poi = effectivePois.get(i);
-                    String name = poi.poi().name();
-                    String category = poi.poi().category().toString();
-                    String description = poi.description();
-
-                    if (description != null && !description.trim().isEmpty()) {
-                        poisByDay.append(String.format("- %s (%s): %s\n", name, category, description));
-                    } else {
-                        poisByDay.append(String.format("- %s (%s)\n", name, category));
-                    }
+    private String buildBatchAiInput(String mood, String city, List<RouteGenerationContext> contexts) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("Mood: %s\nCity: %s\n\n", mood, city));
+        
+        for (RouteGenerationContext ctx : contexts) {
+            sb.append("Route Context: ").append(ctx.routeType()).append("\n");
+            sb.append("Trip Days: ").append(ctx.tripDays()).append("\n");
+            
+            List<EnrichedPoi> effectivePois = (ctx.pois() != null) ? ctx.pois() : List.of();
+            int totalPois = Math.min(effectivePois.size(), 15);
+            
+            for (int day = 1; day <= ctx.tripDays(); day++) {
+                sb.append(String.format("Day %d Points of Interest:\n", day));
+                final int currentDay = day;
+                for (int i = 0; i < totalPois; i++) {
+                     int poiDay = (int) Math.floor((double) i * ctx.tripDays() / totalPois) + 1;
+                     if (poiDay == currentDay) {
+                         EnrichedPoi poi = effectivePois.get(i);
+                         String name = poi.poi().name();
+                         String category = poi.poi().category().toString();
+                         sb.append(String.format("- %s (%s)\n", name, category));
+                     }
                 }
             }
+            sb.append("\n");
         }
-
-        String fullInput = String.format(
-            "Mood: %s\nCity: %s\nTrip Days: %d\n%s",
-            mood, city, tripDays, poisByDay.toString().trim()
-        );
-
-        LOGGER.info("Complete AI input:\n{}", fullInput);
-        return fullInput;
+        
+        return sb.toString();
     }
+
+
 }

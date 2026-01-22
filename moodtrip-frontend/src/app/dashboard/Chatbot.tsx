@@ -39,7 +39,7 @@ import {
   renameConversation,
   deleteConversation,
 } from "@/api/conversation";
-import type { RouteRecommendation } from "@/api/conversation";
+import type { RouteRecommendation, AppRouteType } from "@/api/conversation";
 import type {
   Feature,
   FeatureCollection,
@@ -57,6 +57,9 @@ type RouteProperties = {
   image?: string;
   distanceMeters?: number;
   durationSeconds?: number;
+  routeType?: AppRouteType;
+  routeTypeTitle?: string;
+  routeTypeDescription?: string;
 };
 
 type PoiProperties = {
@@ -929,51 +932,60 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   };
                   setMessages((prev) => [...prev, successMsg]);
 
-                  const routeFc = routeData as FeatureCollection;
-                  const allFeatures = (routeFc.features ?? []) as AnyFeature[];
+                  // Check if routes array exists (it should be present in the response type now)
+                  const routesArray = Array.isArray(res.routes) ? res.routes : [routeData];
 
-                  const rf = allFeatures.find(isRouteFeature);
-                  const routeProps = rf?.properties;
+                  // Track used images to prioritize diversity
+                  const usedImages = new Set<string>();
 
-                  const poiFeatures = allFeatures.filter(isPoiFeature);
-                  const firstPoiWithImage = poiFeatures.find(
-                    (f) => !!f.properties?.imageUrl
-                  );
-                  const fallbackPoiImage = firstPoiWithImage?.properties?.imageUrl;
-                  const finalThumbnail =
-                    routeProps?.image || fallbackPoiImage || "/placeholder.png";
+                  const cardDataList: RouteRecommendation[] = routesArray.map((fc, idx) => {
+                    const features = (fc.features ?? []) as AnyFeature[];
+                    const routeFeature = features.find(isRouteFeature);
+                    const props = routeFeature?.properties as RouteProperties | undefined;
 
-                  const dayDescriptions = routeProps?.dayDescriptions || { "1": "A personalized route based on your mood." };
+                    const poiFeats = features.filter(isPoiFeature);
 
-                  const cardDataList: RouteRecommendation[] = [
-                    {
-                      id: "1",
-                      title: routeProps?.name || "Your Personalized Trip",
-                      dayDescriptions,
-                      imageUrl: finalThumbnail,
-                      distanceMeters: routeProps?.distanceMeters || 0,
-                      durationSeconds: routeProps?.durationSeconds || 0,
-                      geoJson: routeFc,
-                    },
-                    {
-                      id: "2",
-                      title: routeProps?.name || "Your Personalized Trip",
-                      dayDescriptions,
-                      imageUrl: finalThumbnail,
-                      distanceMeters: routeProps?.distanceMeters || 0,
-                      durationSeconds: routeProps?.durationSeconds || 0,
-                      geoJson: routeFc,
-                    },
-                    {
-                      id: "3",
-                      title: routeProps?.name || "Your Personalized Trip",
-                      dayDescriptions,
-                      imageUrl: finalThumbnail,
-                      distanceMeters: routeProps?.distanceMeters || 0,
-                      durationSeconds: routeProps?.durationSeconds || 0,
-                      geoJson: routeFc,
-                    },
-                  ];
+                    // Find the best image for this card
+                    // Priority 1: Image explicitly set on route props
+                    // Priority 2: First POI image that hasn't been used yet
+                    // Priority 3: First POI image (fallback if all used)
+
+                    let thumbnail = props?.image;
+
+                    if (!thumbnail) {
+                      const availablePoiImages = poiFeats
+                        .map(f => f.properties?.imageUrl)
+                        .filter((url): url is string => !!url);
+
+                      const uniqueImage = availablePoiImages.find(url => !usedImages.has(url));
+
+                      if (uniqueImage) {
+                        thumbnail = uniqueImage;
+                      } else if (availablePoiImages.length > 0) {
+                        thumbnail = availablePoiImages[0];
+                      }
+                    }
+
+                    if (thumbnail) {
+                      usedImages.add(thumbnail);
+                    } else {
+                      thumbnail = "/placeholder.png";
+                    }
+
+                    const dayDescs = props?.dayDescriptions || { "1": "A personalized route based on your mood." };
+
+                    return {
+                      id: String(idx + 1),
+                      title: props?.name || "Your Personalized Trip",
+                      dayDescriptions: dayDescs,
+                      imageUrl: thumbnail,
+                      distanceMeters: props?.distanceMeters || 0,
+                      durationSeconds: props?.durationSeconds || 0,
+                      geoJson: fc as FeatureCollection,
+                      routeType: props?.routeType,
+                      routeTypeTitle: props?.routeTypeTitle,
+                    };
+                  });
 
                   const cardsPayload = `[ROUTE_CARDS] ${JSON.stringify(cardDataList)}`;
                   await apiSendMessage(conversationId, cardsPayload, false);

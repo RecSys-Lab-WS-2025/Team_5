@@ -5,6 +5,7 @@ import de.tum.moodtrip_backend.core.model.Poi;
 import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.model.PoiScore;
 import de.tum.moodtrip_backend.core.model.ScoredPoi;
+import de.tum.moodtrip_backend.core.model.ScoringConfig;
 import de.tum.moodtrip_backend.core.model.UserPreferenceOffset;
 import de.tum.moodtrip_backend.core.port.EmotionCategoryScorePort;
 import de.tum.moodtrip_backend.core.port.UserPreferenceOffsetPort;
@@ -98,26 +99,80 @@ public class PoiScoringService {
         return normalized;
     }
 
+
+
+    /**
+     * Scores and ranks POIs with custom scoring configuration.
+     *
+     * @param pois the POIs to score
+     * @param userId the user ID for personalization
+     * @param rawEmotionWeights raw emotion weights from analysis
+     * @param selectedCategories categories selected by user
+     * @param originLat origin latitude
+     * @param originLon origin longitude
+     * @param limit maximum number of POIs to return
+     * @param config optional scoring configuration for route type-specific scoring
+     * @return scored and ranked POIs
+     */
     public Mono<List<ScoredPoi>> scoreAndRank(Flux<Poi> pois,
                                               Long userId,
                                               Map<Emotion, Double> rawEmotionWeights,
                                               List<PoiCategory> selectedCategories,
                                               double originLat,
                                               double originLon,
-                                              int limit) {
+                                              int limit,
+                                              ScoringConfig config) {
+        String routeTypeName = config != null && config.routeType() != null ? config.routeType().name() : "DEFAULT";
+        LOGGER.info("[START] Scoring POIs for user: {} (RouteType={})", userId, routeTypeName);
+
+        // Apply emotion multiplier from config
+        double emotionMultiplier = config != null ? config.emotionMultiplier() : 1.0;
+        double categoryBoostMultiplier = config != null ? config.categoryBoostMultiplier() : 1.0;
+        double mmrLambda = config != null ? config.mmrLambda() : -1.0; // -1 means use default
+
         Map<Emotion, Double> emotionWeights = normalizeEmotionWeights(rawEmotionWeights);
 
-        Mono<Map<PoiCategory, CategoryScore>> categoryScoresMono = computeCategoryScores(userId, emotionWeights, selectedCategories);
+        // Apply emotion multiplier to the weights
+        Map<Emotion, Double> finalEmotionWeights = new HashMap<>();
+        for (Map.Entry<Emotion, Double> entry : emotionWeights.entrySet()) {
+            finalEmotionWeights.put(entry.getKey(), entry.getValue() * emotionMultiplier);
+        }
+        // Do NOT re-normalize here, otherwise the multiplier effect is cancelled out.
+        // We want the total weight sum to scale with emotionMultiplier.
 
+        // Compute effective category boost
+        double effectiveCategoryBoost = weightSelectedCategory * categoryBoostMultiplier;
+
+        Mono<Map<PoiCategory, CategoryScore>> categoryScoresMono =
+            computeCategoryScoresWithBoost(userId, finalEmotionWeights, selectedCategories, effectiveCategoryBoost);
+
+        final double finalMmrLambda = mmrLambda;
         return categoryScoresMono.flatMap(categoryScores ->
                 pois.flatMap(poi -> scorePoi(poi, categoryScores, originLat, originLon))
                         .collectList()
-                        .map(candidates -> mmrRerankingService.rerank(
-                                candidates.stream()
-                                        .sorted(Comparator.comparingDouble(sp -> -sp.score().finalScore()))
-                                        .toList(),
-                                limit))
-                        .doOnNext(list -> list.forEach(this::logTopPoi))
+                        .map(candidates -> {
+                            List<ScoredPoi> sorted = candidates.stream()
+                                    .sorted(Comparator.comparingDouble(sp -> -sp.score().finalScore()))
+                                    .toList();
+                            if (finalMmrLambda > 0) {
+                                return mmrRerankingService.rerankWithLambda(sorted, limit, finalMmrLambda);
+                            } else {
+                                return mmrRerankingService.rerank(sorted, limit);
+                            }
+                        })
+                        .doOnNext(list -> {
+                            String top3 = list.stream()
+                                    .limit(3)
+                                    .map(p -> String.format("%s(Total=%.2f, Cat=%.2f, Tag=%.2f, Dist=%.2f)", 
+                                            p.poi().name(), 
+                                            p.score().finalScore(),
+                                            p.score().categoryScore(),
+                                            p.score().tagScore(),
+                                            p.score().distanceScore()))
+                                    .collect(Collectors.joining(" | "));
+                            LOGGER.info("[COMPLETE] Scoring finished for user {} (RouteType={}). Candidates: {}. Top 3: [{}]", userId, routeTypeName, list.size(), top3);
+                            list.forEach(this::logTopPoi);
+                        })
         );
     }
 
@@ -159,8 +214,15 @@ public class PoiScoringService {
     private Mono<Map<PoiCategory, CategoryScore>> computeCategoryScores(Long userId,
                                                                         Map<Emotion, Double> emotionWeights,
                                                                         List<PoiCategory> selectedCategories) {
+        return computeCategoryScoresWithBoost(userId, emotionWeights, selectedCategories, weightSelectedCategory);
+    }
+
+    private Mono<Map<PoiCategory, CategoryScore>> computeCategoryScoresWithBoost(Long userId,
+                                                                                  Map<Emotion, Double> emotionWeights,
+                                                                                  List<PoiCategory> selectedCategories,
+                                                                                  double categoryBoost) {
         return Flux.fromArray(PoiCategory.values())
-                .flatMap(category -> computeCategoryScore(category, userId, emotionWeights, selectedCategories))
+                .flatMap(category -> computeCategoryScoreWithBoost(category, userId, emotionWeights, selectedCategories, categoryBoost))
                 .collectMap(CategoryScore::category);
     }
 
@@ -168,6 +230,14 @@ public class PoiScoringService {
                                                      Long userId,
                                                      Map<Emotion, Double> emotionWeights,
                                                      List<PoiCategory> selectedCategories) {
+        return computeCategoryScoreWithBoost(category, userId, emotionWeights, selectedCategories, weightSelectedCategory);
+    }
+
+    private Mono<CategoryScore> computeCategoryScoreWithBoost(PoiCategory category,
+                                                               Long userId,
+                                                               Map<Emotion, Double> emotionWeights,
+                                                               List<PoiCategory> selectedCategories,
+                                                               double categoryBoost) {
         return Flux.fromIterable(emotionWeights.entrySet())
                 .flatMap(entry -> computeEmotionContribution(category, userId, entry.getKey(), entry.getValue()))
                 .collectList()
@@ -178,10 +248,10 @@ public class PoiScoringService {
 
                     // Intent Confidence Logic:
                     // If the category was explicitly selected in the survey, boost its score multiplicatively.
-                    // formula: CategoryScore = EmotionScore * (1 + beta * isSelected)
+                    // formula: CategoryScore = EmotionScore * (1 + boost * isSelected)
 
                     boolean isSelected = selectedCategories != null && selectedCategories.contains(category);
-                    double finalCategoryScore = isSelected ? emotionBaseScore * (1 + weightSelectedCategory) : emotionBaseScore;
+                    double finalCategoryScore = isSelected ? emotionBaseScore * (1 + categoryBoost) : emotionBaseScore;
 
                     Map<Emotion, Double> byEmotion = contributions.stream()
                             .collect(Collectors.toMap(EmotionContribution::emotion, EmotionContribution::weightedScore));
@@ -285,7 +355,7 @@ public class PoiScoringService {
                         .map(e -> e.getKey() + "=" + String.format("%.3f", e.getValue()))
                         .collect(Collectors.joining(", "));
 
-        LOGGER.info("Ranked POI -> id={}, name='{}', category={}, finalScore={}, categoryScore={} (base={}, boosted={}), tagScore={}, distanceScore={}, distanceMeters={}, emotions=[{}], signals={{nameTag={}, wikipedia={}, wikidata={}, commons={}, website={}, image={}, opening_hours={}, phone={}, trustMarker={}}}",
+        LOGGER.debug("Ranked POI -> id={}, name='{}', category={}, finalScore={}, categoryScore={} (base={}, boosted={}), tagScore={}, distanceScore={}, distanceMeters={}, emotions=[{}], signals={{nameTag={}, wikipedia={}, wikidata={}, commons={}, website={}, image={}, opening_hours={}, phone={}, trustMarker={}}}",
                 poi.osmId(),
                 poi.name(),
                 poi.category(),

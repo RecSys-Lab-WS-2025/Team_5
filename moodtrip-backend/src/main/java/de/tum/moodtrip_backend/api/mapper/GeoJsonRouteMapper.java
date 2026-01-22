@@ -6,6 +6,7 @@ import de.tum.moodtrip_backend.core.model.Poi;
 import de.tum.moodtrip_backend.core.model.PoiScore;
 import de.tum.moodtrip_backend.core.model.Route;
 import de.tum.moodtrip_backend.core.model.RouteCoordinate;
+import de.tum.moodtrip_backend.core.model.RouteType;
 import org.geojson.Feature;
 import org.geojson.FeatureCollection;
 import org.geojson.LineString;
@@ -32,6 +33,19 @@ public final class GeoJsonRouteMapper {
      * @return GeoJSON FeatureCollection
      */
     public FeatureCollection toFeatureCollection(PoiRouteResult poiRouteResult, String emotion, int tripDays) {
+        return toFeatureCollection(poiRouteResult, emotion, tripDays, null);
+    }
+
+    /**
+     * Build a GeoJSON FeatureCollection from enriched POIs and an optional route with route type.
+     *
+     * @param poiRouteResult domain object containing enriched POIs and the route
+     * @param emotion current emotion for styling
+     * @param tripDays total duration of the trip in days
+     * @param routeType the type of route (emotion-focused, category-focused, balanced)
+     * @return GeoJSON FeatureCollection
+     */
+    public FeatureCollection toFeatureCollection(PoiRouteResult poiRouteResult, String emotion, int tripDays, RouteType routeType) {
         FeatureCollection featureCollection = new FeatureCollection();
 
         if (poiRouteResult == null) {
@@ -103,7 +117,14 @@ public final class GeoJsonRouteMapper {
             routeFeature.setProperty("durationSeconds", route.durationSeconds());
             routeFeature.setProperty("emotion", emotion);
             routeFeature.setProperty("tripDays", tripDays);
-            
+
+            // Add route type properties
+            if (routeType != null) {
+                routeFeature.setProperty("routeType", routeType.name());
+                routeFeature.setProperty("routeTypeTitle", routeType.getDisplayTitle());
+                routeFeature.setProperty("routeTypeDescription", routeType.getDescription());
+            }
+
             // Add title and day descriptions to the route feature
             if (route.title() != null) {
                 routeFeature.setProperty("name", route.title());
@@ -118,6 +139,8 @@ public final class GeoJsonRouteMapper {
             }
 
             List<Map<String, Object>> dailyStats = new ArrayList<>();
+            double totalActiveDistance = 0;
+            double totalActiveDuration = 0;
 
             for (int d = 1; d <= tripDays; d++) {
                 double dayDistance = 0;
@@ -145,11 +168,20 @@ public final class GeoJsonRouteMapper {
                 Map<String, Object> dayStat = new HashMap<>();
                 dayStat.put("day", d);
                 dayStat.put("distanceMeters", Math.round(dayDistance));
-                dayStat.put("durationSeconds", Math.round(dayDuration + (dayPoisCount * POI_VISITING_TIME_SECONDS)));
+                double totalDayTime = dayDuration + (dayPoisCount * POI_VISITING_TIME_SECONDS);
+                dayStat.put("durationSeconds", Math.round(totalDayTime));
                 dailyStats.add(dayStat);
+
+                totalActiveDistance += dayDistance;
+                totalActiveDuration += totalDayTime;
             }
             routeFeature.setProperty("dailyStats", dailyStats);
-
+            
+            // Overwrite total distance/duration with the sum of ACTIVE daily parts
+            // preventing the inclusion of long cross-day travel legs in the difficulty calculation
+            routeFeature.setProperty("distanceMeters", Math.round(totalActiveDistance));
+            routeFeature.setProperty("durationSeconds", Math.round(totalActiveDuration));
+            
             featureCollection.add(routeFeature);
         }
 

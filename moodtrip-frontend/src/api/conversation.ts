@@ -157,12 +157,14 @@ export type SurveyResponse =
   | {
     routeStatus: "SUCCEEDED";
     route: FeatureCollection;
+    routes?: FeatureCollection[];  // NEW: all 3 routes
     spotifyPlaylistLink: string | null;
   }
   | {
     routeStatus: "FAILED";
     userMessage?: string;
     route?: FeatureCollection | null;
+    routes?: FeatureCollection[] | null;
     spotifyPlaylistLink?: string | null;
   };
 
@@ -174,6 +176,8 @@ export interface RouteRecommendation {
   distanceMeters: number;
   durationSeconds: number;
   geoJson: FeatureCollection;
+  routeType?: AppRouteType;
+  routeTypeTitle?: string;
 }
 
 export interface PoiFeature {
@@ -194,6 +198,8 @@ export interface PoiFeature {
   };
 }
 
+export type AppRouteType = "BALANCED" | "YOUR_PICKS" | "DISCOVERY";
+
 export interface RouteFeature {
   type: "Feature";
   geometry: {
@@ -208,6 +214,9 @@ export interface RouteFeature {
     name?: string;
     dayDescriptions?: Record<string, string>;
     image?: string;
+    routeType?: AppRouteType;
+    routeTypeTitle?: string;
+    routeTypeDescription?: string;
     dailyStats: Array<{
       day: number;
       distanceMeters: number;

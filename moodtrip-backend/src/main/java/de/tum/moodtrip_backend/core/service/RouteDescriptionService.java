@@ -1,7 +1,9 @@
 package de.tum.moodtrip_backend.core.service;
 
 import de.tum.moodtrip_backend.core.model.EnrichedPoi;
+import de.tum.moodtrip_backend.core.model.RouteGenerationContext;
 import de.tum.moodtrip_backend.core.model.RouteText;
+import de.tum.moodtrip_backend.core.model.RouteType;
 import de.tum.moodtrip_backend.core.port.RouteDescriptionGeneratorPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,30 +24,63 @@ public class RouteDescriptionService {
         this.routeDescriptionGeneratorPort = routeDescriptionGeneratorPort;
     }
 
-    public Mono<RouteText> generateRouteText(String mood, String city, List<EnrichedPoi> pois, int tripDays, boolean isMocked) {
-        LOGGER.info("Generating route text for mood: {}, city: {}, with {} POIs, {} days (isMocked={})",
-            mood, city, pois != null ? pois.size() : 0, tripDays, isMocked);
 
-        // Call the port to generate the route text
-        return routeDescriptionGeneratorPort.generateRouteText(mood, city, pois, tripDays, isMocked)
+
+
+
+    public Mono<Map<RouteType, RouteText>> generateBatchRouteText(String mood, String city, List<RouteGenerationContext> contexts, boolean isMocked) {
+        LOGGER.info("Generating batch route text for mood: {}, city: {}, with {} contexts (isMocked={})",
+            mood, city, contexts != null ? contexts.size() : 0, isMocked);
+        
+        return routeDescriptionGeneratorPort.generateBatchRouteText(mood, city, contexts, isMocked)
+                .map(results -> {
+                    // Enrich titles with prefixes if needed, similar to single route generation
+                    Map<RouteType, RouteText> enrichedResults = new HashMap<>();
+                    if (contexts != null) {
+                        for (RouteGenerationContext ctx : contexts) {
+                             RouteText text = results.get(ctx.routeType());
+                             if (text != null) {
+                                 String typePrefix = ctx.routeType().getDisplayTitle();
+                                 // Check if title already starts with prefix to avoid double prefixing if AI did it
+                                 String finalTitle = text.title();
+                                 if (!finalTitle.startsWith(typePrefix)) {
+                                     finalTitle = typePrefix + ": " + finalTitle;
+                                 }
+                                 enrichedResults.put(ctx.routeType(), new RouteText(finalTitle, text.dayDescriptions()));
+                             } else {
+                                 // Fallback for missing type in response
+                                 LOGGER.warn("Missing batch result for type {}, using fallback", ctx.routeType());
+                                 enrichedResults.put(ctx.routeType(), fallbackRouteTextForType(mood, city, ctx.tripDays(), ctx.routeType()));
+                             }
+                        }
+                    }
+                    return enrichedResults;
+                })
                 .onErrorResume(error -> {
-                    LOGGER.warn("Failed to generate route text with AI, falling back to default: {}", error.getMessage());
-                    return Mono.fromCallable(() -> fallbackRouteText(mood, city, tripDays));
+                    LOGGER.warn("Failed to generate batch route text with AI, falling back to defaults: {}", error.getMessage());
+                    Map<RouteType, RouteText> fallbacks = new HashMap<>();
+                    if (contexts != null) {
+                        for (RouteGenerationContext ctx : contexts) {
+                            fallbacks.put(ctx.routeType(), fallbackRouteTextForType(mood, city, ctx.tripDays(), ctx.routeType()));
+                        }
+                    }
+                    return Mono.just(fallbacks);
                 });
     }
 
-    /**
-     * Fallback method to generate simple route text when AI generation fails
-     */
-    private RouteText fallbackRouteText(String mood, String city, int tripDays) {
-        String title = String.format("%s Trip in %s", capitalizeFirst(mood), city);
+    private RouteText fallbackRouteTextForType(String mood, String city, int tripDays, RouteType routeType) {
+        String baseTitle = String.format("%s Trip in %s", capitalizeFirst(mood), city);
+        String title = routeType != null ? routeType.getDisplayTitle() + ": " + baseTitle : baseTitle;
         Map<Integer, String> dayDescriptions = new HashMap<>();
         for (int day = 1; day <= tripDays; day++) {
-            dayDescriptions.put(day, String.format("Day %d: A personalized route for your %s mood exploring %s.",
-                day, mood.toLowerCase(), city));
+            String typeDesc = routeType != null ? routeType.getDescription() + " - " : "";
+            dayDescriptions.put(day, String.format("Day %d: %sA personalized route for your %s mood exploring %s.",
+                day, typeDesc, mood.toLowerCase(), city));
         }
         return new RouteText(title, dayDescriptions);
     }
+
+
 
     private String capitalizeFirst(String str) {
         if (str == null || str.isEmpty()) {

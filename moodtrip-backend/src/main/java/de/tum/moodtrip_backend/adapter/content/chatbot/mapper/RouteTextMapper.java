@@ -18,24 +18,7 @@ public class RouteTextMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RouteTextMapper.class);
 
-    /**
-     * Parse AI response string into RouteText with day descriptions
-     * Supports JSON format with dayDescriptions field
-     */
-    public static RouteText fromAiResponse(String response, int tripDays) {
-        LOGGER.info("Parsing AI response into RouteText with {} days, response length: {} chars", tripDays, response.length());
 
-        String cleanedResponse = response.trim();
-
-        // Try JSON format first
-        RouteText jsonResult = tryParseJsonFormat(cleanedResponse, tripDays);
-        if (jsonResult != null) {
-            return jsonResult;
-        }
-
-        // Fallback: create default day descriptions
-        return parseFallback(cleanedResponse, tripDays);
-    }
 
     /**
      * Generate mock RouteText for testing (bypasses AI)
@@ -52,25 +35,7 @@ public class RouteTextMapper {
         return new RouteText(title, dayDescriptions);
     }
 
-    /**
-     * Create error RouteText for invalid inputs
-     */
-    public static RouteText createErrorRouteText(String errorMessage, String city, int tripDays) {
-        String title = "Error Route";
-        Map<Integer, String> dayDescriptions = new HashMap<>();
-        String errorDesc = String.format(
-            "Unable to generate route: %s. This is a mock response for error handling demonstration in %s.",
-            errorMessage,
-            city != null ? city : "unknown location"
-        );
 
-        for (int day = 1; day <= tripDays; day++) {
-            dayDescriptions.put(day, errorDesc);
-        }
-
-        LOGGER.warn("Creating error route text: {}", errorMessage);
-        return new RouteText(title, dayDescriptions);
-    }
 
     // ==================== Private Parsing Methods ====================
 
@@ -85,64 +50,72 @@ public class RouteTextMapper {
     }
 
     /**
-     * Attempt to parse JSON format with dayDescriptions:
-     * {"title": "...", "dayDescriptions": {"1": "...", "2": "..."}}
+     * Parse batch AI response string into a Map of RouteType to RouteText.
      */
-    private static RouteText tryParseJsonFormat(String response, int tripDays) {
-        if (!response.trim().startsWith("{")) {
-             LOGGER.debug("Not JSON format (does not start with brace)");
-             return null;
+    public static Map<de.tum.moodtrip_backend.core.model.RouteType, RouteText> parseBatchResponse(String response) {
+        LOGGER.info("Parsing batch AI response, length: {} chars", response.length());
+        String cleanedResponse = response.trim();
+        
+        // Remove markdown code blocks if present (e.g. ```json ..., ```JSON ..., ```json extra-metadata ... ```).
+        if (cleanedResponse.startsWith("```")) {
+            // Strip a leading code fence with optional language/metadata, then a trailing closing fence.
+            cleanedResponse = cleanedResponse
+                .replaceFirst("^```[a-zA-Z0-9_+-]*\\s*", "")
+                .replaceFirst("```\\s*$", "")
+                .trim();
         }
 
+        Map<de.tum.moodtrip_backend.core.model.RouteType, RouteText> result = new HashMap<>();
+
         try {
-            // Configure loose parsing to handle potential AI inconsistencies
+            // Configure loose parsing
             objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
             objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
             objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-            RouteTextDto dto = objectMapper.readValue(response, RouteTextDto.class);
-            
-            if (dto.title != null && dto.dayDescriptions != null && !dto.dayDescriptions.isEmpty()) {
-                // Convert Map<String, String> to Map<Integer, String>
-                Map<Integer, String> intDayDescriptions = new HashMap<>();
-                for (Map.Entry<String, String> entry : dto.dayDescriptions.entrySet()) {
-                    try {
-                        intDayDescriptions.put(Integer.parseInt(entry.getKey()), entry.getValue());
-                    } catch (NumberFormatException e) {
-                        LOGGER.warn("Invalid day key in JSON: {}", entry.getKey());
-                    }
-                }
+            // Need to parse as a Map<String, RouteTextDto> because the keys are dynamic enum names
+            com.fasterxml.jackson.core.type.TypeReference<HashMap<String, RouteTextDto>> typeRef 
+                = new com.fasterxml.jackson.core.type.TypeReference<HashMap<String, RouteTextDto>>() {};
                 
-                LOGGER.info("Successfully parsed JSON format - Title: '{}', {} day descriptions",
-                    dto.title, intDayDescriptions.size());
-                return new RouteText(dto.title, intDayDescriptions);
+            Map<String, RouteTextDto> dtos = objectMapper.readValue(cleanedResponse, typeRef);
+
+            for (Map.Entry<String, RouteTextDto> entry : dtos.entrySet()) {
+                String typeKey = entry.getKey();
+                RouteTextDto dto = entry.getValue();
+
+                try {
+                    de.tum.moodtrip_backend.core.model.RouteType routeType = 
+                        de.tum.moodtrip_backend.core.model.RouteType.valueOf(typeKey.toUpperCase());
+                    
+                    if (dto.title != null && dto.dayDescriptions != null) {
+                        // Convert day descriptions keys to Integer
+                        Map<Integer, String> intDayDescriptions = new HashMap<>();
+                        for (Map.Entry<String, String> dayEntry : dto.dayDescriptions.entrySet()) {
+                            try {
+                                intDayDescriptions.put(Integer.parseInt(dayEntry.getKey()), dayEntry.getValue());
+                            } catch (NumberFormatException e) {
+                                LOGGER.warn("Invalid day key in batch JSON for type {}: {}", typeKey, dayEntry.getKey());
+                            }
+                        }
+                        result.put(routeType, new RouteText(dto.title, intDayDescriptions));
+                    }
+                } catch (IllegalArgumentException e) {
+                    LOGGER.warn("Unknown route type in batch response: {}", typeKey);
+                }
             }
-             
-            LOGGER.warn("JSON parsed but missing required fields");
-
+            
+            LOGGER.info("Successfully parsed batch response for {} types", result.size());
+            
         } catch (Exception e) {
-            LOGGER.warn("Failed to parse as JSON format: {}", e.getMessage());
+            LOGGER.warn("Failed to parse batch JSON response: {}", e.getMessage());
         }
-
-        return null;
+        
+        return result;
     }
 
-    /**
-     * Fallback parsing: create generic day descriptions from response
-     */
-    private static RouteText parseFallback(String response, int tripDays) {
-        String fallbackTitle = "Personalized " + extractMoodFromResponse(response) + " Journey";
 
-        Map<Integer, String> dayDescriptions = new HashMap<>();
-        // Split response into days if possible, otherwise use the whole response for day 1
-        for (int day = 1; day <= tripDays; day++) {
-            dayDescriptions.put(day, String.format("Day %d of your journey. %s", day,
-                tripDays == 1 ? response : "Explore and enjoy the planned activities."));
-        }
 
-        LOGGER.info("Using fallback parsing - Title: '{}', {} days", fallbackTitle, tripDays);
-        return new RouteText(fallbackTitle, dayDescriptions);
-    }
+
 
     // ==================== Mock Generation Methods ====================
 
@@ -248,17 +221,5 @@ public class RouteTextMapper {
         return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
     }
 
-    private static String extractMoodFromResponse(String response) {
-        String lowerResponse = response.toLowerCase();
 
-        if (lowerResponse.contains("joyful") || lowerResponse.contains("happy")) {
-            return "Joyful";
-        } else if (lowerResponse.contains("relaxed") || lowerResponse.contains("calm")) {
-            return "Relaxed";
-        } else if (lowerResponse.contains("adventurous") || lowerResponse.contains("exciting")) {
-            return "Adventurous";
-        } else {
-            return "Travel";
-        }
-    }
 }

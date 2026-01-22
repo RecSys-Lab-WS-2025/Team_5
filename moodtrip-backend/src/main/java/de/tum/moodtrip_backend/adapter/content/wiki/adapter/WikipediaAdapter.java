@@ -273,7 +273,8 @@ public class WikipediaAdapter implements WikipediaPort {
         if (!pages.isObject()) {
             return null;
         }
-        Iterator<Map.Entry<String, JsonNode>> fields = pages.fields();
+        // Cast to ObjectNode to avoid deprecated JsonNode.fields()
+        Iterator<Map.Entry<String, JsonNode>> fields = ((com.fasterxml.jackson.databind.node.ObjectNode) pages).fields();
         while (fields.hasNext()) {
             JsonNode page = fields.next().getValue();
             JsonNode imageinfo = page.path("imageinfo");
@@ -305,6 +306,10 @@ public class WikipediaAdapter implements WikipediaPort {
         return name.trim().replace(' ', '_');
     }
 
+    // Caches to prevent redundant network calls for the same identifier
+    private final java.util.concurrent.ConcurrentMap<String, Mono<String>> summaryCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentMap<String, Mono<String>> imageCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     /**
      * Resolve an image URL for a POI given optional image, Wikipedia, Wikidata and Wikimedia Commons tags.
      * <p>
@@ -324,26 +329,31 @@ public class WikipediaAdapter implements WikipediaPort {
      */
     @Override
     public Mono<String> fetchImageUrl(String imageTag, String wikipediaTag, String wikidataId, String wikimediaCommonsTag) {
-        Mono<String> directImage = Mono.empty();
-        if (imageTag != null && !imageTag.isBlank()) {
-            if (WikipediaMediaMapper.isValidHttpUrl(imageTag)) {
-                String normalized = WikipediaMediaMapper.normalizeCommonsFileUrl(imageTag);
-                directImage = resolveCommonsImageUrl(normalized).switchIfEmpty(Mono.just(normalized));
-            } else {
-                directImage = resolveCommonsImageUrl(imageTag);
+        String cacheKey = String.format("img|%s|%s|%s|%s", imageTag, wikipediaTag, wikidataId, wikimediaCommonsTag);
+        
+        return imageCache.computeIfAbsent(cacheKey, k -> {
+            Mono<String> directImage = Mono.empty();
+            if (imageTag != null && !imageTag.isBlank()) {
+                if (WikipediaMediaMapper.isValidHttpUrl(imageTag)) {
+                    String normalized = WikipediaMediaMapper.normalizeCommonsFileUrl(imageTag);
+                    directImage = resolveCommonsImageUrl(normalized).switchIfEmpty(Mono.just(normalized));
+                } else {
+                    directImage = resolveCommonsImageUrl(imageTag);
+                }
+                directImage = directImage.doOnNext(url -> LOGGER.info("Using direct image tag: {}", url));
             }
-            directImage = directImage.doOnNext(url -> LOGGER.info("Using direct image tag: {}", url));
-        }
 
-        // 2. Wikipedia → image (originalimage/thumbnail)
-        return directImage.switchIfEmpty(fetchImageFromWikipediaTag(wikipediaTag)
-                .doOnNext(url -> LOGGER.info("Found image via Wikipedia tag {}: {}", wikipediaTag, url))
-                // 3. If still empty, fall back to Wikidata → P18 → Commons
-                .switchIfEmpty(fetchImageFromWikidataId(wikidataId)
-                        .doOnNext(url -> LOGGER.info("Found image via Wikidata ID {}: {}", wikidataId, url)))
-                // 4. Finally, try Wikimedia Commons tag as a last resort
-                .switchIfEmpty(fetchImageFromWikimediaCommonsTag(wikimediaCommonsTag)
-                        .doOnNext(url -> LOGGER.info("Found image via Commons tag {}: {}", wikimediaCommonsTag, url))));
+            // 2. Wikipedia → image (originalimage/thumbnail)
+            return directImage.switchIfEmpty(fetchImageFromWikipediaTag(wikipediaTag)
+                    .doOnNext(url -> LOGGER.info("Found image via Wikipedia tag {}: {}", wikipediaTag, url))
+                    // 3. If still empty, fall back to Wikidata → P18 → Commons
+                    .switchIfEmpty(fetchImageFromWikidataId(wikidataId)
+                            .doOnNext(url -> LOGGER.info("Found image via Wikidata ID {}: {}", wikidataId, url)))
+                    // 4. Finally, try Wikimedia Commons tag as a last resort
+                    .switchIfEmpty(fetchImageFromWikimediaCommonsTag(wikimediaCommonsTag)
+                            .doOnNext(url -> LOGGER.info("Found image via Commons tag {}: {}", wikimediaCommonsTag, url))))
+                    .cache(); // Cache the result of the Mono itself (success or empty/error)
+        });
     }
 
     /**
@@ -357,7 +367,10 @@ public class WikipediaAdapter implements WikipediaPort {
         if (wikiTag == null || wikiTag.isBlank()) {
             return Mono.empty();
         }
-        LOGGER.info("Fetching summary for Wikipedia tag: {}", wikiTag);
-        return fetchSummaryFromWikipediaTag(wikiTag);
+
+        return summaryCache.computeIfAbsent(wikiTag, k -> {
+            LOGGER.info("Fetching summary for Wikipedia tag: {}", wikiTag);
+            return fetchSummaryFromWikipediaTag(wikiTag).cache();
+        });
     }
 }
