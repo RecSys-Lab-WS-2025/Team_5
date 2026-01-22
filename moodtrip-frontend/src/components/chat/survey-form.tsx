@@ -529,12 +529,11 @@ export function SurveyForm({
             {!readOnly && !isSubmitted && (
                 <CardFooter className="bg-gray-50 border-t border-gray-100 p-4">
                     <Button
-                        style={{
-                            backgroundColor: isSubmitting || !isFormComplete ? '#9ca3af' : '#111827',
-                            color: 'white',
-                            boxShadow: isSubmitting || !isFormComplete ? 'none' : '0 10px 15px -3px rgba(17, 24, 39, 0.2)'
-                        }}
-                        className="w-full h-12 font-semibold text-base rounded-xl transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed"
+                        className={`w-full h-12 font-semibold text-base rounded-xl transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed text-white ${
+                            isSubmitting || !isFormComplete
+                                ? "bg-gray-400 shadow-none"
+                                : "bg-gray-900 shadow-[0_10px_15px_-3px_rgba(17,24,39,0.2)]"
+                        }`}
                         onClick={handleSubmit}
                         disabled={isSubmitting || !isFormComplete}
                     >
