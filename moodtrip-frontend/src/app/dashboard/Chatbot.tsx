@@ -826,8 +826,6 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
 
                 setIsLoading(true);
 
-                setIsLoading(true);
-
                 try {
                   const rangeMetersInput = (data as unknown as { rangeMeters?: unknown }).rangeMeters;
                   const poiCategoriesInput = (data as unknown as { poiCategories?: unknown }).poiCategories;
