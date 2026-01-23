@@ -826,6 +826,8 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
 
                 setIsLoading(true);
 
+                setIsLoading(true);
+
                 try {
                   const rangeMetersInput = (data as unknown as { rangeMeters?: unknown }).rangeMeters;
                   const poiCategoriesInput = (data as unknown as { poiCategories?: unknown }).poiCategories;
@@ -855,6 +857,29 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     return;
                   }
 
+                  // 1. Optimistically append messages to UI:
+                  //    (A) User's survey data
+                  //    (B) "Please wait" message
+                  const surveyContent = `[SURVEY_DATA] ${JSON.stringify(payload)}`;
+                  const persistedSurveyMsg: UIMessage = {
+                    id: Date.now().toString(),
+                    role: "user",
+                    parts: [{ type: "text", text: surveyContent }],
+                  };
+
+                  const waitText = "Generating routes may take a few minutes. Please be patient.";
+                  const waitMsg: UIMessage = {
+                    id: "wait-" + Date.now().toString(),
+                    role: "assistant",
+                    parts: [{ type: "text", text: waitText }],
+                  };
+
+                  setMessages((prev) => [...prev, persistedSurveyMsg, waitMsg]);
+
+                  // 2. Persist the survey message to backend history immediately
+                  await apiSendMessage(conversationId, surveyContent, true);
+
+                  // 3. Submit survey for processing
                   const trySubmit = async (p: SurveyData) => {
                     const res =
                       (await submitSurvey(conversationId, p)) as SubmitSurveyResponseWithSpotify;
@@ -875,16 +900,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     return { ok: true as const, res, routeData };
                   };
 
-                  let attempt = await trySubmit(payload);
-
-                  if (!attempt.ok) {
-                    const noCatPayload: SurveyData = {
-                      ...payload,
-                      poiCategories: [],
-                    };
-                    const attempt2 = await trySubmit(noCatPayload);
-                    if (attempt2.ok) attempt = attempt2;
-                  }
+                  const attempt = await trySubmit(payload);
 
                   if (!attempt.ok) {
                     const msg =
@@ -907,15 +923,8 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     }));
                   }
 
-                  const surveyContent = `[SURVEY_DATA] ${JSON.stringify(payload)}`;
-                  await apiSendMessage(conversationId, surveyContent, true);
-
-                  const persistedSurveyMsg: UIMessage = {
-                    id: Date.now().toString(),
-                    role: "user",
-                    parts: [{ type: "text", text: surveyContent }],
-                  };
-                  setMessages((prev) => [...prev, persistedSurveyMsg]);
+                  // surveyContent already persisted above, removing duplicate call.
+                  // persistedSurveyMsg already added to UI, removing duplicate setMessages.
 
                   let botText =
                     "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
