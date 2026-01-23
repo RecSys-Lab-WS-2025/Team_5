@@ -86,7 +86,18 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
                 .map(StringBuilder::toString)
                 .filter(result -> !result.isBlank())
                 .switchIfEmpty(Mono.error(new RuntimeException("AI returned empty response")))
-                .map(EmotionMapper::fromJson);
+                .map(EmotionMapper::fromJson)
+                .onErrorResume(e -> {
+                    LOGGER.error("Emotion extraction failed: {}", e.getMessage());
+                    // Return a default failure result so the conversation flow continues
+                    return Mono.just(new EmotionResult(
+                        java.util.Collections.emptyMap(),
+                        Emotion.NEUTRAL,
+                        0.0,
+                        "I'm sorry, I am currently having trouble connecting to my brain. Could you please try again?",
+                        false
+                    ));
+                });
     }
 
     @Override
