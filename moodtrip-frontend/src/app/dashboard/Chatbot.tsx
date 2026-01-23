@@ -826,6 +826,8 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
 
                 setIsLoading(true);
 
+                let waitMsgId: string | null = null;
+
                 try {
                   const rangeMetersInput = (data as unknown as { rangeMeters?: unknown }).rangeMeters;
                   const poiCategoriesInput = (data as unknown as { poiCategories?: unknown }).poiCategories;
@@ -866,8 +868,9 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   };
 
                   const waitText = "Generating routes may take a few minutes. Please be patient.";
+                  waitMsgId = "wait-" + Date.now().toString();
                   const waitMsg: UIMessage = {
-                    id: "wait-" + Date.now().toString(),
+                    id: waitMsgId,
                     role: "assistant",
                     parts: [{ type: "text", text: waitText }],
                   };
@@ -1013,6 +1016,11 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                       : "I couldn't generate a route due to an unexpected error. Please try again.";
                   await appendRecovery(fallbackMessage);
                 } finally {
+                  // Remove the "wait" message from the UI
+                  if (waitMsgId) {
+                    const idToRemove = waitMsgId;
+                    setMessages((prev) => prev.filter((m) => m.id !== idToRemove));
+                  }
                   setIsLoading(false);
                 }
               }}
