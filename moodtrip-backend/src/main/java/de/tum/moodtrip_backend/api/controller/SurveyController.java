@@ -132,7 +132,7 @@ public class SurveyController {
                                                         .sum();
 
 
-                                                int dynamicLimit = (int) Math.round((2 + (days - 1) * 3) * energyScore);
+                                                int dynamicLimit = (int) Math.round((3 + (days - 1) * 3.5) * energyScore);
                                                 logger.info("Trip duration: {} days, Mood energy score: {}. Set dynamic POI limit to: {}",
                                                         days, String.format("%.2f", energyScore), dynamicLimit);
 
