@@ -182,7 +182,7 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
             sb.append("Trip Days: ").append(ctx.tripDays()).append("\n");
             
             List<EnrichedPoi> effectivePois = (ctx.pois() != null) ? ctx.pois() : List.of();
-            int totalPois = Math.min(effectivePois.size(), 15);
+            int totalPois = Math.min(effectivePois.size(), 20);
             
             for (int day = 1; day <= ctx.tripDays(); day++) {
                 sb.append(String.format("Day %d Points of Interest:\n", day));

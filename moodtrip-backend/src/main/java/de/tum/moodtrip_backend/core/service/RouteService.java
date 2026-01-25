@@ -37,7 +37,7 @@ public class RouteService {
     private static final Logger LOGGER = LoggerFactory.getLogger(RouteService.class);
     private static final Duration ROUTE_TIMEOUT = Duration.ofSeconds(90);
     private static final String GENERIC_ERROR_MESSAGE = "I couldn't generate a route due to a routing service error. Please try again.";
-    private static final int MAX_POI_RESULTS = 15;
+    private static final int MAX_POI_RESULTS = 20;
     private static final int MIN_POI_RESULTS = 2;
     public static final int POI_VISITING_TIME_SECONDS = 45 * 60;
     public static final double WALKING_SPEED_MPS = 5000.0 / 3600.0;
