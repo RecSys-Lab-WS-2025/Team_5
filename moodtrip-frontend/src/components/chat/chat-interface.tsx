@@ -510,8 +510,8 @@ export function ChatInterface({
   const { state, isMobile } = useSidebar();
   const fixedBarStyle = !isMobile
     ? {
-        left: `var(${state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"})`,
-      }
+      left: `var(${state === "expanded" ? "--sidebar-width" : "--sidebar-width-icon"})`,
+    }
     : undefined;
 
   return (
@@ -547,11 +547,9 @@ export function ChatInterface({
                 className={`flex ${isUser ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`${
-                    isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
-                  } rounded-lg px-4 py-3 text-base ${
-                    isUser ? "!bg-blue-100 !text-black" : "border bg-muted text-foreground"
-                  } `}
+                  className={`${isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
+                    } rounded-lg px-4 py-3 text-base ${isUser ? "!bg-blue-100 !text-black" : "border bg-muted text-foreground"
+                    } `}
                 >
                   <div className="space-y-1">{renderedParts}</div>
                 </div>
@@ -582,18 +580,21 @@ export function ChatInterface({
       </ScrollArea>
 
       <div
-        className={`fixed bottom-10 z-50 flex justify-center transition-all duration-320 ease-in-out ${
-          isMobile ? "left-3 right-3" : "right-4"
-        }`}
+        className={`fixed bottom-10 z-50 flex justify-center transition-all duration-320 ease-in-out ${isMobile ? "left-3 right-3" : "right-4"
+          }`}
         style={fixedBarStyle}
       >
         <form onSubmit={handleSubmit} className="w-full max-w-3xl">
           <div
-            className="
+            className={`
               flex items-center gap-3
-              rounded-full border border-black/10 bg-white px-4 py-2.5
-              dark:border-white/10 dark:bg-[#303030]
-            "
+              rounded-full border border-black/10 px-4 py-2.5
+              dark:border-white/10
+              ${isInputLocked
+                ? "opacity-60 cursor-not-allowed bg-gray-50 dark:bg-zinc-800"
+                : "bg-white dark:bg-[#303030]"
+              }
+            `}
           >
             <Input
               value={input}
@@ -624,21 +625,22 @@ export function ChatInterface({
             </Button>
           </div>
         </form>
-      </div>
+      </div >
 
-      {spotifyUrlForThisChat ? (
-        <SpotifyVinylMiniCard
-          url={spotifyUrlForThisChat}
-          title="Moodtrip playlist"
-          subtitle="Open in Spotify"
-          onClose={() => {
-            setDismissedUrl((prev) => ({
-              ...prev,
-              [chatKey]: spotifyUrlForThisChat,
-            }));
-          }}
-        />
-      ) : null}
-    </div>
+      {
+        spotifyUrlForThisChat ? (
+          <SpotifyVinylMiniCard
+            url={spotifyUrlForThisChat}
+            title="Moodtrip playlist"
+            subtitle="Open in Spotify"
+            onClose={() => {
+              setDismissedUrl((prev) => ({
+                ...prev,
+                [chatKey]: spotifyUrlForThisChat,
+              }));
+            }}
+          />
+        ) : null}
+    </div >
   );
 }

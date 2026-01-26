@@ -860,25 +860,34 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   // 1. Optimistically append messages to UI:
                   //    (A) User's survey data
                   //    (B) "Please wait" message
+                  const now = Date.now();
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(payload)}`;
                   const persistedSurveyMsg: UIMessage = {
-                    id: Date.now().toString(),
+                    id: `survey-${now}`,
                     role: "user",
                     parts: [{ type: "text", text: surveyContent }],
                   };
 
-                  const waitText = "Generating routes may take a few minutes. Please be patient.";
-                  waitMsgId = "wait-" + Date.now().toString();
+                  const thankYouText = "Got it! 🌟 I've received your preferences and I'm excited to plan this for you!";
+                  const thankYouMsg: UIMessage = {
+                    id: `thank-${now}`,
+                    role: "assistant",
+                    parts: [{ type: "text", text: thankYouText }],
+                  };
+
+                  const waitText = "I'm crafting your perfect trip now. This might take a moment, so please bear with me... ⏳";
+                  waitMsgId = `wait-${now}`;
                   const waitMsg: UIMessage = {
                     id: waitMsgId,
                     role: "assistant",
                     parts: [{ type: "text", text: waitText }],
                   };
 
-                  setMessages((prev) => [...prev, persistedSurveyMsg, waitMsg]);
+                  setMessages((prev) => [...prev, persistedSurveyMsg, thankYouMsg, waitMsg]);
 
-                  // 2. Persist the survey message to backend history immediately
+                  // 2. Persist the survey message and the thank you message to backend history immediately
                   await apiSendMessage(conversationId, surveyContent, true);
+                  await apiSendMessage(conversationId, thankYouText, false);
 
                   // 3. Submit survey for processing
                   const trySubmit = async (p: SurveyData) => {
@@ -924,11 +933,11 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     }));
                   }
 
-                  // surveyContent already persisted above, removing duplicate call.
-                  // persistedSurveyMsg already added to UI, removing duplicate setMessages.
+                  // Check if routes array exists
+                  const routesArray = Array.isArray(res.routes) ? res.routes : [routeData];
+                  const routeCount = routesArray.length;
 
-                  let botText =
-                    "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
+                  let botText = `All done! 🎉 I've prepared ${routeCount} lovely routes just for you.`;
                   if (spotifyLink) {
                     botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${spotifyLink})`;
                   }
@@ -941,9 +950,6 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     parts: [{ type: "text", text: botText }],
                   };
                   setMessages((prev) => [...prev, successMsg]);
-
-                  // Check if routes array exists (it should be present in the response type now)
-                  const routesArray = Array.isArray(res.routes) ? res.routes : [routeData];
 
                   // Track used images to prioritize diversity
                   const usedImages = new Set<string>();

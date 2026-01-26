@@ -17,7 +17,7 @@ Requirements:
 - Maximum 7 words.
 - No quotation marks, no emojis, no hashtags.
 - No personally identifying information (no names, emails, IDs, locations, etc.).
-- Use the *same language* as the majority of the conversation (German or English).
+- Use the *same language* as the majority of the conversation (matches User's language).
 - Use title case only when natural in that language (e.g., "Plan Weekend Trip in Munich").
 - Focus on the main recurring topic (e.g., mood, travel planning, music, route recommendation), not on technical details of the system.
 

@@ -121,7 +121,9 @@ export function RouteCard({
                         alt={title || "Route Image"}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/placeholder-route.jpg";
+                            const target = e.target as HTMLImageElement;
+                            if (target.src.includes("placeholder.png")) return;
+                            target.src = "/placeholder.png";
                         }}
                     />
                 ) : (
