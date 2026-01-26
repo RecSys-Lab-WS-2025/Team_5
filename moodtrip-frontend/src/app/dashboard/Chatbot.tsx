@@ -286,6 +286,7 @@ export default function Chatbot() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [chatToRename, setChatToRename] = useState<ChatSummary | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState<string | null>(null);
 
   const parseMessageContent = (content: string) => {
     if (content.startsWith("EmotionResult[")) {
@@ -794,6 +795,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
               isInputLocked={isChatLocked}
               routeGeoJson={routeGeoJson}
               currentEmotion={currentEmotion}
+              processingMessage={processingMessage}
               spotifyPlaylistUrl={
                 selectedChatId ? (spotifyUrlByChat[String(selectedChatId)] ?? null) : null
               }
@@ -826,7 +828,6 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
 
                 setIsLoading(true);
 
-                let waitMsgId: string | null = null;
 
                 try {
                   const rangeMetersInput = (data as unknown as { rangeMeters?: unknown }).rangeMeters;
@@ -875,18 +876,10 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     parts: [{ type: "text", text: thankYouText }],
                   };
 
-                  const waitText = "I'm crafting your perfect trip now. This might take a moment, so please bear with me... ⏳";
-                  waitMsgId = `wait-${now}`;
-                  const waitMsg: UIMessage = {
-                    id: waitMsgId,
-                    role: "assistant",
-                    parts: [{ type: "text", text: waitText }],
-                  };
-
-                  setMessages((prev) => [...prev, persistedSurveyMsg, thankYouMsg, waitMsg]);
+                  setMessages((prev) => [...prev, persistedSurveyMsg, thankYouMsg]);
+                  setProcessingMessage("Generating your personalized trip, it may take a while...");
 
                   // 2. Persist the survey message and the thank you message to backend history immediately
-                  await apiSendMessage(conversationId, surveyContent, true);
                   await apiSendMessage(conversationId, thankYouText, false);
 
                   // 3. Submit survey for processing
@@ -1022,11 +1015,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                       : "I couldn't generate a route due to an unexpected error. Please try again.";
                   await appendRecovery(fallbackMessage);
                 } finally {
-                  // Remove the "wait" message from the UI
-                  if (waitMsgId) {
-                    const idToRemove = waitMsgId;
-                    setMessages((prev) => prev.filter((m) => m.id !== idToRemove));
-                  }
+                  setProcessingMessage(null);
                   setIsLoading(false);
                 }
               }}

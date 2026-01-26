@@ -27,6 +27,7 @@ interface ChatInterfaceProps {
   currentEmotion?: string | null;
   chatId?: string | null;
   spotifyPlaylistUrl?: string | null;
+  processingMessage?: string | null;
 }
 
 function SpotifyVinylMiniCard({
@@ -195,6 +196,7 @@ export function ChatInterface({
   currentEmotion,
   chatId,
   spotifyPlaylistUrl,
+  processingMessage,
 }: ChatInterfaceProps) {
   const bottomRef = React.useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
@@ -584,63 +586,75 @@ export function ChatInterface({
           }`}
         style={fixedBarStyle}
       >
-        <form onSubmit={handleSubmit} className="w-full max-w-3xl">
-          <div
-            className={`
-              flex items-center gap-3
-              rounded-full border border-black/10 px-4 py-2.5
-              dark:border-white/10
-              ${isInputLocked
-                ? "opacity-60 cursor-not-allowed bg-gray-50 dark:bg-zinc-800"
-                : "bg-white dark:bg-[#303030]"
-              }
-            `}
-          >
-            <Input
-              value={input}
-              onChange={handleInputChange}
-              placeholder={isInputLocked ? "Trip generated" : "Ask anything"}
+        <div className="w-full max-w-3xl flex flex-col items-center gap-2">
+          {processingMessage && (
+            <div
               className="
+                px-4 py-1.5 
+                bg-muted/80 backdrop-blur-sm border border-border/50
+                text-xs font-medium text-muted-foreground
+                rounded-full shadow-sm
+                animate-pulse
+              "
+            >
+              {processingMessage}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="w-full">
+            <div
+              className="
+              flex items-center gap-3
+              rounded-full border border-black/10 bg-white px-4 py-2.5
+              dark:border-white/10 dark:bg-[#303030]
+            "
+            >
+              <Input
+                value={input}
+                onChange={handleInputChange}
+                placeholder={isInputLocked ? "Trip generated" : "Ask anything"}
+                className="
                 h-auto flex-1 border-0 bg-transparent px-0
                 text-sm
                 shadow-none
                 focus-visible:ring-0 focus-visible:ring-offset-0
               "
-              disabled={isLoading || isInputLocked}
-            />
+                disabled={isLoading || isInputLocked}
+              />
 
-            <Button
-              type="submit"
-              size="icon"
-              disabled={!input.trim() || isLoading || isInputLocked}
-              className="
+              <Button
+                type="submit"
+                size="icon"
+                disabled={!input.trim() || isLoading || isInputLocked}
+                className="
                 ml-1 h-9 w-9 rounded-full
                 !bg-black text-white
                 hover:bg-black/90
                 disabled:bg-black/40 disabled:text-white/70
                 dark:bg-white dark:text-black dark:hover:bg-white/90
               "
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </form>
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
 
-      {
-        spotifyUrlForThisChat ? (
-          <SpotifyVinylMiniCard
-            url={spotifyUrlForThisChat}
-            title="Moodtrip playlist"
-            subtitle="Open in Spotify"
-            onClose={() => {
-              setDismissedUrl((prev) => ({
-                ...prev,
-                [chatKey]: spotifyUrlForThisChat,
-              }));
-            }}
-          />
-        ) : null}
-    </div >
+      {spotifyUrlForThisChat ? (
+        <SpotifyVinylMiniCard
+          url={spotifyUrlForThisChat}
+          title="Moodtrip playlist"
+          subtitle="Open in Spotify"
+          onClose={() => {
+            setDismissedUrl((prev) => ({
+              ...prev,
+              [chatKey]: spotifyUrlForThisChat,
+            }));
+          }}
+        />
+      ) : null}
+    </div>
   );
 }
+
+
