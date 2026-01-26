@@ -933,7 +933,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
 
                   let botText = `All done! 🎉 I've prepared ${routeCount} lovely route${routeCount === 1 ? "" : "s"} just for you.`;
                   if (spotifyLink) {
-                    botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${spotifyLink})`;
+                    botText += `\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${spotifyLink})`;
                   }
 
                   await apiSendMessage(conversationId, botText, false);
