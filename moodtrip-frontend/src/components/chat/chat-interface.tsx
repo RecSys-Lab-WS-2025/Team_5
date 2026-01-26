@@ -480,7 +480,26 @@ export function ChatInterface({
         if (!isTypingMessage || !typingMessageId) {
           return (
             <div key={idx} className="prose prose-sm whitespace-pre-wrap">
-              <ReactMarkdown>{text}</ReactMarkdown>
+              <ReactMarkdown
+                components={{
+                  a: ({ node, children, href, ...props }) => (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold underline decoration-2"
+                      style={{
+                        color: href?.includes('spotify.com') ? '#1DB954' : '#2563eb',
+                      }}
+                      {...props}
+                    >
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {text}
+              </ReactMarkdown>
             </div>
           );
         }
@@ -492,7 +511,26 @@ export function ChatInterface({
 
         return (
           <div key={idx} className="prose prose-sm whitespace-pre-wrap">
-            <ReactMarkdown>{slice}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                a: ({ node, children, href, ...props }) => (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline decoration-2"
+                    style={{
+                      color: href?.includes('spotify.com') ? '#1DB954' : '#2563eb',
+                    }}
+                    {...props}
+                  >
+                    {children}
+                  </a>
+                ),
+              }}
+            >
+              {slice}
+            </ReactMarkdown>
           </div>
         );
       }
