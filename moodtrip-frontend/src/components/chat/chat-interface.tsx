@@ -482,7 +482,7 @@ export function ChatInterface({
             <div key={idx} className="prose prose-sm whitespace-pre-wrap">
               <ReactMarkdown
                 components={{
-                  a: ({ node, children, href, ...props }) => (
+                  a: ({ children, href, ...props }) => (
                     <a
                       href={href}
                       target="_blank"
@@ -513,7 +513,7 @@ export function ChatInterface({
           <div key={idx} className="prose prose-sm whitespace-pre-wrap">
             <ReactMarkdown
               components={{
-                a: ({ node, children, href, ...props }) => (
+                a: ({ children, href, ...props }) => (
                   <a
                     href={href}
                     target="_blank"

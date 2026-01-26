@@ -44,12 +44,34 @@ public class OsrmRouteResponseRouteMapper {
                 .sorted(java.util.Comparator.comparingInt(i -> osrm.waypoints().get(i).waypointIndex()))
                 .toList();
 
+        // IMPORTANT: OSRM demo server (router.project-osrm.org) only supports driving profile
+        // Even though we use /walking/ endpoint, it returns driving duration
+        // So we calculate walking time manually: distance / walking_speed
+        // Walking speed: 4.5 km/h = 1.25 m/s
+        final double WALKING_SPEED_MPS = 1.25; // meters per second (4.5 km/h)
+        
+        // Calculate walking duration from total distance
+        double calculatedWalkingDuration = osrmRoute.distance() / WALKING_SPEED_MPS;
+        
+        // Recalculate leg durations proportionally
+        // This preserves the relative time distribution between legs
+        double originalTotalDuration = osrmRoute.duration();
+        List<Double> calculatedLegDurations = legDurations.stream()
+                .map(originalLegDuration -> {
+                    if (originalTotalDuration > 0) {
+                        // Scale each leg duration proportionally
+                        return (originalLegDuration / originalTotalDuration) * calculatedWalkingDuration;
+                    }
+                    return 0.0;
+                })
+                .toList();
+
         Route route = new Route(
                 osrmRoute.distance(),
-                osrmRoute.duration(),
+                calculatedWalkingDuration, // Use calculated walking duration instead of driving duration
                 geometry,
                 legDistances,
-                legDurations,
+                calculatedLegDurations, // Use recalculated leg durations
                 waypointOrder,
                 null, // title - will be set later by route description service
                 null  // description - will be set later by route description service
