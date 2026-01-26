@@ -880,6 +880,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   setProcessingMessage("Generating your personalized trip, it may take a while...");
 
                   // 2. Persist the survey message and the thank you message to backend history immediately
+                  await apiSendMessage(conversationId, surveyContent, true);
                   await apiSendMessage(conversationId, thankYouText, false);
 
                   // 3. Submit survey for processing
