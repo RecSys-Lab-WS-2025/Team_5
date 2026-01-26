@@ -625,7 +625,7 @@ export function ChatInterface({
             </Button>
           </div>
         </form>
-      </div >
+      </div>
 
       {
         spotifyUrlForThisChat ? (
