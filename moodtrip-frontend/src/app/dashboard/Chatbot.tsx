@@ -286,6 +286,7 @@ export default function Chatbot() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [chatToRename, setChatToRename] = useState<ChatSummary | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState<string | null>(null);
 
   const parseMessageContent = (content: string) => {
     if (content.startsWith("EmotionResult[")) {
@@ -794,6 +795,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
               isInputLocked={isChatLocked}
               routeGeoJson={routeGeoJson}
               currentEmotion={currentEmotion}
+              processingMessage={processingMessage}
               spotifyPlaylistUrl={
                 selectedChatId ? (spotifyUrlByChat[String(selectedChatId)] ?? null) : null
               }
@@ -826,7 +828,6 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
 
                 setIsLoading(true);
 
-                let waitMsgId: string | null = null;
 
                 try {
                   const rangeMetersInput = (data as unknown as { rangeMeters?: unknown }).rangeMeters;
@@ -860,25 +861,27 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   // 1. Optimistically append messages to UI:
                   //    (A) User's survey data
                   //    (B) "Please wait" message
+                  const now = Date.now();
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(payload)}`;
                   const persistedSurveyMsg: UIMessage = {
-                    id: Date.now().toString(),
+                    id: `survey-${now}`,
                     role: "user",
                     parts: [{ type: "text", text: surveyContent }],
                   };
 
-                  const waitText = "Generating routes may take a few minutes. Please be patient.";
-                  waitMsgId = "wait-" + Date.now().toString();
-                  const waitMsg: UIMessage = {
-                    id: waitMsgId,
+                  const thankYouText = "Got it! 🌟 I've received your preferences and I'm excited to plan this for you!";
+                  const thankYouMsg: UIMessage = {
+                    id: `thank-${now}`,
                     role: "assistant",
-                    parts: [{ type: "text", text: waitText }],
+                    parts: [{ type: "text", text: thankYouText }],
                   };
 
-                  setMessages((prev) => [...prev, persistedSurveyMsg, waitMsg]);
+                  setMessages((prev) => [...prev, persistedSurveyMsg, thankYouMsg]);
+                  setProcessingMessage("Generating your personalized trip, it may take a while...");
 
-                  // 2. Persist the survey message to backend history immediately
+                  // 2. Persist the survey message and the thank you message to backend history immediately
                   await apiSendMessage(conversationId, surveyContent, true);
+                  await apiSendMessage(conversationId, thankYouText, false);
 
                   // 3. Submit survey for processing
                   const trySubmit = async (p: SurveyData) => {
@@ -924,13 +927,13 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     }));
                   }
 
-                  // surveyContent already persisted above, removing duplicate call.
-                  // persistedSurveyMsg already added to UI, removing duplicate setMessages.
+                  // Check if routes array exists
+                  const routesArray = Array.isArray(res.routes) ? res.routes : [routeData];
+                  const routeCount = routesArray.length;
 
-                  let botText =
-                    "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
+                  let botText = `All done! 🎉 I've prepared ${routeCount} lovely route${routeCount === 1 ? "" : "s"} just for you.`;
                   if (spotifyLink) {
-                    botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${spotifyLink})`;
+                    botText += `\n🎵 I also created a Spotify playlist for you based on the conversation mood → [**Click here to listen on Spotify**](${spotifyLink})`;
                   }
 
                   await apiSendMessage(conversationId, botText, false);
@@ -941,9 +944,6 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     parts: [{ type: "text", text: botText }],
                   };
                   setMessages((prev) => [...prev, successMsg]);
-
-                  // Check if routes array exists (it should be present in the response type now)
-                  const routesArray = Array.isArray(res.routes) ? res.routes : [routeData];
 
                   // Track used images to prioritize diversity
                   const usedImages = new Set<string>();
@@ -1016,11 +1016,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                       : "I couldn't generate a route due to an unexpected error. Please try again.";
                   await appendRecovery(fallbackMessage);
                 } finally {
-                  // Remove the "wait" message from the UI
-                  if (waitMsgId) {
-                    const idToRemove = waitMsgId;
-                    setMessages((prev) => prev.filter((m) => m.id !== idToRemove));
-                  }
+                  setProcessingMessage(null);
                   setIsLoading(false);
                 }
               }}
