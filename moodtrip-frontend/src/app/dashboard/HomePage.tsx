@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/navbar";
 import { useNavigate } from "react-router-dom";
 import { getUser } from "@/api/auth";
+import { HowItWorksDialog } from "@/app/dashboard/HowItWorksDialog";
 
 const TravelIcon = () => (
   <svg
@@ -53,7 +54,7 @@ export function HomePage() {
       {/* Hero section */}
       <main className="min-h-screen pt-24 pb-12 flex items-center justify-center px-6 md:px-12 lg:px-24 relative">
         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-12 items-center">
-          
+
           {/* Left side: text */}
           <div className="flex flex-col text-center lg:text-left lg:order-1">
             <p className="text-xl font-bold uppercase tracking-wider text-orange-600 mb-7 mx-auto lg:mx-0">
@@ -90,19 +91,20 @@ export function HomePage() {
               </div>
 
               {/* Play / guide button - FORCED PAGE BACKGROUND COLOR */}
-              <button
-                type="button"
-                onClick={() => navigate("/demo")}
-                className="flex items-center gap-3 group !bg-blue-50 !border-0 !p-0 focus:outline-none"
-              >
-                {/* Play Icon Wrapper - FORCED PAGE BACKGROUND COLOR */}
-                <div className="w-10 h-10 rounded-full border-2 border-blue-400 flex items-center justify-center group-hover:scale-105 transition-all duration-200 !bg-blue-50">
-                  <PlayIcon />
-                </div>
-                <span className="text-gray-600 font-bold group-hover:text-blue-500 transition">
-                  How it works
-                </span>
-              </button>
+              <HowItWorksDialog>
+                <button
+                  type="button"
+                  className="flex items-center gap-3 group !bg-blue-50 !border-0 !p-0 focus:outline-none cursor-pointer"
+                >
+                  {/* Play Icon Wrapper - FORCED PAGE BACKGROUND COLOR */}
+                  <div className="w-10 h-10 rounded-full border-2 border-blue-400 flex items-center justify-center group-hover:scale-105 transition-all duration-200 !bg-blue-50">
+                    <PlayIcon />
+                  </div>
+                  <span className="text-gray-600 font-bold group-hover:text-blue-500 transition">
+                    How it works
+                  </span>
+                </button>
+              </HowItWorksDialog>
             </div>
           </div>
 
@@ -116,7 +118,7 @@ export function HomePage() {
           </div>
         </div>
       </main>
-      
+
       {/* Deep Blue Footer */}
       <footer className="bg-blue-900 w-full py-4 mt-auto">
         <div className="max-w-6xl mx-auto px-6 text-white text-center text-sm">
