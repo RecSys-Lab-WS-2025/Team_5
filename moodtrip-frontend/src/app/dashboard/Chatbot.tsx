@@ -620,6 +620,7 @@ export default function Chatbot() {
   const handleScriptedClick = async (userText: string, assistantText: string) => {
     // setIsLoading(true); // Don't set true globally yet, wait for ID
 
+
     let currentChatId = selectedChatId;
 
     if (!currentChatId) {
@@ -848,6 +849,8 @@ Just share a bit, and I’ll do the planning for you ✨`;
                   }
                   const m = String(mood).toUpperCase();
 
+
+
                   const Icon =
                     m === "JOYFUL" || m === "ENERGIZED"
                       ? Laugh
@@ -917,18 +920,15 @@ Just share a bit, and I’ll do the planning for you ✨`;
                         <span
                           className={
                             "h-2 w-2 rounded-full " +
-                            dot +
-                            (String(mood) === "Not yet" ? " animate-pulse" : "")
+                            dot
                           }
                         />
-                        {String(mood) === "Not yet" ? "Not yet" : m}
+                        {m}
                       </span>
                     </>
                   );
-                })()}
+                })() : null}
               </div>
-            ) : null}
-          </div>
         </header>
 
         <div className="flex min-h-[calc(100vh-4rem)] flex-1 flex-col">
