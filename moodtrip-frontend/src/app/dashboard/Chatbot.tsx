@@ -927,8 +927,10 @@ Just share a bit, and I’ll do the planning for you ✨`;
                       </span>
                     </>
                   );
-                })() : null}
+                })()}
               </div>
+            ) : null}
+          </div>
         </header>
 
         <div className="flex min-h-[calc(100vh-4rem)] flex-1 flex-col">
