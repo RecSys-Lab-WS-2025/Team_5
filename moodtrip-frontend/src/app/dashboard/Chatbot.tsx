@@ -233,7 +233,7 @@ export default function Chatbot() {
     initialSnapshot?.currentEmotion ?? null
   );
   const [isChatLocked, setIsChatLocked] = useState(
-    initialSnapshot?.emotionExtracted ?? false
+    initialSnapshot?.emotionExtracted ?? true
   );
 
   const [spotifyUrlByChat, setSpotifyUrlByChat] = useState<
