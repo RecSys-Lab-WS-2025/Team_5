@@ -3,9 +3,6 @@
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { MoveLeft, ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-import { Button } from "@/components/ui/button";
 import {
   SidebarInset,
   SidebarProvider,
@@ -22,9 +19,11 @@ import type { RouteRecommendation, PoiFeature, RouteFeature } from "@/api/conver
 function MapPane({
   geoJson,
   selectedDay,
+  activePoiId,
 }: {
   geoJson: FeatureCollection;
   selectedDay: number;
+  activePoiId: string | null;
 }) {
   const { isMobile, openMobile, state } = useSidebar();
   const invalidateKey = isMobile ? (openMobile ? "open" : "closed") : state;
@@ -35,6 +34,7 @@ function MapPane({
         data={geoJson}
         invalidateKey={invalidateKey}
         selectedDay={selectedDay}
+        activePoiId={activePoiId}
       />
     </div>
   );
@@ -48,25 +48,20 @@ export const RouteDetailsPage = () => {
   const routeData = (location.state as RouteDetailsState) ?? null;
 
   const [selectedDay, setSelectedDay] = React.useState(1);
+  const [activePoiId, setActivePoiId] = React.useState<string | null>(null);
 
   if (!routeData) {
     return (
       <div className="flex h-screen items-center justify-center bg-white p-4">
         <div className="text-center space-y-4">
-          <h2 className="text-xl font-semibold text-foreground">Route not found</h2>
-          <Button
+          <h2 className="text-xl font-semibold text-slate-900">Route not found</h2>
+          <button
             onClick={() => navigate(-1)}
-            className={cn(
-              "inline-flex h-10 w-10 items-center justify-center rounded-full",
-              "!bg-white text-foreground",
-              "border border-black/10",
-              "shadow-sm shadow-black/10",
-              "hover:bg-white hover:border-black/20",
-              "transition-colors"
-            )}
+            className="inline-flex items-center justify-center p-2 rounded-full text-slate-400 hover:text-slate-900 transition-colors"
+            aria-label="Go back"
           >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+            <ArrowLeft className="h-6 w-6" />
+          </button>
         </div>
       </div>
     );
@@ -101,28 +96,33 @@ export const RouteDetailsPage = () => {
           "--sidebar-width-icon": "3rem",
         } as React.CSSProperties
       }
-      className="h-screen"
+      className="h-screen w-full"
     >
-      <SidebarInset className="h-screen min-h-0 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-white">
-        <header className="relative z-20 flex h-16 shrink-0 items-center gap-3 border-b border-gray-200/50 bg-white/80 backdrop-blur-xl px-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="!bg-white text-gray-600 hover:text-gray-900 hover:!bg-white"
-          >
-            <MoveLeft className="h-5 w-5" />
-          </Button>
+      <SidebarInset className="relative h-screen min-h-0 w-full overflow-hidden bg-slate-50">
+        <header className="relative z-20 flex h-10 shrink-0 items-center justify-between bg-white/70 backdrop-blur-md px-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center justify-center p-1.5 -ml-1 text-slate-400 hover:text-slate-900 transition-colors"
+              aria-label="Go back"
+            >
+              <MoveLeft className="h-5 w-5" />
+            </button>
+          </div>
 
-          <SidebarTrigger className="ml-auto rotate-180 text-gray-600 hover:text-gray-900" />
+          <SidebarTrigger className="rotate-180 text-slate-400 hover:text-slate-900 transition-colors" />
         </header>
 
-        <main className="h-[calc(100vh-4rem)] min-h-0 w-full">
+        <main className="flex-1 min-h-0 w-full">
           {routeData.geoJson ? (
-            <MapPane geoJson={routeData.geoJson} selectedDay={selectedDay} />
+            <MapPane
+              geoJson={routeData.geoJson}
+              selectedDay={selectedDay}
+              activePoiId={activePoiId}
+            />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-gray-400">
-              Map Preview
+            <div className="flex h-full w-full items-center justify-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">
+              Initializing Map
             </div>
           )}
         </main>
@@ -138,6 +138,7 @@ export const RouteDetailsPage = () => {
         displayDuration={displayDuration}
         formatDuration={formatDuration}
         dayPois={dayPois}
+        onPoiClick={(id) => setActivePoiId(id)}
       />
     </SidebarProvider>
   );

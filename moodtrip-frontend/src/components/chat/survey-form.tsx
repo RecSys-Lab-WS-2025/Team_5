@@ -48,10 +48,8 @@ export function SurveyForm({
     readOnly?: boolean;
     initialData?: SurveyData;
 }) {
-    // Helper to get date string YYYY-MM-DD
     const getTodayString = () => new Date().toISOString().split('T')[0];
 
-    // Helper to calculate trip days from start/end dates
     const calculateTripDays = (start: string, end: string): number => {
         const startDate = new Date(start);
         const endDate = new Date(end);
@@ -61,7 +59,6 @@ export function SurveyForm({
     };
 
     const [range, setRange] = React.useState<number>(initialData?.rangeMeters ?? 5000);
-    // Local string state for input to allow empty/typing states
     const [rangeInput, setRangeInput] = React.useState<string>((initialData?.rangeMeters ? initialData.rangeMeters / 1000 : 5).toString());
 
     const [tripDays, setTripDays] = React.useState<number>(
@@ -82,7 +79,6 @@ export function SurveyForm({
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [isSubmitted, setIsSubmitted] = React.useState(false);
 
-    // Populate from initial data (read-only view)
     React.useEffect(() => {
         if (!initialData) return;
         const fallbackLabel = `Lat ${initialData.latitude.toFixed(4)}, Lon ${initialData.longitude.toFixed(4)}`;
@@ -98,7 +94,6 @@ export function SurveyForm({
         setSelectedCategories(normalizePoiCategories(initialData.poiCategories));
     }, [initialData]);
 
-    // Fetch location suggestions (debounced)
     React.useEffect(() => {
         if (readOnly || isSubmitted) return;
         const query = locationQuery.trim();
@@ -224,7 +219,6 @@ export function SurveyForm({
         setIsSubmitting(true);
         setLocationError(null);
 
-        // Calculate dates from trip duration
         const finalStartDate = getTodayString();
         const endDateObj = new Date();
         endDateObj.setDate(endDateObj.getDate() + tripDays - 1);
@@ -261,7 +255,6 @@ export function SurveyForm({
 
     return (
         <Card className="w-full max-w-lg mx-auto border border-gray-200 shadow-xl bg-white rounded-2xl overflow-hidden">
-            {/* Header */}
             <CardHeader className="bg-gray-100 border-b border-gray-200 pb-6 pt-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-gray-200 rounded-xl">
@@ -278,7 +271,6 @@ export function SurveyForm({
 
             <CardContent className="p-6 space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Location Picker */}
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
                             <MapPin className="w-4 h-4 text-gray-700" />
@@ -382,12 +374,9 @@ export function SurveyForm({
                         )}
                     </div>
 
-                    {/* Divider */}
                     <div className="border-t border-gray-100" />
 
-                    {/* Trip Duration & Range Row */}
                     <div className="grid grid-cols-2 gap-4">
-                        {/* Trip Duration */}
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
                                 <Calendar className="w-4 h-4 text-gray-700" />
@@ -414,7 +403,6 @@ export function SurveyForm({
                             </select>
                         </div>
 
-                        {/* Search Range */}
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
                                 <Compass className="w-4 h-4 text-gray-700" />
@@ -460,7 +448,6 @@ export function SurveyForm({
                         </div>
                     </div>
 
-                    {/* Range Slider */}
                     <div className="px-1">
                         <Slider
                             className="w-full"
@@ -481,10 +468,8 @@ export function SurveyForm({
                         </div>
                     </div>
 
-                    {/* Divider */}
                     <div className="border-t border-gray-100" />
 
-                    {/* POI Categories */}
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
                             <Sparkles className="w-4 h-4 text-gray-700" />
@@ -493,7 +478,7 @@ export function SurveyForm({
                                 <span className="ml-2 text-xs font-normal text-gray-400">(Optional)</span>
                             </Label>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                             {POI_CATEGORIES.map((cat) => {
                                 const isSelected = selectedCategories.includes(cat);
                                 return (
@@ -502,11 +487,11 @@ export function SurveyForm({
                                         type="button"
                                         onClick={() => toggleCategory(cat)}
                                         disabled={isDisabled}
-                                        style={isSelected ? { backgroundColor: '#000', color: '#fff', borderColor: '#000' } : {}}
+                                        style={isSelected ? { backgroundColor: '#4b5563', color: '#fff', borderColor: '#4b5563' } : {}}
                                         className={`
                                             px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border outline-none
                                             ${isSelected
-                                                ? "shadow-md hover:!bg-gray-800 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                                                ? "shadow-md hover:!bg-gray-600 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
                                                 : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:bg-gray-100 hover:text-gray-900 focus:ring-2 focus:ring-black focus:ring-offset-2"}
                                             ${isDisabled ? "cursor-default opacity-70" : "cursor-pointer"}
                                         `}
@@ -520,19 +505,18 @@ export function SurveyForm({
                 </form>
             </CardContent>
 
-            {/* Footer */}
             {!readOnly && !isSubmitted && (
                 <CardFooter className="bg-gray-50 border-t border-gray-100 p-4">
                     <Button
                         style={
                             isSubmitting || !isFormComplete
                                 ? { backgroundColor: '#d1d5db', color: '#6b7280' }
-                                : { backgroundColor: '#000', color: '#fff' }
+                                : { backgroundColor: '#4b5563', color: '#fff' }
                         }
                         className={`w-full h-12 font-semibold text-base rounded-xl transition-all duration-200 disabled:cursor-not-allowed outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 ${
                             isSubmitting || !isFormComplete
                                 ? "shadow-none"
-                                : "hover:!bg-gray-800 active:!bg-gray-900 shadow-lg shadow-black/30"
+                                : "hover:!bg-gray-600 active:!bg-gray-700 shadow-lg shadow-black/30"
                         }`}
                         onClick={handleSubmit}
                         disabled={isSubmitting || !isFormComplete}

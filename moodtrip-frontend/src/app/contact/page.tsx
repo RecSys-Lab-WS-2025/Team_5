@@ -29,10 +29,10 @@ export default function ContactPage() {
                 Email
               </div>
               <a
-                href="mailto:hello@moodtrip.app"
+                href="mailto:hello@moodtrip.com"
                 className="!block !mt-2 !text-lg !font-semibold !underline !underline-offset-4"
               >
-                hello@moodtrip.app
+                hello@moodtrip.com
               </a>
             </div>
 

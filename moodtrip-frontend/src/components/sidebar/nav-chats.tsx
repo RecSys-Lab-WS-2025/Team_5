@@ -92,7 +92,7 @@ export function NavChats({
                   </a>
                 </SidebarMenuButton>
 
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <SidebarMenuAction
                       showOnHover

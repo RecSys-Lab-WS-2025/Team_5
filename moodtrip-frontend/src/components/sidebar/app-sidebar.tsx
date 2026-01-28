@@ -6,16 +6,12 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
 import { NavMain } from "@/components/sidebar/nav-main"
 import { NavSecondary } from "@/components/sidebar/nav-secondary"
 import { NavUser } from "@/components/sidebar/nav-user"
 import { NavChats } from "@/components/sidebar/nav-chats"
-import { Plus } from "lucide-react"
 
 import { getUser, saveUser, type AuthUser } from "@/api/auth"
 import { fetchCurrentUser, type UserProfile } from "@/api/user"
@@ -45,6 +41,7 @@ type Props = React.ComponentProps<typeof Sidebar> & {
   onIntroductionClick?: () => void
   onQuickStartClick?: () => void
   onRefreshChats?: () => void
+  onLogoClick?: () => void
 }
 
 type LocalAuthUser = AuthUser & { avatarUrl?: string | null }
@@ -75,6 +72,7 @@ export function AppSidebar({
   onIntroductionClick,
   onQuickStartClick,
   onRefreshChats,
+  onLogoClick,
   ...props
 }: Props) {
   const { open } = useSidebar()
@@ -86,25 +84,20 @@ export function AppSidebar({
   React.useEffect(() => {
     let cancelled = false
 
-    ;(async () => {
-      const server = await fetchCurrentUser()
-      if (cancelled) return
+      ; (async () => {
+        const server = await fetchCurrentUser()
+        if (cancelled) return
 
-      if (server) {
-        const next = mergeServerIntoLocal(server, authUser)
-
-        // saveUser expects AuthUser; runtime JSON can still include extra fields.
-        saveUser(next as AuthUser)
-
-        // Ensure avatarUrl is persisted even if AuthUser doesn't include it in TS type.
-        localStorage.setItem("auth_user", JSON.stringify(next))
-
-        setAuthUser(next)
-      } else {
-        const local = getUser() as LocalAuthUser | null
-        setAuthUser(local)
-      }
-    })()
+        if (server) {
+          const next = mergeServerIntoLocal(server, authUser)
+          saveUser(next as AuthUser)
+          localStorage.setItem("auth_user", JSON.stringify(next))
+          setAuthUser(next)
+        } else {
+          const local = getUser() as LocalAuthUser | null
+          setAuthUser(local)
+        }
+      })()
 
     const off = onUserUpdated(() => {
       const local = getUser() as LocalAuthUser | null
@@ -124,26 +117,25 @@ export function AppSidebar({
 
   return (
     <Sidebar variant="inset" {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <button
-                type="button"
-                onClick={onNewChat}
-                className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 transition-colors duration-200 !bg-blue-800 hover:!bg-[#142c65] active:!bg-[#0e204a] !text-white focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="text-sm font-semibold">New Chat</span>
-              </button>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarHeader className="px-3 py-3">
+        <button
+          type="button"
+          onClick={onLogoClick}
+          style={{ all: "unset", cursor: "pointer" }}
+          aria-label="Go to home"
+          title="Home"
+        >
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="Moodtrip" className="h-6 w-6 shrink-0" />
+            <span className="text-sm font-semibold tracking-tight">Moodtrip</span>
+          </div>
+        </button>
       </SidebarHeader>
 
       <div className="shrink-0">
         <NavMain
           items={navMain}
+          onNewChat={onNewChat}
           onIntroductionClick={onIntroductionClick}
           onQuickStartClick={onQuickStartClick}
         />

@@ -3,13 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Base light theme variables */
 :root {
   font-family: "Open Sans", sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  /* Only light mode */
   color-scheme: light;
   background-color: #f4f8fb;
   color: #213547;
@@ -21,7 +19,6 @@
 
   --radius: 0.625rem;
 
-  /* Light theme design tokens */
   --background: oklch(0.97 0.01 240);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -64,62 +61,11 @@ body {
   min-height: 100vh;
 }
 
-/* Big landing heading style */
-h1 {
-  font-family: "Montserrat", sans-serif;
-  font-size: 5em;
-  line-height: 1.1;
-  font-weight: 900;
+::selection {
+  background-color: #bfdbfe;
+  color: #111827;
 }
 
-/* Basic button styling */
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #f9f9f9;
-  cursor: pointer;
-  transition: border-color 0.25s, background-color 0.25s;
-}
-
-/* FIX: Set border-color to transparent to eliminate the yellow/orange default hover border */
-button:hover {
-  border-color: transparent;
-}
-
-/* Accessible focus ring */
-button:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-/* Link hover */
-a:hover {
-  color: rgba(221, 88, 16, 0.832);
-}
-
-/* Custom CSS to eliminate narrow boxes/outlines on navigation links */
-.max-lg\:hidden a:focus,
-.max-lg\:hidden a:focus-visible,
-.max-lg\:hidden a:hover,
-.max-lg\:hidden a:active,
-.max-lg\:hidden a {
-  outline: none !important;
-  box-shadow: none !important;
-  border: none !important;
-}
-
-/* Specific focus fix for the mobile menu links */
-.lg\:hidden a:focus,
-.lg\:hidden a:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* Tailwind theme mappings */
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -169,9 +115,6 @@ a:hover {
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* No dark theme overrides: the .dark class will not change colors anymore */
-
-/* Tailwind base layer */
 @layer base {
   * {
     @apply border-border;
@@ -231,82 +174,86 @@ a:hover {
   .leaflet-edit-marker-selected {
     @apply !border-transparent !bg-transparent;
   }
-}
 
-/* Text selection for light mode */
-::selection {
-  background-color: #bfdbfe; /* light blue */
-  color: #111827; /* dark text */
+  .max-lg\:hidden a:focus,
+  .max-lg\:hidden a:focus-visible,
+  .max-lg\:hidden a:hover,
+  .max-lg\:hidden a:active,
+  .max-lg\:hidden a {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .lg\:hidden a:focus,
+  .lg\:hidden a:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
 }
 
 .btn-container {
   position: relative;
-  /* Adjust SVG position relative to the button text, ensure SVG padding fits */
   --svg-width: 40px;
 }
 
-/* Base button styling override for the new effect */
 .custom-swipe-btn {
-  /* Resetting Tailwind/Shadcn button default styles for the custom effect */
   border: 0 !important;
-  padding: 15px 20px 16px calc(var(--svg-width) + 20px); /* Adjust padding for SVG icon */
+  padding: 15px 20px 16px calc(var(--svg-width) + 20px);
   text-transform: uppercase;
   font-weight: bold;
 
-  /* Main Colors: Deep Blue (Start) and Bright Blue (End) */
-  --color-start: #1e3a8a; /* Deep Blue (blue-900) */
-  --color-end: #3b82f6; /* Bright Blue (blue-500) */
+  --color-start: #1e3a8a;
+  --color-end: #3b82f6;
 
   color: white;
   background: var(--color-start);
 
-  /* Create 200% wide gradient background */
   background: linear-gradient(
     to right,
     var(--color-end) 50%,
     var(--color-start) 50%
   );
   background-size: 200% 100%;
-
-  /* Initial state: Right side (Deep Blue) is visible */
   background-position: right bottom;
 
-  /* Transition on the background position */
   transition: background-position 0.5s ease;
-
-  /* Use full border-radius for pill shape */
   border-radius: 50px;
-
-  /* Ensure text is above the background changes */
   z-index: 10;
 }
 
-/* SVG Icon Styling */
 .btn-container svg {
-  background: var(
-    --color-start
-  ); /* Match the button's initial background color */
+  background: var(--color-start);
   padding: 8px;
   width: var(--svg-width);
   height: var(--svg-width);
   border-radius: 50%;
   position: absolute;
   left: 0;
-  top: 50%; /* Center vertically */
+  top: 50%;
   transform: translateY(-50%);
-  z-index: 20; /* Ensure SVG is above the button */
-
-  /* Transition for a smooth color change */
+  z-index: 20;
   transition: background-color 0.5s ease;
 }
 
-/* Hover State: Slide the background and change SVG color */
 .btn-container:hover .custom-swipe-btn {
-  /* Slide background to the left: Bright Blue becomes visible */
   background-position: left bottom;
 }
 
 .btn-container:hover svg {
-  /* Change SVG background to match the new button background color */
   background-color: var(--color-end);
+}
+
+@layer utilities {
+  .sidebar-custom-scroll::-webkit-scrollbar {
+    width: 0px;
+  }
+
+  .transition-hover {
+    transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl;
+  }
 }

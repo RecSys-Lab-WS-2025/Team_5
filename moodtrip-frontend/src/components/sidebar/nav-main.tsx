@@ -1,12 +1,12 @@
-"use client";
+"use client"
 
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { ChevronRight, SquarePen, type LucideIcon } from "lucide-react"
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/components/ui/collapsible"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -16,27 +16,47 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from "@/components/ui/sidebar";
+} from "@/components/ui/sidebar"
 
 export function NavMain({
   items,
   onIntroductionClick,
   onQuickStartClick,
+  onNewChat,
 }: {
   items: {
-    title: string;
-    url: string;
-    icon: LucideIcon;
-    isActive?: boolean;
-    items?: { title: string; url: string }[];
-  }[];
-  onIntroductionClick?: () => void;
-  onQuickStartClick?: () => void;
+    title: string
+    url: string
+    icon: LucideIcon
+    isActive?: boolean
+    items?: { title: string; url: string }[]
+  }[]
+  onIntroductionClick?: () => void
+  onQuickStartClick?: () => void
+  onNewChat?: () => void
 }) {
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
+
       <SidebarMenu>
+        {onNewChat ? (
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={onNewChat}
+              tooltip="New chat"
+              className="group flex items-center justify-between gap-2 focus-visible:outline-none"
+            >
+              <span className="flex items-center gap-2">
+                <SquarePen className="size-4 shrink-0" />
+                <span className="text-sm font-normal leading-none">
+                  New chat
+                </span>
+              </span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ) : null}
+
         {items.map((item) => (
           <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
             <SidebarMenuItem>
@@ -54,6 +74,7 @@ export function NavMain({
                       <item.icon className="size-4 shrink-0" />
                       <span className="leading-none">{item.title}</span>
                     </span>
+
                     {item.items?.length ? (
                       <ChevronRight className="size-4 shrink-0 -mt-px transition-transform duration-200 group-data-[state=open]:rotate-90" />
                     ) : null}
@@ -65,13 +86,13 @@ export function NavMain({
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.items.map((sub) => {
-                      const isIntro = sub.title === "Introduction";
-                      const isQuick = sub.title === "Quick-Start";
+                      const isIntro = sub.title === "Introduction"
+                      const isQuick = sub.title === "Quick-Start"
 
                       const handler =
                         (isIntro && onIntroductionClick) ||
                         (isQuick && onQuickStartClick) ||
-                        undefined;
+                        undefined
 
                       return (
                         <SidebarMenuSubItem key={sub.title}>
@@ -80,16 +101,16 @@ export function NavMain({
                               href={sub.url}
                               className="text-sm font-normal"
                               onClick={(e) => {
-                                if (!handler) return;
-                                e.preventDefault();
-                                handler();
+                                if (!handler) return
+                                e.preventDefault()
+                                handler()
                               }}
                             >
                               {sub.title}
                             </a>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
-                      );
+                      )
                     })}
                   </SidebarMenuSub>
                 </CollapsibleContent>
@@ -99,5 +120,5 @@ export function NavMain({
         ))}
       </SidebarMenu>
     </SidebarGroup>
-  );
+  )
 }
