@@ -40,8 +40,8 @@ cp .env.example moodtrip-frontend/.env
 **Terminal 1: Database & Backend**
 ```bash
 cd moodtrip-backend
-docker-compose up -d db   # Start PostgreSQL
-./gradlew bootRun         # Start Backend Server
+docker-compose up -d postgres   # Start PostgreSQL
+./gradlew bootRun               # Start Backend Server
 ```
 
 **Terminal 2: Frontend**
