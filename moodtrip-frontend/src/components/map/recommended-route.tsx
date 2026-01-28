@@ -199,7 +199,7 @@ function PoiRating({
       } else {
         setRating(previousRating);
       }
-    } catch (error) {
+    } catch{
       setIsSubmitting(false);
       setRating(previousRating);
     }
@@ -291,7 +291,7 @@ export function RecommendedRouteMap({
     try {
       const coords = L.geoJSON(safeData as GeoJsonObject).getBounds().getCenter();
       return [coords.lat, coords.lng] as [number, number];
-    } catch (error) {
+    } catch {
       return [48.137154, 11.576124] as [number, number];
     }
   }, [safeData]);

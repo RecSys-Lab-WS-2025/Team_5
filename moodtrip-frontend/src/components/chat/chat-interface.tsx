@@ -27,6 +27,7 @@ interface ChatInterfaceProps {
   currentEmotion?: string | null;
   chatId?: string | null;
   spotifyPlaylistUrl?: string | null;
+  historyRenderToken?: number;
   processingMessage?: string | null;
 }
 
@@ -91,11 +92,10 @@ function SpotifyVinylMiniCard({
                   aria-hidden="true"
                 >
                   <div className="absolute inset-0 rounded-full bg-gradient-to-br from-neutral-800 via-slate-900 to-neutral-950" />
-                  
+
                   <div className="absolute inset-[3px] rounded-full border-[0.5px] border-white/5" />
                   <div className="absolute inset-[6px] rounded-full border-[0.5px] border-white/5" />
                   <div className="absolute inset-[9px] rounded-full border-[0.5px] border-white/5" />
-                  
                   <div
                     className="absolute inset-0 rounded-full"
                     style={{
@@ -202,6 +202,7 @@ export function ChatInterface({
   currentEmotion,
   chatId,
   spotifyPlaylistUrl,
+  historyRenderToken = 0,
   processingMessage,
 }: ChatInterfaceProps) {
   const navigate = useNavigate();
@@ -296,7 +297,7 @@ export function ChatInterface({
         clearTimeout(timerRef.current);
       }
     };
-  }, [messages.length, historyRenderToken, messages, scrollToBottom]);
+  }, [messages.length, historyRenderToken, scrollToBottom]);
 
   const visibleMessages = React.useMemo(() => {
     return messages.slice(0, visibleCount);
@@ -599,91 +600,76 @@ export function ChatInterface({
         ref={scrollAreaRootRef as unknown as React.RefObject<HTMLDivElement>}
         className="flex-1"
       >
-        <div className="p-6" style={{ paddingBottom: bottomGap }}>
-          <div className="mx-auto max-w-6xl space-y-4">
-            {visibleMessages.map((message) => {
-              const isUser = message.role === "user";
-              const renderedParts = renderMessageParts(message).filter(
-                (part) => part !== null && part !== undefined
-              );
-              if (renderedParts.length === 0) return null;
+  <div className="p-6" style={{ paddingBottom: bottomGap }}>
+    <div className="mx-auto max-w-6xl space-y-4">
+      {visibleMessages.map((message) => {
+        const isUser = message.role === "user";
+        const renderedParts = renderMessageParts(message).filter(
+        (part) => part !== null && part !== undefined
+        );
+        if (renderedParts.length === 0) return null;
 
-              const isMapBubble = message.parts.some(
-                (p) => p.type === "text" && (p.text || "").includes("[ROUTE_MAP]")
-              );
+        const isMapBubble = message.parts.some(
+          (p) => p.type === "text" && (p.text || "").includes("[ROUTE_MAP]")
+        );
 
-              const isRouteCardsBubble = message.parts.some(
-                (p) => p.type === "text" && (p.text || "").includes("[ROUTE_CARDS]")
-              );
+        const isRouteCardsBubble = message.parts.some(
+          (p) => p.type === "text" && (p.text || "").includes("[ROUTE_CARDS]")
+        );
 
-              if (isRouteCardsBubble) {
-                return (
-                  <div key={message.id} className="w-full flex justify-center">
-                    <div className="w-full flex justify-center">{renderedParts}</div>
-                  </div>
-                );
-              }
+        if (isRouteCardsBubble) {
+          return (
+            <div key={message.id} className="w-full flex justify-center">
+              <div className="w-full flex justify-center">{renderedParts}</div>
+            </div>
+          );
+        }
 
-              return (
+        return (
+          <div
+            key={message.id}
+            className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`${
+                isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
+              } rounded-lg px-4 py-3 text-base ${
+                isUser ? "!bg-blue-100 !text-black" : "border bg-muted text-foreground"
+                    } `}
+            >
+              <div className="space-y-1">{renderedParts}</div>
+            </div>
+          </div>
+        );
+      })}
+
+      {isLoading && (
+        <div className="flex justify-start">
+          <div className="max-w-[80%] rounded-lg border bg-muted px-4 py-3 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40" />
               <div
-                key={message.id}
-                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`${isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
-                    } rounded-lg px-4 py-3 text-base ${isUser ? "!bg-blue-100 !text-black" : "border bg-muted text-foreground"
-                    } `}
-                >
-                  <div className="space-y-1">{renderedParts}</div>
-                </div>
-              </div>
-            );
-          })}
-
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-lg border bg-muted px-4 py-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40" />
-                  <div
-                    className={`${
-                      isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
-                    } rounded-lg px-4 py-3 text-base ${
-                      isUser ? "!bg-blue-100 !text-black" : "border bg-muted text-foreground"
-                    } `}
-                  >
-                    <div className="space-y-1">{renderedParts}</div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-lg border bg-muted px-4 py-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40" />
-                    <div
-                    className="h-2 w-2 animate-bounce rounded-full bg-foreground/40"
-                    style={{ animationDelay: "0.1s" }}
-                  />
-                  <div
-                    className="h-2 w-2 animate-bounce rounded-full bg-foreground/40"
-                    style={{ animationDelay: "0.2s" }}
-                  />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={bottomSentinelRef} />
+                className="h-2 w-2 animate-bounce rounded-full bg-foreground/40"
+                style={{ animationDelay: "0.1s" }}
+              />
+              <div
+                className="h-2 w-2 animate-bounce rounded-full bg-foreground/40"
+                style={{ animationDelay: "0.2s" }}
+              />
+            </div>
           </div>
         </div>
-      </ScrollArea>
+      )}
+
+      <div ref={bottomSentinelRef} />
+    </div>
+  </div>
+</ScrollArea>
+
 
       <div
         className={`fixed bottom-10 z-50 flex justify-center transition-all duration-320 ease-in-out ${isMobile ? "left-3 right-3" : "right-4"
-          }`}
+        }`}
         style={fixedBarStyle}
       >
         <div className="w-full max-w-3xl flex flex-col items-center gap-2">
@@ -700,24 +686,25 @@ export function ChatInterface({
               {processingMessage}
             </div>
           )}
-          <form onSubmit={handleSubmit} className="w-full">
+
+          <form onSubmit={onSubmitWrapped} className="w-full">
             <div
               className="
-              flex items-center gap-3
-              rounded-full border border-black/10 bg-white px-4 py-2.5
-              dark:border-white/10 dark:bg-[#303030]
-            "
+                flex items-center gap-3
+                rounded-full border border-black/10 bg-white px-4 py-2.5
+                dark:border-white/10 dark:bg-[#303030]
+              "
             >
               <Input
                 value={input}
                 onChange={handleInputChange}
                 placeholder={isInputLocked ? "Trip generated" : "Ask anything"}
                 className="
-                h-auto flex-1 border-0 bg-transparent px-0
-                text-sm
-                shadow-none
-                focus-visible:ring-0 focus-visible:ring-offset-0
-              "
+                  h-auto flex-1 border-0 bg-transparent px-0
+                  text-sm
+                  shadow-none
+                  focus-visible:ring-0 focus-visible:ring-offset-0
+                "
                 disabled={isLoading || isInputLocked}
               />
 
@@ -726,12 +713,12 @@ export function ChatInterface({
                 size="icon"
                 disabled={!input.trim() || isLoading || isInputLocked}
                 className="
-                ml-1 h-9 w-9 rounded-full
-                !bg-black text-white
-                hover:bg-black/90
-                disabled:bg-black/40 disabled:text-white/70
-                dark:bg-white dark:text-black dark:hover:bg-white/90
-              "
+                  ml-1 h-9 w-9 rounded-full
+                  !bg-black text-white
+                  hover:bg-black/90
+                  disabled:bg-black/40 disabled:text-white/70
+                  dark:bg-white dark:text-black dark:hover:bg-white/90
+                "
               >
                 <Send className="h-4 w-4" />
               </Button>
