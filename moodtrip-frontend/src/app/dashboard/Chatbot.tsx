@@ -286,6 +286,7 @@ export default function Chatbot() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [chatToRename, setChatToRename] = useState<ChatSummary | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState<string | null>(null);
 
   const parseMessageContent = (content: string) => {
     if (content.startsWith("EmotionResult[")) {
@@ -902,6 +903,7 @@ Just share a bit, and I’ll do the planning for you ✨`;
               isInputLocked={isChatLocked}
               routeGeoJson={routeGeoJson}
               currentEmotion={currentEmotion}
+              processingMessage={processingMessage}
               spotifyPlaylistUrl={
                 selectedChatId ? (spotifyUrlByChat[String(selectedChatId)] ?? null) : null
               }
@@ -935,7 +937,6 @@ Just share a bit, and I’ll do the planning for you ✨`;
 
                 setIsLoading(true);
 
-                let waitMsgId: string | null = null;
 
                 try {
                   const rangeMetersInput = (data as unknown as { rangeMeters?: unknown }).rangeMeters;
@@ -966,24 +967,30 @@ Just share a bit, and I’ll do the planning for you ✨`;
                     return;
                   }
 
+                  // 1. Optimistically append messages to UI:
+                  //    (A) User's survey data
+                  //    (B) "Please wait" message
+                  const now = Date.now();
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(payload)}`;
                   const persistedSurveyMsg: UIMessage = {
-                    id: Date.now().toString(),
+                    id: `survey-${now}`,
                     role: "user",
                     parts: [{ type: "text", text: surveyContent }],
                   };
 
-                  const waitText = "Generating routes may take a few minutes. Please be patient.";
-                  waitMsgId = "wait-" + Date.now().toString();
-                  const waitMsg: UIMessage = {
-                    id: waitMsgId,
+                  const thankYouText = "Got it! 🌟 I've received your preferences and I'm excited to plan this for you!";
+                  const thankYouMsg: UIMessage = {
+                    id: `thank-${now}`,
                     role: "assistant",
-                    parts: [{ type: "text", text: waitText }],
+                    parts: [{ type: "text", text: thankYouText }],
                   };
 
-                  setMessages((prev) => [...prev, persistedSurveyMsg, waitMsg]);
+                  setMessages((prev) => [...prev, persistedSurveyMsg, thankYouMsg]);
+                  setProcessingMessage("Generating your personalized trip, it may take a while...");
 
+                  // 2. Persist the survey message and the thank you message to backend history immediately
                   await apiSendMessage(conversationId, surveyContent, true);
+                  await apiSendMessage(conversationId, thankYouText, false);
 
                   const trySubmit = async (p: SurveyData) => {
                     const res =
@@ -1028,10 +1035,13 @@ Just share a bit, and I’ll do the planning for you ✨`;
                     }));
                   }
 
-                  let botText =
-                    "Got it! Thanks for sharing your preferences 😊 I’m putting everything together now and will create a few trips just for you.";
+                  // Check if routes array exists
+                  const routesArray = Array.isArray(res.routes) ? res.routes : [routeData];
+                  const routeCount = routesArray.length;
+
+                  let botText = `All done! 🎉 I've prepared ${routeCount} lovely route${routeCount === 1 ? "" : "s"} just for you.`;
                   if (spotifyLink) {
-                    botText += `\n\nI also made a Spotify playlist that matches the mood of our chat. Feel free to listen while exploring your trip ideas: [Open playlist](${spotifyLink})`;
+                    botText += `\n🎵 I also created a Spotify playlist for you based on the conversation mood → [**Click here to listen on Spotify**](${spotifyLink})`;
                   }
 
                   await apiSendMessage(conversationId, botText, false);
@@ -1043,8 +1053,7 @@ Just share a bit, and I’ll do the planning for you ✨`;
                   };
                   setMessages((prev) => [...prev, successMsg]);
 
-                  const routesArray = Array.isArray(res.routes) ? res.routes : [routeData];
-
+                  // Track used images to prioritize diversity
                   const usedImages = new Set<string>();
 
                   const cardDataList: RouteRecommendation[] = routesArray.map((fc, idx) => {
@@ -1110,10 +1119,7 @@ Just share a bit, and I’ll do the planning for you ✨`;
                       : "I couldn't generate a route due to an unexpected error. Please try again.";
                   await appendRecovery(fallbackMessage);
                 } finally {
-                  if (waitMsgId) {
-                    const idToRemove = waitMsgId;
-                    setMessages((prev) => prev.filter((m) => m.id !== idToRemove));
-                  }
+                  setProcessingMessage(null);
                   setIsLoading(false);
                 }
               }}

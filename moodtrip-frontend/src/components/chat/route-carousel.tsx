@@ -64,7 +64,7 @@ export function RouteCarousel({ routes, onRouteClick }: RouteCarouselProps) {
               index={i + 1}
               title={route.title}
               description={getPreviewDescription(route.dayDescriptions)}
-              imageUrl={route.imageUrl || "/placeholder-route.jpg"}
+              imageUrl={route.imageUrl || "/placeholder.png"}
               distanceMeters={route.distanceMeters}
               durationSeconds={route.durationSeconds}
               tripDays={getTripDays(route.geoJson)}
