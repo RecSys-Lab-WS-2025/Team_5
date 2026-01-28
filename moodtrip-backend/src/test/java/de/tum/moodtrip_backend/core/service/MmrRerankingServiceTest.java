@@ -4,6 +4,7 @@ import de.tum.moodtrip_backend.core.model.Poi;
 import de.tum.moodtrip_backend.core.model.PoiCategory;
 import de.tum.moodtrip_backend.core.model.PoiScore;
 import de.tum.moodtrip_backend.core.model.ScoredPoi;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -14,20 +15,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MmrRerankingServiceTest {
 
     @Test
+    @DisplayName("Should keep original relevance order when lambda is 1.0 (pure relevance)")
     void lambdaOneKeepsRelevanceOrder() {
+        // Given
         MmrRerankingService reranker = new MmrRerankingService(1.0, 500, 0.5, 0.4, 0.1, 0);
 
         ScoredPoi a = poi(1, 10.0, PoiCategory.HISTORY_AND_CULTURE, 0, 0, Map.of("amenity", "museum"));
         ScoredPoi b = poi(2, 8.0, PoiCategory.FOOD_AND_CULINARY, 1, 1, Map.of("amenity", "restaurant"));
         ScoredPoi c = poi(3, 6.0, PoiCategory.NATURE, 2, 2, Map.of("natural", "wood"));
 
+        // When
         List<ScoredPoi> reranked = reranker.rerank(List.of(a, b, c), 3);
 
+        // Then
         assertThat(reranked).containsExactly(a, b, c);
     }
 
     @Test
+    @DisplayName("Should promote diversity when lambda is small")
     void smallLambdaPromotesCategoryDiversity() {
+        // Given
         MmrRerankingService reranker = new MmrRerankingService(0.2, 500, 0.5, 0.4, 0.1, 0);
 
         ScoredPoi hist1 = poi(1, 9.0, PoiCategory.HISTORY_AND_CULTURE, 0, 0, Map.of("tourism", "museum"));
@@ -35,34 +42,44 @@ class MmrRerankingServiceTest {
         ScoredPoi food1 = poi(3, 7.0, PoiCategory.FOOD_AND_CULINARY, 1, 1, Map.of("amenity", "restaurant"));
         ScoredPoi food2 = poi(4, 6.0, PoiCategory.FOOD_AND_CULINARY, 2, 2, Map.of("amenity", "cafe"));
 
+        // When
         List<ScoredPoi> reranked = reranker.rerank(List.of(hist1, hist2, food1, food2), 2);
 
+        // Then
         assertThat(reranked).containsExactly(hist1, food1);
     }
 
     @Test
+    @DisplayName("Should discourage clustering by penalizing geographically close POIs")
     void geoSimilarityDiscouragesClusteredPois() {
+        // Given
         MmrRerankingService reranker = new MmrRerankingService(0.6, 200, 0.2, 0.7, 0.1, 0);
 
         ScoredPoi clusterA = poi(1, 9.0, PoiCategory.RELAXATION, 0.0, 0.0, Map.of("leisure", "park"));
         ScoredPoi clusterB = poi(2, 8.0, PoiCategory.RELAXATION, 0.0001, 0.0, Map.of("leisure", "park"));
         ScoredPoi farPoi = poi(3, 7.5, PoiCategory.RELAXATION, 10.0, 10.0, Map.of("leisure", "park"));
 
+        // When
         List<ScoredPoi> reranked = reranker.rerank(List.of(clusterA, clusterB, farPoi), 2);
 
+        // Then
         assertThat(reranked).containsExactly(clusterA, farPoi);
     }
 
     @Test
+    @DisplayName("Should handle pois with identical relevance scores safely")
     void handlesFlatRelevanceSafely() {
+        // Given
         MmrRerankingService reranker = new MmrRerankingService(0.85, 500, 0.5, 0.4, 0.1, 0);
 
         ScoredPoi p1 = poi(1, 5.0, PoiCategory.NATURE, 0, 0, Map.of("natural", "wood"));
         ScoredPoi p2 = poi(2, 5.0, PoiCategory.FOOD_AND_CULINARY, 1, 1, Map.of("amenity", "restaurant"));
         ScoredPoi p3 = poi(3, 5.0, PoiCategory.HISTORY_AND_CULTURE, 2, 2, Map.of("tourism", "museum"));
 
+        // When
         List<ScoredPoi> reranked = reranker.rerank(List.of(p1, p2, p3), 3);
 
+        // Then
         assertThat(reranked).containsExactlyInAnyOrder(p1, p2, p3);
     }
 
