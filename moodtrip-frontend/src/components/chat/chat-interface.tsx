@@ -476,7 +476,9 @@ export function ChatInterface({
 
           try {
             dataFromMessage = JSON.parse(jsonStr) as FeatureCollection;
-          } catch {}
+          } catch {
+            // ignore
+          }
 
           const mapData = dataFromMessage || routeGeoJson || null;
 

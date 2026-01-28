@@ -3,9 +3,6 @@
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { MoveLeft, ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-import { Button } from "@/components/ui/button";
 import {
   SidebarInset,
   SidebarProvider,

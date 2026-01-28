@@ -200,6 +200,7 @@ function PoiRating({
         setRating(previousRating);
       }
     } catch{
+      // ignore
       setIsSubmitting(false);
       setRating(previousRating);
     }
@@ -316,7 +317,7 @@ export function RecommendedRouteMap({
   }, [safeData]);
 
   const routeLineCoords = useMemo(() => {
-    if (!safeData || !safeData.features) return null;
+    if (!safeData?.features) return null;
     const routeFeature = safeData.features.find(
       (f) => f.properties?.type === "route" && f.geometry?.type === "LineString"
     );
@@ -324,7 +325,7 @@ export function RecommendedRouteMap({
     return normalizeLineCoords(
         (routeFeature.geometry as { coordinates?: unknown }).coordinates
     );
-  }, [safeData?.features]);
+  }, [safeData]);
 
   const activeDay =
     Number.isFinite(selectedDay) && Number(selectedDay) > 0
