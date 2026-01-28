@@ -15,7 +15,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-import { Button } from "@/components/ui/button";
 import {
   Laugh,
   Smile,
@@ -23,7 +22,6 @@ import {
   Annoyed,
   Send,
   SquareTerminal,
-  House,
 } from "lucide-react";
 
 import { getUser } from "@/api/auth";
@@ -249,8 +247,10 @@ export default function Chatbot() {
   const [spotifyUrlByChat, setSpotifyUrlByChat] = useState<
     Record<string, string | null>
   >({});
+  const [emotionByChat, setEmotionByChat] = useState<Record<string, string | null>>({});
 
   const skipLoadRef = useRef(false);
+  const [historyRenderToken, setHistoryRenderToken] = useState(0);
 
   useEffect(() => {
     const state = (location.state as ChatLocationState) ?? null;
@@ -357,6 +357,14 @@ export default function Chatbot() {
         emotion: c.emotion,
       }));
       setChats(mapped);
+
+      setEmotionByChat((prev) => {
+        const next = { ...prev };
+        for (const c of mapped) {
+          if (c.emotion) next[String(c.id)] = c.emotion;
+        }
+        return next;
+      });
     } catch (e) {
       console.error("Failed to load chats", e);
     }
@@ -367,21 +375,23 @@ export default function Chatbot() {
   }, [loadChats]);
 
   const loadMessages = useCallback(async (chatId: string) => {
-    try {
-      const msgs = await getConversationMessages(Number(chatId));
-      const uiMsgs: UIMessage[] = msgs.map((m) => ({
-        id: m.id.toString(),
-        role: m.sender === "USER" ? "user" : "assistant",
-        parts: [{ type: "text", text: parseMessageContent(m.content) }],
-      }));
-      setMessages(uiMsgs);
-      setEmotionExtracted(didEmotionExtractionSucceed(msgs));
-      setIsChatLocked(didGenerateRoute(msgs));
-    } catch (e) {
-      console.error("Failed to load messages", e);
-      setMessages([]);
-      setIsChatLocked(false);
-    }
+      try {
+        const msgs = await getConversationMessages(Number(chatId));
+        const uiMsgs: UIMessage[] = msgs.map((m) => ({
+          id: m.id.toString(),
+          role: m.sender === "USER" ? "user" : "assistant",
+          parts: [{ type: "text", text: parseMessageContent(m.content) }],
+        }));
+        setMessages(uiMsgs);
+        setHistoryRenderToken((t) => t + 1);
+        setEmotionExtracted(didEmotionExtractionSucceed(msgs));
+        setIsChatLocked(didGenerateRoute(msgs));
+      } catch (e) {
+        console.error("Failed to load messages", e);
+        setMessages([]);
+        setHistoryRenderToken((t) => t + 1);
+        setIsChatLocked(false);
+      }
   }, [didEmotionExtractionSucceed, didGenerateRoute]);
 
   useEffect(() => {
@@ -415,7 +425,7 @@ export default function Chatbot() {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setInput(e.target.value);
+     setInput(e.target.value);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -438,7 +448,18 @@ export default function Chatbot() {
         const res = await apiExtractEmotion(Number(selectedChatId), text);
         if (res.success) {
           setEmotionExtracted(true);
-          if (res.topLabel) setCurrentEmotion(res.topLabel);
+          if (res.topLabel) {
+            setCurrentEmotion(res.topLabel);
+            setEmotionByChat((prev) => ({
+              ...prev,
+              [String(selectedChatId)]: res.topLabel,
+            }));
+          } else {
+            setEmotionByChat((prev) => ({
+              ...prev,
+              [String(selectedChatId)]: prev[String(selectedChatId)] ?? null,
+            }));
+          }
         } else {
           setEmotionExtracted(false);
         }
@@ -463,8 +484,8 @@ export default function Chatbot() {
             await apiSendMessage(
               Number(selectedChatId),
               "[SURVEY_FORM_TRIGGER]",
-              false
-            );
+               false
+              );
           } catch (err) {
             console.error("Failed to persist survey form trigger", err);
           }
@@ -519,7 +540,18 @@ export default function Chatbot() {
       const res = await apiExtractEmotion(Number(chatId), text);
       if (res.success) {
         setEmotionExtracted(true);
-        if (res.topLabel) setCurrentEmotion(res.topLabel);
+        if (res.topLabel) {
+          setCurrentEmotion(res.topLabel);
+          setEmotionByChat((prev) => ({
+            ...prev,
+            [String(chatId)]: res.topLabel,
+          }));
+        } else {
+          setEmotionByChat((prev) => ({
+            ...prev,
+            [String(chatId)]: prev[String(chatId)] ?? null,
+          }));
+        }
       } else {
         setEmotionExtracted(false);
       }
@@ -614,34 +646,32 @@ export default function Chatbot() {
     const userText = "Could you briefly introduce what this Moodtrip website does?";
     const assistantText = `Of course! 😊
 
-**In one sentence:** Moodtrip is a tiny travel buddy that suggests same-day or short-notice trips that match your current mood.
+Moodtrip helps you plan short, easy trips based on how you’re feeling right now.
 
-**What Moodtrip helps with:**
-- You’re not sure *where* to go, you just know *how* you feel
-- You want a small reset rather than a big, complicated holiday
-- You’d like ideas that feel emotionally right, not just “top rated nearby”
-
-**What you can do next:** Choose a mood prompt from the sidebar, or just type how you’re feeling and hit **Send**.
-I’ll take it from there and start shaping a Moodtrip for you 💫`;
+Instead of starting with destinations or long plans, you just tell me your mood.
+From there, I’ll help turn that feeling into some small, personalized trip ideas.
+It’s meant for moments when you want a break, a reset, or just somewhere that feels right.
+No heavy planning, no pressure.`;
 
     handleScriptedClick(userText, assistantText);
   };
 
   const handleQuickStartClick = () => {
-    const userText =
-      "How do I quickly get started using Moodtrip? Please give me a short guide.";
-    const assistantText = `Let’s keep it super simple 🌈
+  const userText = "How do I quickly get started using Moodtrip? Please give me a short guide.";
+  const assistantText = `Getting started is easy and relaxed 🌿
 
-**Quick start in 4 steps:**
-1. Tell me how you feel.
-2. Say what you want this trip to do.
-3. Add a few basics (people, timing, starting area).
-4. Press Send and just chat.
+Here’s how it works:
+1. Start by telling me how you’re feeling right now.
+2. I’ll ask you a few quick questions like time, location, and interests.
+3. Submit the survey and take a short break ☕
+4. I’ll put everything together and come back with some personalized routes for you.
+You’ll also get a Spotify playlist that matches the mood of the trip.
 
-I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧✨`;
+No pressure, no overthinking.
+Just share a bit, and I’ll do the planning for you ✨`;
 
-    handleScriptedClick(userText, assistantText);
-  };
+  handleScriptedClick(userText, assistantText);
+};
 
   const handleRenameChat = (id: string, currentTitle: string) => {
     const found = chats.find((c) => c.id === id);
@@ -661,10 +691,10 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
     try {
       const updated = await renameConversation(Number(chatToRename.id), newTitle);
       setChats((prev) =>
-        prev.map((c) =>
-          c.id === chatToRename.id ? { ...c, title: updated.title } : c
-        )
-      );
+         prev.map((c) =>
+           c.id === chatToRename.id ? { ...c, title: updated.title } : c
+           )
+          );
     } catch (e) {
       console.error("Failed to rename chat", e);
     } finally {
@@ -749,40 +779,118 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
         onIntroductionClick={handleIntroClick}
         onQuickStartClick={handleQuickStartClick}
         onRefreshChats={loadChats}
+        onLogoClick={() => {
+          clearSnapshot();
+          navigate("/", { replace: true });
+        }}
       />
 
       <SidebarInset>
         <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center bg-white">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                clearSnapshot();
-                navigate("/", { replace: true });
-              }}
-              aria-label="Go to home"
-              title="Home"
-              className="
-                !bg-transparent
-                hover:bg-transparent
-                active:bg-transparent
-                focus-visible:bg-transparent
-                shadow-none
-              "
-            >
-              <House className="h-5 w-5 text-black" />
-            </Button>
+          <div className="flex w-full items-center justify-between px-4">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="-ml-1" />
+            </div>
+
+            {!showWelcome ? (
+              <div
+                className="flex items-center gap-2 rounded-full border border-slate-200/60 bg-white/80 px-3 py-1.5 shadow-sm"
+              >
+                {(() => {
+                  const mood = selectedChatId
+                    ? (emotionByChat[String(selectedChatId)] ?? currentEmotion ?? "Not yet")
+                    : "Not yet";
+                  const m = String(mood).toUpperCase();
+
+                  const Icon =
+                    m === "JOYFUL" || m === "ENERGIZED"
+                      ? Laugh
+                      : m === "CALM"
+                        ? Smile
+                        : m === "STRESSED"
+                          ? Annoyed
+                          : Meh;
+
+                  const pill =
+                    m === "JOYFUL" || m === "ENERGIZED"
+                      ? "bg-amber-100 text-amber-800 border-amber-200/70"
+                      : m === "CALM"
+                        ? "bg-emerald-100 text-emerald-800 border-emerald-200/70"
+                        : m === "NEUTRAL"
+                          ? "bg-slate-100 text-slate-700 border-slate-200/70"
+                          : m === "STRESSED"
+                            ? "bg-rose-100 text-rose-800 border-rose-200/70"
+                            : m === "SAD"
+                              ? "bg-indigo-100 text-indigo-800 border-indigo-200/70"
+                              : m === "TIRED"
+                                ? "bg-violet-100 text-violet-800 border-violet-200/70"
+                                : "bg-slate-100 text-slate-700 border-slate-200/70";
+
+                  const dot =
+                    m === "JOYFUL" || m === "ENERGIZED"
+                      ? "bg-amber-500"
+                      : m === "CALM"
+                        ? "bg-emerald-500"
+                        : m === "NEUTRAL"
+                          ? "bg-slate-500"
+                          : m === "STRESSED"
+                            ? "bg-rose-500"
+                            : m === "SAD"
+                              ? "bg-indigo-500"
+                              : m === "TIRED"
+                                ? "bg-violet-500"
+                                : "bg-slate-500";
+
+                  const iconColor =
+                    m === "JOYFUL" || m === "ENERGIZED"
+                      ? "text-amber-600"
+                      : m === "CALM"
+                        ? "text-emerald-600"
+                        : m === "NEUTRAL"
+                          ? "text-slate-600"
+                          : m === "STRESSED"
+                            ? "text-rose-600"
+                            : m === "SAD"
+                              ? "text-indigo-600"
+                              : m === "TIRED"
+                                ? "text-violet-600"
+                                : "text-slate-600";
+
+                  return (
+                    <>
+                      <Icon className={"h-4 w-4 " + iconColor} />
+                      <span className="text-sm font-medium text-slate-700">
+                        Detected mood:
+                      </span>
+                      <span
+                        className={
+                          "inline-flex items-center gap-2 rounded-full border px-2.5 py-0.5 text-sm font-semibold " +
+                          pill
+                        }
+                      >
+                        <span
+                          className={
+                            "h-2 w-2 rounded-full " +
+                            dot +
+                            (String(mood) === "Not yet" ? " animate-pulse" : "")
+                          }
+                        />
+                        {String(mood) === "Not yet" ? "Not yet" : m}
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : null}
           </div>
         </header>
 
         <div className="flex min-h-[calc(100vh-4rem)] flex-1 flex-col">
           {showWelcome ? (
             <WelcomeScreen
-              onSuggestionClick={handleSuggestionClick}
+             onSuggestionClick={handleSuggestionClick}
               userName={displayUserName}
-            />
+               />
           ) : (
             <ChatInterface
               chatId={selectedChatId}
@@ -797,6 +905,7 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
               spotifyPlaylistUrl={
                 selectedChatId ? (spotifyUrlByChat[String(selectedChatId)] ?? null) : null
               }
+              historyRenderToken={historyRenderToken}
               onSurveySubmit={async (data: SurveyData) => {
                 if (!selectedChatId) return;
                 const conversationId = Number(selectedChatId);
@@ -857,9 +966,6 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     return;
                   }
 
-                  // 1. Optimistically append messages to UI:
-                  //    (A) User's survey data
-                  //    (B) "Please wait" message
                   const surveyContent = `[SURVEY_DATA] ${JSON.stringify(payload)}`;
                   const persistedSurveyMsg: UIMessage = {
                     id: Date.now().toString(),
@@ -877,13 +983,11 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
 
                   setMessages((prev) => [...prev, persistedSurveyMsg, waitMsg]);
 
-                  // 2. Persist the survey message to backend history immediately
                   await apiSendMessage(conversationId, surveyContent, true);
 
-                  // 3. Submit survey for processing
                   const trySubmit = async (p: SurveyData) => {
                     const res =
-                      (await submitSurvey(conversationId, p)) as SubmitSurveyResponseWithSpotify;
+                     (await submitSurvey(conversationId, p)) as SubmitSurveyResponseWithSpotify;
 
                     if (res.routeStatus === "FAILED") return { ok: false as const, res };
 
@@ -893,8 +997,8 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                         ok: false as const,
                         res: {
                           routeStatus: "FAILED" as const,
-                          userMessage:
-                            "The route data was missing or malformed. Please try again.",
+                          userMessage: 
+                          "The route data was missing or malformed. Please try again.",
                         },
                       };
                     }
@@ -924,13 +1028,10 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                     }));
                   }
 
-                  // surveyContent already persisted above, removing duplicate call.
-                  // persistedSurveyMsg already added to UI, removing duplicate setMessages.
-
                   let botText =
-                    "Thank you! I've received your preferences. I'll now generate a personalized trip for you.";
+                    "Got it! Thanks for sharing your preferences 😊 I’m putting everything together now and will create a few trips just for you.";
                   if (spotifyLink) {
-                    botText += `\n\nI also created a Spotify playlist for you based on the conversation mood: [Open playlist](${spotifyLink})`;
+                    botText += `\n\nI also made a Spotify playlist that matches the mood of our chat. Feel free to listen while exploring your trip ideas: [Open playlist](${spotifyLink})`;
                   }
 
                   await apiSendMessage(conversationId, botText, false);
@@ -942,10 +1043,8 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                   };
                   setMessages((prev) => [...prev, successMsg]);
 
-                  // Check if routes array exists (it should be present in the response type now)
                   const routesArray = Array.isArray(res.routes) ? res.routes : [routeData];
 
-                  // Track used images to prioritize diversity
                   const usedImages = new Set<string>();
 
                   const cardDataList: RouteRecommendation[] = routesArray.map((fc, idx) => {
@@ -955,19 +1054,14 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
 
                     const poiFeats = features.filter(isPoiFeature);
 
-                    // Find the best image for this card
-                    // Priority 1: Image explicitly set on route props
-                    // Priority 2: First POI image that hasn't been used yet
-                    // Priority 3: First POI image (fallback if all used)
-
                     let thumbnail = props?.image;
 
                     if (!thumbnail) {
                       const availablePoiImages = poiFeats
-                        .map(f => f.properties?.imageUrl)
+                        .map((f) => f.properties?.imageUrl)
                         .filter((url): url is string => !!url);
 
-                      const uniqueImage = availablePoiImages.find(url => !usedImages.has(url));
+                      const uniqueImage = availablePoiImages.find((url) => !usedImages.has(url));
 
                       if (uniqueImage) {
                         thumbnail = uniqueImage;
@@ -1016,7 +1110,6 @@ I’ll ask for anything missing and suggest a few mood-matching trip ideas 🎧�
                       : "I couldn't generate a route due to an unexpected error. Please try again.";
                   await appendRecovery(fallbackMessage);
                 } finally {
-                  // Remove the "wait" message from the UI
                   if (waitMsgId) {
                     const idToRemove = waitMsgId;
                     setMessages((prev) => prev.filter((m) => m.id !== idToRemove));

@@ -27,85 +27,109 @@ interface ChatInterfaceProps {
   currentEmotion?: string | null;
   chatId?: string | null;
   spotifyPlaylistUrl?: string | null;
+  historyRenderToken?: number;
 }
 
 function SpotifyVinylMiniCard({
   url,
   onClose,
   title = "Moodtrip playlist",
-  subtitle = "Open in Spotify",
 }: {
   url: string;
   onClose: () => void;
   title?: string;
-  subtitle?: string;
 }) {
   return (
     <>
       <div
         className="
-          fixed top-[88px] right-6 z-[100]
-          w-[260px] sm:w-[280px]
-          rounded-2xl border bg-white/90 backdrop-blur
-          shadow-[0_10px_30px_rgba(0,0,0,0.12)]
-          overflow-hidden
+          fixed top-[30%] -translate-y-1/2 right-6 z-[100]
+          w-[220px] 
+          rounded-[22px] border border-blue-100/50
+          bg-blue-50/60 backdrop-blur-2xl
+          shadow-[0_15px_35px_rgba(0,40,80,0.1)]
+          overflow-hidden group transition-all duration-500
         "
         style={{
-          animation: "playlist-slide-in 520ms cubic-bezier(0.22, 1, 0.36, 1)",
+          animation: "playlist-slide-in 600ms cubic-bezier(0.16, 1, 0.3, 1)",
         }}
-        role="region"
-        aria-label="Spotify playlist recommendation"
       >
+        <div className="absolute -right-4 -top-4 w-20 h-20 bg-blue-200/20 blur-[30px] rounded-full" />
+
         <div className="relative p-3">
           <button
             type="button"
             onClick={onClose}
             className="
-              absolute right-2 top-2
-              h-7 w-7 rounded-full
+              absolute right-2 top-2 z-10
+              h-5 w-5 rounded-full
               grid place-items-center
-              hover:bg-black/5
+              bg-blue-900/5 hover:bg-blue-900/10 transition-colors
             "
             aria-label="Close"
           >
-            <span className="text-[16px] leading-none">×</span>
+            <span className="text-[16px] leading-none text-blue-900/40">×</span>
           </button>
 
           <button
             type="button"
             onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
-            className="w-full text-left"
+            className="w-full text-left outline-none"
           >
             <div className="flex items-center gap-3">
-              <div className="relative h-12 w-12 shrink-0">
-                <div className="absolute inset-0 rounded-full bg-black/5 blur-[6px]" />
+              <div className="relative h-14 w-14 shrink-0 group-hover:scale-105 transition-transform duration-500">
+                <div className="absolute inset-0 rounded-full bg-blue-900/10 blur-sm" />
 
                 <div
-                  className="absolute inset-0 rounded-full bg-gradient-to-br from-neutral-900 to-neutral-700 shadow-sm"
-                  style={{ animation: "vinyl-spin 3.6s linear infinite" }}
+                  className="absolute inset-0 rounded-full animate-spin"
+                  style={{
+                    animationDuration: "3s",
+                    animationTimingFunction: "linear",
+                    animationIterationCount: "infinite",
+                    boxShadow: "0 4px 12px rgba(0,20,50,0.2)",
+                  }}
+                  aria-hidden="true"
                 >
-                  <div className="absolute inset-[6px] rounded-full border border-white/10" />
-                  <div className="absolute inset-[10px] rounded-full border border-white/8" />
-                  <div className="absolute inset-[14px] rounded-full border border-white/6" />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-neutral-800 via-slate-900 to-neutral-950" />
+                  
+                  <div className="absolute inset-[3px] rounded-full border-[0.5px] border-white/5" />
+                  <div className="absolute inset-[6px] rounded-full border-[0.5px] border-white/5" />
+                  <div className="absolute inset-[9px] rounded-full border-[0.5px] border-white/5" />
+                  
+                  <div
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      background:
+                        "conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.15) 15%, transparent 30%, transparent 50%, rgba(255,255,255,0.15) 65%, transparent 80%, transparent 100%)",
+                    }}
+                  />
 
-                  <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/90" />
-                  <div className="absolute left-1/2 top-1/2 h-[3px] w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-neutral-700" />
+                  <div
+                    className="absolute inset-0 rounded-full opacity-60"
+                    style={{
+                      background:
+                        "conic-gradient(from 90deg, transparent 0%, rgba(255,255,255,0.2) 5%, transparent 10%, transparent 100%)",
+                    }}
+                  />
+
+                  <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-tr from-blue-100 to-slate-300 shadow-inner border border-white/30" />
                 </div>
 
-                <div className="absolute -right-1 top-1/2 h-[2px] w-5 -translate-y-1/2 rotate-[12deg] rounded-full bg-neutral-300" />
+                <div className="absolute -right-0.5 top-1 w-5 h-[2px] bg-slate-400 rounded-full rotate-[25deg] shadow-sm origin-right group-hover:rotate-[15deg] transition-transform duration-500" />
               </div>
 
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold tracking-tight truncate">
+              <div className="min-w-0 flex-1 pr-4">
+                <div className="text-[13px] font-bold tracking-tight text-slate-800 truncate leading-tight">
                   {title}
                 </div>
-                <div className="mt-0.5 text-xs text-muted-foreground truncate">
-                  {subtitle}
-                </div>
 
-                <div className="mt-2 inline-flex items-center gap-1 text-xs font-medium">
-                  <span className="inline-block h-2 w-2 rounded-full bg-[#1DB954]" />
-                  <span>Spotify</span>
+                <div className="mt-2 flex items-center">
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-900/5 border border-blue-200/50">
+                    <div className="h-1 w-1 rounded-full bg-blue-400 animate-pulse" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                      Spotify
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -114,19 +138,9 @@ function SpotifyVinylMiniCard({
       </div>
 
       <style>{`
-        @keyframes vinyl-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
         @keyframes playlist-slide-in {
-          from { transform: translateX(40px); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          [style*="vinyl-spin"] { animation: none !important; }
-          [style*="playlist-slide-in"] { animation: none !important; }
+          from { transform: translate(30px, -50%) scale(0.95); opacity: 0; }
+          to { transform: translate(0, -50%) scale(1); opacity: 1; }
         }
       `}</style>
     </>
@@ -142,25 +156,18 @@ function extractLatestSpotifyUrlFromMessages(messages: UIMessage[]): string | nu
       if (p.type !== "text") continue;
       const t = p.text || "";
 
-      // Markdown: [text](https://open.spotify.com/...)
       const md = t.match(/\[([^\]]*)\]\((https?:\/\/open\.spotify\.com\/[^)\s]+)\)/i);
       if (md?.[2]) return md[2];
 
-      // looser Markdown
       const mdLoose = t.match(/\[([^\]]*)\]\((https?:\/\/open\.spotify\.com\/[^)]+)\)/i);
       if (mdLoose?.[2]) return mdLoose[2].trim();
 
-      // (https://open.spotify.com/...)
       const paren = t.match(/\((https?:\/\/open\.spotify\.com\/[^)\s]+)\)/i);
       if (paren?.[1]) return paren[1];
 
-      // raw https://open.spotify.com/...
-      // ✅ remove useless escape: \) -> )
       const raw = t.match(/https?:\/\/open\.spotify\.com\/[^\s)\n]+/i);
       if (raw?.[0]) return raw[0];
 
-      // any spotify.com url
-      // ✅ remove useless escape: \) -> )
       const anySpotify = t.match(/https?:\/\/[^\s)\n]*spotify\.com\/[^\s)\n]+/i);
       if (anySpotify?.[0]) return anySpotify[0];
     }
@@ -195,53 +202,93 @@ export function ChatInterface({
   currentEmotion,
   chatId,
   spotifyPlaylistUrl,
+  historyRenderToken = 0,
 }: ChatInterfaceProps) {
-  const bottomRef = React.useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
+
+  const scrollAreaRootRef = React.useRef<HTMLDivElement | null>(null);
+  const bottomSentinelRef = React.useRef<HTMLDivElement | null>(null);
+  const inputBarRef = React.useRef<HTMLDivElement | null>(null);
+  const [inputBarH, setInputBarH] = React.useState(120);
+
+  const scrollToBottom = React.useCallback((smooth: boolean) => {
+    const el = bottomSentinelRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "end" });
+  }, []);
+
+  React.useEffect(() => {
+    const el = inputBarRef.current;
+    if (!el) return;
+
+    const ro = new ResizeObserver(() => {
+      const h = el.getBoundingClientRect().height;
+      if (Number.isFinite(h) && h > 0) setInputBarH(Math.ceil(h));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const prevMsgLenRef = React.useRef(messages.length);
+  React.useEffect(() => {
+    const prevLen = prevMsgLenRef.current;
+    const curLen = messages.length;
+    prevMsgLenRef.current = curLen;
+
+    if (curLen > prevLen) {
+      requestAnimationFrame(() => scrollToBottom(true));
+    }
+  }, [messages.length, scrollToBottom]);
 
   const [typingMessageId, setTypingMessageId] = React.useState<string | null>(null);
   const [typingIndex, setTypingIndex] = React.useState(0);
 
-  // Staggered message reveal: track which messages are visible
   const [visibleCount, setVisibleCount] = React.useState(messages.length);
   const prevLengthRef = React.useRef(messages.length);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const prevHistoryTokenRef = React.useRef(historyRenderToken);
+
   React.useEffect(() => {
+    if (prevHistoryTokenRef.current !== historyRenderToken) {
+      prevHistoryTokenRef.current = historyRenderToken;
+
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+
+      prevLengthRef.current = messages.length;
+      setVisibleCount(messages.length);
+
+      requestAnimationFrame(() => scrollToBottom(false));
+      return;
+    }
+
     const prevLength = prevLengthRef.current;
     const currentLength = messages.length;
     prevLengthRef.current = currentLength;
 
-    // Messages were removed or reset - show all immediately
     if (currentLength <= prevLength) {
       setVisibleCount(currentLength);
       return;
     }
 
-    // New messages arrived
     const newCount = currentLength - prevLength;
 
-    // If only 1 new message, show immediately
     if (newCount === 1) {
       setVisibleCount(currentLength);
       return;
     }
 
-    // Multiple new messages - reveal one by one
-    // First, keep visibleCount at prevLength (don't show new ones yet)
-    // Then reveal them with delay
-
     const revealNext = (targetCount: number) => {
       if (targetCount > currentLength) return;
-
       setVisibleCount(targetCount);
-
       if (targetCount < currentLength) {
         timerRef.current = setTimeout(() => revealNext(targetCount + 1), 1000);
       }
     };
 
-    // Start revealing from the first new message
     timerRef.current = setTimeout(() => revealNext(prevLength + 1), 100);
 
     return () => {
@@ -249,12 +296,15 @@ export function ChatInterface({
         clearTimeout(timerRef.current);
       }
     };
-  }, [messages.length]);
+  }, [messages.length, historyRenderToken, messages, scrollToBottom]);
 
-  // Get only visible messages
   const visibleMessages = React.useMemo(() => {
     return messages.slice(0, visibleCount);
   }, [messages, visibleCount]);
+
+  React.useEffect(() => {
+    requestAnimationFrame(() => scrollToBottom(true));
+  }, [visibleCount, isLoading, inputBarH, scrollToBottom]);
 
   const chatKey = chatId ?? "__global__";
   const [dismissedUrl, setDismissedUrl] = React.useState<Record<string, string | null>>({});
@@ -378,20 +428,6 @@ export function ChatInterface({
     return () => clearInterval(interval);
   }, [typingMessageId, lastAssistantMessage]);
 
-  // Smoothly scroll the bottom marker into view within the scrollable container
-  const smoothScrollToBottom = React.useCallback(() => {
-    if (!bottomRef.current) return;
-
-    bottomRef.current.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
-  }, []);
-
-  React.useEffect(() => {
-    smoothScrollToBottom();
-  }, [visibleMessages.length, typingIndex, smoothScrollToBottom]);
-
   const renderMessageParts = (message: UIMessage) => {
     const isTypingMessage = message.id === typingMessageId;
     let typedCharsLeft = typingIndex;
@@ -439,9 +475,7 @@ export function ChatInterface({
 
           try {
             dataFromMessage = JSON.parse(jsonStr) as FeatureCollection;
-          } catch {
-            // ignore
-          }
+          } catch {}
 
           const mapData = dataFromMessage || routeGeoJson || null;
 
@@ -514,57 +548,68 @@ export function ChatInterface({
       }
     : undefined;
 
+  const bottomGap = inputBarH + 28;
+
+  const onSubmitWrapped = (e: React.FormEvent<HTMLFormElement>) => {
+    handleSubmit(e);
+    requestAnimationFrame(() => scrollToBottom(true));
+  };
+
   return (
     <div className="bg-white relative flex flex-1 flex-col">
-      <ScrollArea className="flex-1 p-6 pb-32">
-        <div className="mx-auto max-w-6xl space-y-4">
-          {visibleMessages.map((message) => {
-            const isUser = message.role === "user";
-            const renderedParts = renderMessageParts(message).filter(
-              (part) => part !== null && part !== undefined
-            );
-            if (renderedParts.length === 0) return null;
-
-            const isMapBubble = message.parts.some(
-              (p) => p.type === "text" && (p.text || "").includes("[ROUTE_MAP]")
-            );
-
-            const isRouteCardsBubble = message.parts.some(
-              (p) => p.type === "text" && (p.text || "").includes("[ROUTE_CARDS]")
-            );
-
-            if (isRouteCardsBubble) {
-              return (
-                <div key={message.id} className="w-full flex justify-center">
-                  <div className="w-full flex justify-center">{renderedParts}</div>
-                </div>
+      <ScrollArea
+        ref={scrollAreaRootRef as unknown as React.RefObject<HTMLDivElement>}
+        className="flex-1"
+      >
+        <div className="p-6" style={{ paddingBottom: bottomGap }}>
+          <div className="mx-auto max-w-6xl space-y-4">
+            {visibleMessages.map((message) => {
+              const isUser = message.role === "user";
+              const renderedParts = renderMessageParts(message).filter(
+                (part) => part !== null && part !== undefined
               );
-            }
+              if (renderedParts.length === 0) return null;
 
-            return (
+              const isMapBubble = message.parts.some(
+                (p) => p.type === "text" && (p.text || "").includes("[ROUTE_MAP]")
+              );
+
+              const isRouteCardsBubble = message.parts.some(
+                (p) => p.type === "text" && (p.text || "").includes("[ROUTE_CARDS]")
+              );
+
+              if (isRouteCardsBubble) {
+                return (
+                  <div key={message.id} className="w-full flex justify-center">
+                    <div className="w-full flex justify-center">{renderedParts}</div>
+                  </div>
+                );
+              }
+
+              return (
               <div
                 key={message.id}
                 className={`flex ${isUser ? "justify-end" : "justify-start"}`}
               >
-                <div
-                  className={`${
-                    isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
-                  } rounded-lg px-4 py-3 text-base ${
-                    isUser ? "!bg-blue-100 !text-black" : "border bg-muted text-foreground"
-                  } `}
-                >
-                  <div className="space-y-1">{renderedParts}</div>
-                </div>
-              </div>
-            );
-          })}
-
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-lg border bg-muted px-4 py-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40" />
                   <div
+                    className={`${
+                      isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
+                    } rounded-lg px-4 py-3 text-base ${
+                      isUser ? "!bg-blue-100 !text-black" : "border bg-muted text-foreground"
+                    } `}
+                  >
+                    <div className="space-y-1">{renderedParts}</div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-lg border bg-muted px-4 py-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40" />
+                    <div
                     className="h-2 w-2 animate-bounce rounded-full bg-foreground/40"
                     style={{ animationDelay: "0.1s" }}
                   />
@@ -572,22 +617,24 @@ export function ChatInterface({
                     className="h-2 w-2 animate-bounce rounded-full bg-foreground/40"
                     style={{ animationDelay: "0.2s" }}
                   />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div ref={bottomRef} />
+            <div ref={bottomSentinelRef} />
+          </div>
         </div>
       </ScrollArea>
 
       <div
+        ref={inputBarRef}
         className={`fixed bottom-10 z-50 flex justify-center transition-all duration-320 ease-in-out ${
           isMobile ? "left-3 right-3" : "right-4"
         }`}
         style={fixedBarStyle}
       >
-        <form onSubmit={handleSubmit} className="w-full max-w-3xl">
+        <form onSubmit={onSubmitWrapped} className="w-full max-w-3xl">
           <div
             className="
               flex items-center gap-3
@@ -630,7 +677,6 @@ export function ChatInterface({
         <SpotifyVinylMiniCard
           url={spotifyUrlForThisChat}
           title="Moodtrip playlist"
-          subtitle="Open in Spotify"
           onClose={() => {
             setDismissedUrl((prev) => ({
               ...prev,

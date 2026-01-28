@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import type {Feature, FeatureCollection, GeoJsonObject, Point} from "geojson";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -13,14 +13,17 @@ import {
   MapTileLayer,
   MapZoomControl,
 } from "@/components/ui/map";
-import {Loader2, MapPin, Star} from "lucide-react";
+import {Loader2, MapPin, Star, Navigation2 } from "lucide-react";
 import {fetchPoiRating, submitPoiRating} from "@/api/emotion";
+import {useUserLocation} from "@/hooks/useUserLocation";
+import {cn} from "@/lib/utils";
 
 type Props = {
   data?: FeatureCollection | null;
   emotion?: string;
-  invalidateKey?: unknown; // ✅ was any
+  invalidateKey?: unknown;
   selectedDay?: number;
+  activePoiId?: string | null;
 };
 
 function FitToData({ data }: { data?: FeatureCollection | null }) {
@@ -50,7 +53,7 @@ function FitToData({ data }: { data?: FeatureCollection | null }) {
   return null;
 }
 
-function InvalidateOnResize({ dep }: { dep: unknown }) { // ✅ was any
+function InvalidateOnResize({ dep }: { dep: unknown }) {
   const map = useMap();
 
   useEffect(() => {
@@ -107,9 +110,10 @@ function StarItem({
     <div className="relative h-5 w-5 group">
       <Star className="h-5 w-5 text-muted-foreground/30" />
       <div
-        className={`absolute inset-0 overflow-hidden transition-all duration-200 ${
+        className={cn(
+          "absolute inset-0 overflow-hidden transition-all duration-200",
           isHalf ? "w-1/2" : isFull ? "w-full" : "w-0"
-        }`}
+        )}
       >
         <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
       </div>
@@ -139,7 +143,7 @@ function normalizeLineCoords(coords: unknown): [number, number][] | null {
     if (!Array.isArray(coord) || coord.length < 2) continue;
     const lon = coord[0];
     const lat = coord[1];
-    if (typeof lon !== "number" || typeof lat !== "number") continue;
+  if (typeof lon !== "number" || typeof lat !== "number") continue;
     normalized.push([lon, lat]);
   }
   return normalized.length ? normalized : null;
@@ -178,38 +182,41 @@ function PoiRating({
     setIsSubmitting(true);
     setShowSuccess(false);
 
-    const success = await submitPoiRating({
-      poiId: String(poiId),
-      category,
-      emotion,
-      rating: val,
-    });
+    try {
+      const success = await submitPoiRating({
+        poiId: String(poiId),
+        category,
+        emotion,
+        rating: val,
+      });
 
-    setIsSubmitting(false);
-    if (success) {
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-    } else {
+      setIsSubmitting(false);
+      if (success) {
+        setShowSuccess(true);
+        window.setTimeout(() => {
+          setShowSuccess(false);
+        }, 3000);
+      } else {
+        setRating(previousRating);
+      }
+    } catch (error) {
+      setIsSubmitting(false);
       setRating(previousRating);
     }
   };
 
   return (
-    <div className="mt-2 space-y-2 border-t pt-2">
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          Rate this place
+    <div
+      className="mt-4 pt-4 border-t border-slate-100 flex flex-col items-center justify-center space-y-3 w-full"
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
+    >
+      <div className="flex flex-col items-center">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">
+          {showSuccess ? "Success" : "Your Experience"}
         </p>
-        <div className="flex items-center gap-2">
-          {showSuccess && (
-            <span className="text-[10px] font-medium text-green-600 animate-in fade-in slide-in-from-right-1">
-              Saved
-            </span>
-          )}
-          {isSubmitting && (
-            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-          )}
-        </div>
+        <div className="h-0.5 w-6 bg-amber-400/40 rounded-full" />
       </div>
 
       <div
@@ -228,10 +235,17 @@ function PoiRating({
             disabled={isSubmitting}
           />
         ))}
-        {(hover || rating) > 0 && (
-          <span className="ml-2 text-xs font-semibold tabular-nums text-yellow-600">
-            {hover || rating}
+      </div>
+
+      <div className="flex items-center h-4">
+        {isSubmitting ? (
+          <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+        ) : (hover || rating) > 0 ? (
+          <span className="text-xs font-bold tabular-nums text-amber-600">
+            {(hover || rating).toFixed(1)} / 5.0
           </span>
+        ) : (
+          <span className="text-[10px] text-slate-300">Tap to rate</span>
         )}
       </div>
     </div>
@@ -243,7 +257,17 @@ export function RecommendedRouteMap({
   emotion,
   invalidateKey,
   selectedDay,
+  activePoiId,
 }: Props) {
+  const { location: userLoc } = useUserLocation({ watch: true });
+  const markerRefs = useRef<Record<string, L.Marker | null>>({});
+
+  useEffect(() => {
+    if (activePoiId && markerRefs.current[activePoiId]) {
+      markerRefs.current[activePoiId]?.openPopup();
+    }
+  }, [activePoiId]);
+
   const activeEmotion = useMemo(() => {
     if (emotion) return emotion;
     const routeFeature = data?.features.find((f) => f.properties?.type === "route");
@@ -267,36 +291,33 @@ export function RecommendedRouteMap({
     try {
       const coords = L.geoJSON(safeData as GeoJsonObject).getBounds().getCenter();
       return [coords.lat, coords.lng] as [number, number];
-    } catch {
+    } catch (error) {
       return [48.137154, 11.576124] as [number, number];
     }
   }, [safeData]);
 
-  const pois = useMemo(
-    () =>
-      safeData?.features
-        ?.filter(
-          (f): f is Feature<Point> =>
-            f.geometry?.type === "Point" && f.properties?.type === "poi"
-        )
-        .map((f) => {
-          const props = f.properties ?? {};
-          const [lon, lat] = (f.geometry as Point).coordinates;
-          return {
-            id: props.osmId?.toString() ?? props.id?.toString() ?? `${lat}-${lon}`,
-            name: props.displayName ?? "Unknown POI",
-            description: props.description ?? "",
-            imageUrl: props.imageUrl ?? "",
-            category: props.category ?? "NATURE",
-            position: [lat, lon] as [number, number],
-            day: typeof props.day === "number" ? props.day : 1,
-          };
-        }) ?? [],
-    [safeData?.features]
-  );
+  const pois = useMemo(() => {
+    if (!safeData || !safeData.features) return [];
+    return safeData.features
+      .filter((f): f is Feature<Point> => f.geometry?.type === "Point" && f.properties?.type === "poi")
+      .map((f) => {
+        const props = f.properties ?? {};
+        const [lon, lat] = (f.geometry as Point).coordinates;
+        return {
+          id: props.osmId?.toString() ?? props.id?.toString() ?? `${lat}-${lon}`,
+          name: props.displayName ?? "Unknown POI",
+          description: props.description ?? "",
+          imageUrl: props.imageUrl ?? "",
+          category: props.category ?? "NATURE",
+          position: [lat, lon] as [number, number],
+          day: typeof props.day === "number" ? props.day : 1,
+        };
+      });
+  }, [safeData]);
 
   const routeLineCoords = useMemo(() => {
-    const routeFeature = safeData?.features?.find(
+    if (!safeData || !safeData.features) return null;
+    const routeFeature = safeData.features.find(
       (f) => f.properties?.type === "route" && f.geometry?.type === "LineString"
     );
     if (!routeFeature || routeFeature.geometry?.type !== "LineString") return null;
@@ -386,13 +407,15 @@ export function RecommendedRouteMap({
     return { type: "FeatureCollection", features } as FeatureCollection;
   }, [activeDay, dayLineData, dayPois, safeData]);
 
-  const renderMarkerIcon = (isActive: boolean) => (
-    <MapPin
-      className={`h-6 w-6 ${
-        isActive ? "text-blue-600 drop-shadow" : "text-slate-400 opacity-50"
-      }`}
-    />
-  );
+  const renderMarkerIcon = (isActive: boolean, isFirst: boolean = false, isLast: boolean = false) => {
+    let colorClass = "text-slate-400 opacity-50";
+    if (isActive) {
+      if (isFirst) colorClass = "text-green-600 drop-shadow-md";
+      else if (isLast) colorClass = "text-red-600 drop-shadow-md";
+      else colorClass = "text-blue-600 drop-shadow";
+    }
+    return <MapPin className={`h-6 w-6 ${colorClass}`} />;
+  };
 
   return (
     <div className="h-full w-full min-w-0">
@@ -409,64 +432,66 @@ export function RecommendedRouteMap({
           />
           <MapLocateControl />
         </MapLayers>
-
+        
         <MapZoomControl />
 
-        {inactivePois.map((poi) => (
-          <MapMarker key={poi.id} position={poi.position} icon={renderMarkerIcon(false)}>
-            <MapPopup className="w-64">
-              <div className="space-y-2">
-                {poi.imageUrl && (
-                  <img
-                    src={poi.imageUrl}
-                    alt={poi.name}
-                    className="h-32 w-full rounded-md object-cover"
-                  />
-                )}
-                <div>
-                  <h3 className="line-clamp-1 text-sm font-semibold">{poi.name}</h3>
-                  {poi.description && (
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                      {poi.description}
-                    </p>
-                  )}
+        {userLoc && (
+          <MapMarker
+            position={[userLoc.latitude, userLoc.longitude]}
+            icon={
+              <div className="relative flex items-center justify-center">
+                <div className="absolute h-4 w-4 rounded-full bg-blue-500 animate-ping opacity-75"></div>
+                <div className="relative h-4 w-4 rounded-full bg-blue-600 border-2 border-white shadow-md flex items-center justify-center">
+                  <Navigation2 className="h-2.5 w-2.5 text-white fill-current" />
                 </div>
+              </div>
+            }
+          />
+        )}
+
+        {[...inactivePois, ...dayPois].map((poi) => {
+          const isActive = dayPois.some((p) => p.id === poi.id);
+          const isFirst = isActive && dayPois[0]?.id === poi.id;
+          const isLast = isActive && dayPois[dayPois.length - 1]?.id === poi.id;
+
+          return (
+            <MapMarker
+              key={poi.id}
+              position={poi.position}
+              icon={renderMarkerIcon(isActive, isFirst, isLast)}
+              ref={(ref) => {
+                markerRefs.current[poi.id] = ref;
+              }}
+            >
+              <MapPopup
+                className="w-64 rounded-xl overflow-hidden border-none shadow-xl [&_.leaflet-popup-close-button]:hidden"
+                closeButton={false}
+              >
+                <div className="space-y-2">
+                  {poi.imageUrl && (
+                    <img
+                      src={poi.imageUrl}
+                      alt={poi.name}
+                    className="h-32 w-full rounded-md object-cover"
+                    />
+                  )}
+                  <div>
+                  <h3 className="line-clamp-1 text-sm font-semibold">{poi.name}</h3>
+                    {poi.description && (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        {poi.description}
+                      </p>
+                    )}
+                  </div>
 
                 {activeEmotion && (
                   <PoiRating poiId={poi.id} category={poi.category} emotion={activeEmotion} />
                 )}
-              </div>
-            </MapPopup>
-          </MapMarker>
-        ))}
-
-        {dayPois.map((poi) => (
-          <MapMarker key={poi.id} position={poi.position} icon={renderMarkerIcon(true)}>
-            <MapPopup className="w-64">
-              <div className="space-y-2">
-                {poi.imageUrl && (
-                  <img
-                    src={poi.imageUrl}
-                    alt={poi.name}
-                    className="h-32 w-full rounded-md object-cover"
-                  />
-                )}
-                <div>
-                  <h3 className="line-clamp-1 text-sm font-semibold">{poi.name}</h3>
-                  {poi.description && (
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                      {poi.description}
-                    </p>
-                  )}
                 </div>
-
-                {activeEmotion && (
-                  <PoiRating poiId={poi.id} category={poi.category} emotion={activeEmotion} />
-                )}
-              </div>
-            </MapPopup>
-          </MapMarker>
-        ))}
+              </MapPopup>
+            </MapMarker>
+          );
+        })}
 
         {safeData && (
           <>
