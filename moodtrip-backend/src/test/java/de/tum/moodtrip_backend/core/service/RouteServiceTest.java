@@ -64,7 +64,7 @@ class RouteServiceTest {
     private RouteService routeService;
 
     @Test
-    @DisplayName("Should generate three routes (Balanced, Emotion, Category) successfully")
+    @DisplayName("Should generate three routes (Balanced, Your Picks, Discovery) successfully")
     void shouldGenerateThreeRoutesSuccessfully() {
         // Given
         long conversationId = 1L;
