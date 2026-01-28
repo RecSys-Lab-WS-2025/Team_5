@@ -21,35 +21,42 @@ This project adopts a modern architecture with a separated frontend and backend,
 - **State & Routing**: React Router DOM 7, React Hooks
 - **AI SDK**: Vercel AI SDK
 
-##  Getting Started
+## 🚀 Quick Start
 
-### Prerequisites
-- **Java**: JDK 21+
-- **Node.js**: v20+
-- **Docker**: Required to run the PostgreSQL database
+Get the application running in minutes!
 
-### 1. Start Database
-Navigate to the backend directory and use Docker Compose to start the database service:
+### 1. Environment Setup
+Copy the example environment file to both backend and frontend directories:
 
+```bash
+cp .env.example moodtrip-backend/.env
+cp .env.example moodtrip-frontend/.env
+```
+
+> **Important**: Open the `.env` files and fill in your `DEEPSEEK_API_KEY` and Spotify credentials (`SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`). The application requires these to function correctly.
+
+### 2. Start Services
+
+**Terminal 1: Database & Backend**
 ```bash
 cd moodtrip-backend
-docker-compose up -d
-```
-> **Note**: Please ensure the `.env` file in the root directory is correctly configured with your database environment variables (e.g., `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`).
-
-### 2. Start Backend Service
-```bash
-./gradlew bootRun
+docker-compose up -d db   # Start PostgreSQL
+./gradlew bootRun         # Start Backend Server
 ```
 
-### 3. Start Frontend Application
-Open a new terminal window and navigate to the frontend directory:
+**Terminal 2: Frontend**
 ```bash
-cd ../moodtrip-frontend
+cd moodtrip-frontend
 npm install
 npm run dev
 ```
-Open your browser and visit `http://localhost:5173` to experience the application.
+
+Visit [http://localhost:5173](http://localhost:5173) to start your Moodtrip!
+
+## 📋 Prerequisites
+- **Java**: JDK 21+
+- **Node.js**: v20+
+- **Docker**: Required to run the PostgreSQL database
 
 ## 📂 Project Structure
 
