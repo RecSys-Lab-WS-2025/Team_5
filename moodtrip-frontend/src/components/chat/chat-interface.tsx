@@ -696,7 +696,7 @@ export function ChatInterface({
               <Input
                 value={input}
                 onChange={handleInputChange}
-                placeholder={isInputLocked ? "Trip generated" : "Ask anything"}
+                placeholder={isInputLocked ? "Emotion detected" : "Ask anything"}
                 className="
                   h-auto flex-1 border-0 bg-transparent px-0
                   text-sm

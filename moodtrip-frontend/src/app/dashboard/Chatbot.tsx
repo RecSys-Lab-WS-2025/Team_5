@@ -232,17 +232,9 @@ export default function Chatbot() {
   const [currentEmotion, setCurrentEmotion] = useState<string | null>(
     initialSnapshot?.currentEmotion ?? null
   );
-  const [isChatLocked, setIsChatLocked] = useState(() => {
-    const snapshotMessages = initialSnapshot?.messages ?? [];
-    return snapshotMessages.some(
-      (message) =>
-        message.role !== "user" &&
-        message.parts.some(
-          (part) =>
-            part.type === "text" && (part.text || "").includes("[ROUTE_CARDS]")
-        )
-    );
-  });
+  const [isChatLocked, setIsChatLocked] = useState(
+    initialSnapshot?.emotionExtracted ?? true
+  );
 
   const [spotifyUrlByChat, setSpotifyUrlByChat] = useState<
     Record<string, string | null>
@@ -318,15 +310,6 @@ export default function Chatbot() {
     [parseEmotionResultSuccess]
   );
 
-  const didGenerateRoute = useCallback(
-    (messages: Array<{ sender: string; content: string }>) =>
-      messages.some(
-        (message) =>
-          message.sender === "BOT" && message.content.includes("[ROUTE_CARDS]")
-      ),
-    []
-  );
-
   const getEmotionIcon = (emotion?: string) => {
     if (!emotion) return undefined;
     const e = emotion.toUpperCase();
@@ -385,15 +368,16 @@ export default function Chatbot() {
         }));
         setMessages(uiMsgs);
         setHistoryRenderToken((t) => t + 1);
-        setEmotionExtracted(didEmotionExtractionSucceed(msgs));
-        setIsChatLocked(didGenerateRoute(msgs));
+        const emotionDetected = didEmotionExtractionSucceed(msgs);
+        setEmotionExtracted(emotionDetected);
+        setIsChatLocked(emotionDetected);
       } catch (e) {
         console.error("Failed to load messages", e);
         setMessages([]);
         setHistoryRenderToken((t) => t + 1);
         setIsChatLocked(false);
       }
-  }, [didEmotionExtractionSucceed, didGenerateRoute]);
+  }, [didEmotionExtractionSucceed]);
 
   useEffect(() => {
     if (!selectedChatId) return;
@@ -449,6 +433,7 @@ export default function Chatbot() {
         const res = await apiExtractEmotion(Number(selectedChatId), text);
         if (res.success) {
           setEmotionExtracted(true);
+          setIsChatLocked(true);
           if (res.topLabel) {
             setCurrentEmotion(res.topLabel);
             setEmotionByChat((prev) => ({
@@ -463,6 +448,7 @@ export default function Chatbot() {
           }
         } else {
           setEmotionExtracted(false);
+          setIsChatLocked(false);
         }
 
         if (res.content) {
@@ -517,6 +503,7 @@ export default function Chatbot() {
         setChats((prev) => [newChatSummary, ...prev]);
         chatId = newChat.id.toString();
         setEmotionExtracted(false);
+        setIsChatLocked(false);
         setRouteGeoJson(null);
       } catch (e) {
         console.error(e);
@@ -541,6 +528,7 @@ export default function Chatbot() {
       const res = await apiExtractEmotion(Number(chatId), text);
       if (res.success) {
         setEmotionExtracted(true);
+        setIsChatLocked(true);
         if (res.topLabel) {
           setCurrentEmotion(res.topLabel);
           setEmotionByChat((prev) => ({
@@ -555,6 +543,7 @@ export default function Chatbot() {
         }
       } else {
         setEmotionExtracted(false);
+        setIsChatLocked(false);
       }
 
       if (res.content) {
@@ -602,6 +591,7 @@ export default function Chatbot() {
         setChats((prev) => [newChatSummary, ...prev]);
         currentChatId = newChat.id.toString();
         setEmotionExtracted(false);
+        setIsChatLocked(false);
 
         skipLoadRef.current = true;
         setSelectedChatId(currentChatId);
@@ -1109,7 +1099,6 @@ Just share a bit, and I’ll do the planning for you ✨`;
                     parts: [{ type: "text", text: cardsPayload }],
                   };
                   setMessages((prev) => [...prev, cardsMsg]);
-                  setIsChatLocked(true);
                 } catch (e) {
                   console.error("Failed to submit survey", e);
                   setRouteGeoJson(null);
