@@ -58,6 +58,7 @@ export const RouteDetailsPage = () => {
           <button
             onClick={() => navigate(-1)}
             className="inline-flex items-center justify-center p-2 rounded-full text-slate-400 hover:text-slate-900 transition-colors"
+            aria-label="Go back"
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
@@ -103,6 +104,7 @@ export const RouteDetailsPage = () => {
             <button
               onClick={() => navigate(-1)}
               className="flex items-center justify-center p-1.5 -ml-1 text-slate-400 hover:text-slate-900 transition-colors"
+              aria-label="Go back"
             >
               <MoveLeft className="h-5 w-5" />
             </button>
@@ -111,12 +113,12 @@ export const RouteDetailsPage = () => {
           <SidebarTrigger className="rotate-180 text-slate-400 hover:text-slate-900 transition-colors" />
         </header>
 
-        <main className="h-[calc(100vh-3.5rem)] min-h-0 w-full">
+        <main className="flex-1 min-h-0 w-full">
           {routeData.geoJson ? (
-            <MapPane 
-              geoJson={routeData.geoJson} 
-              selectedDay={selectedDay} 
-              activePoiId={activePoiId} 
+            <MapPane
+              geoJson={routeData.geoJson}
+              selectedDay={selectedDay}
+              activePoiId={activePoiId}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">

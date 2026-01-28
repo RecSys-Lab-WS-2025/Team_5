@@ -599,79 +599,76 @@ export function ChatInterface({
   return (
     <div className="bg-white relative flex flex-1 flex-col">
       <ScrollArea
-        ref={scrollAreaRootRef as unknown as React.RefObject<HTMLDivElement>}
         className="flex-1"
       >
-  <div className="p-6" style={{ paddingBottom: bottomGap }}>
-    <div className="mx-auto max-w-6xl space-y-4">
-      {visibleMessages.map((message) => {
-        const isUser = message.role === "user";
-        const renderedParts = renderMessageParts(message).filter(
-        (part) => part !== null && part !== undefined
-        );
-        if (renderedParts.length === 0) return null;
+        <div className="p-6" style={{ paddingBottom: bottomGap }}>
+          <div className="mx-auto max-w-6xl space-y-4">
+            {visibleMessages.map((message) => {
+              const isUser = message.role === "user";
+              const renderedParts = renderMessageParts(message).filter(
+                (part) => part !== null && part !== undefined
+              );
+              if (renderedParts.length === 0) return null;
 
-        const isMapBubble = message.parts.some(
-          (p) => p.type === "text" && (p.text || "").includes("[ROUTE_MAP]")
-        );
+              const isMapBubble = message.parts.some(
+                (p) => p.type === "text" && (p.text || "").includes("[ROUTE_MAP]")
+              );
 
-        const isRouteCardsBubble = message.parts.some(
-          (p) => p.type === "text" && (p.text || "").includes("[ROUTE_CARDS]")
-        );
+              const isRouteCardsBubble = message.parts.some(
+                (p) => p.type === "text" && (p.text || "").includes("[ROUTE_CARDS]")
+              );
 
-        if (isRouteCardsBubble) {
-          return (
-            <div key={message.id} className="w-full flex justify-center">
-              <div className="w-full flex justify-center">{renderedParts}</div>
-            </div>
-          );
-        }
+              if (isRouteCardsBubble) {
+                return (
+                  <div key={message.id} className="w-full flex justify-center">
+                    <div className="w-full flex justify-center">{renderedParts}</div>
+                  </div>
+                );
+              }
 
-        return (
-          <div
-            key={message.id}
-            className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`${
-                isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
-              } rounded-lg px-4 py-3 text-base ${
-                isUser ? "!bg-blue-100 !text-black" : "border bg-muted text-foreground"
-                    } `}
-            >
-              <div className="space-y-1">{renderedParts}</div>
-            </div>
-          </div>
-        );
-      })}
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`${isMapBubble ? "w-full max-w-[900px]" : "max-w-[80%]"
+                      } rounded-lg px-4 py-3 text-base ${isUser ? "!bg-blue-100 !text-black" : "border bg-muted text-foreground"
+                      } `}
+                  >
+                    <div className="space-y-1">{renderedParts}</div>
+                  </div>
+                </div>
+              );
+            })}
 
-      {isLoading && (
-        <div className="flex justify-start">
-          <div className="max-w-[80%] rounded-lg border bg-muted px-4 py-3 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40" />
-              <div
-                className="h-2 w-2 animate-bounce rounded-full bg-foreground/40"
-                style={{ animationDelay: "0.1s" }}
-              />
-              <div
-                className="h-2 w-2 animate-bounce rounded-full bg-foreground/40"
-                style={{ animationDelay: "0.2s" }}
-              />
-            </div>
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-lg border bg-muted px-4 py-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-foreground/40" />
+                    <div
+                      className="h-2 w-2 animate-bounce rounded-full bg-foreground/40"
+                      style={{ animationDelay: "0.1s" }}
+                    />
+                    <div
+                      className="h-2 w-2 animate-bounce rounded-full bg-foreground/40"
+                      style={{ animationDelay: "0.2s" }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={bottomSentinelRef} />
           </div>
         </div>
-      )}
-
-      <div ref={bottomSentinelRef} />
-    </div>
-  </div>
-</ScrollArea>
+      </ScrollArea>
 
 
       <div
-        className={`fixed bottom-10 z-50 flex justify-center transition-all duration-320 ease-in-out ${isMobile ? "left-3 right-3" : "right-4"
-        }`}
+        className={`fixed bottom-10 z-50 flex justify-center transition-all duration-300 ease-in-out ${isMobile ? "left-3 right-3" : "right-4"
+          }`}
         style={fixedBarStyle}
       >
         <div className="w-full max-w-3xl flex flex-col items-center gap-2">

@@ -84,20 +84,20 @@ export function AppSidebar({
   React.useEffect(() => {
     let cancelled = false
 
-    ;(async () => {
-      const server = await fetchCurrentUser()
-      if (cancelled) return
+      ; (async () => {
+        const server = await fetchCurrentUser()
+        if (cancelled) return
 
-      if (server) {
-        const next = mergeServerIntoLocal(server, authUser)
-        saveUser(next as AuthUser)
-        localStorage.setItem("auth_user", JSON.stringify(next))
-        setAuthUser(next)
-      } else {
-        const local = getUser() as LocalAuthUser | null
-        setAuthUser(local)
-      }
-    })()
+        if (server) {
+          const next = mergeServerIntoLocal(server, authUser)
+          saveUser(next as AuthUser)
+          localStorage.setItem("auth_user", JSON.stringify(next))
+          setAuthUser(next)
+        } else {
+          const local = getUser() as LocalAuthUser | null
+          setAuthUser(local)
+        }
+      })()
 
     const off = onUserUpdated(() => {
       const local = getUser() as LocalAuthUser | null
@@ -126,12 +126,12 @@ export function AppSidebar({
           title="Home"
         >
           <div className="flex items-center gap-2">
-            <img src="logo.png" alt="Moodtrip" className="h-6 w-6 shrink-0" />
+            <img src="/logo.png" alt="Moodtrip" className="h-6 w-6 shrink-0" />
             <span className="text-sm font-semibold tracking-tight">Moodtrip</span>
           </div>
         </button>
       </SidebarHeader>
-      
+
       <div className="shrink-0">
         <NavMain
           items={navMain}
