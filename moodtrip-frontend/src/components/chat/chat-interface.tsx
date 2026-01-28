@@ -207,7 +207,6 @@ export function ChatInterface({
 }: ChatInterfaceProps) {
   const navigate = useNavigate();
 
-  const scrollAreaRootRef = React.useRef<HTMLDivElement | null>(null);
   const bottomSentinelRef = React.useRef<HTMLDivElement | null>(null);
   const inputBarRef = React.useRef<HTMLDivElement | null>(null);
   const [inputBarH, setInputBarH] = React.useState(120);
