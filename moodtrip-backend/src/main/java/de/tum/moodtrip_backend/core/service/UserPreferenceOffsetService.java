@@ -88,7 +88,7 @@ public class UserPreferenceOffsetService {
         return new UserPreferenceOffsetUpdateResult(offset, alphaAfter, predicted, error);
     }
 
-    private double computeAlpha(long count) {
+    protected double computeAlpha(long count) {
         return count / (count + shrinkageK);
     }
 

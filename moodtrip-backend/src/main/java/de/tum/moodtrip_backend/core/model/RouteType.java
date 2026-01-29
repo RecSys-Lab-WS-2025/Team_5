@@ -6,7 +6,7 @@ package de.tum.moodtrip_backend.core.model;
 public enum RouteType {
     BALANCED("Balanced Route", "Classic balanced mood and interest route"),
     YOUR_PICKS("Your Picks", "Route focused on your selected categories"),
-    DISCOVERY("Try Something New", "Diverse route to explore new experiences");
+    DISCOVERY("Discovery", "Diverse route to explore new experiences");
 
     private final String displayTitle;
     private final String description;
