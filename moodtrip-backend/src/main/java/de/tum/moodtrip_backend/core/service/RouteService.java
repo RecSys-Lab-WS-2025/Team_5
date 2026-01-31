@@ -73,40 +73,61 @@ public class RouteService {
      * Returns 3 routes: emotion-focused, category-focused, and balanced.
      */
     public Mono<List<RouteGenerationResult>> getMultipleRoutes(
-            long conversationId,
-            long userId,
-            double lat,
-            double lon,
-            List<PoiCategory> poiCategories,
-            int radiusMeters,
-            Map<Emotion, Double> emotionWeights,
-            int poiLimit,
-            String city,
-            int tripDays,
-            boolean isMocked
-    ) {
+        long conversationId,
+        long userId,
+        double lat,
+        double lon,
+        List<PoiCategory> poiCategories,
+        int radiusMeters,
+        Map<Emotion, Double> emotionWeights,
+        int poiLimit,
+        String city,
+        int tripDays,
+        boolean isMocked
+) {
+    return Mono.deferContextual(ctxView -> {
+        de.tum.moodtrip_backend.core.eval.EvalRun run =
+                ctxView.hasKey(de.tum.moodtrip_backend.core.eval.EvalRun.CTX_KEY)
+                        ? ctxView.get(de.tum.moodtrip_backend.core.eval.EvalRun.CTX_KEY)
+                        : null;
+
         int normalizedPoiLimit = Math.min(Math.max(poiLimit, MIN_POI_RESULTS), MAX_POI_RESULTS);
         LOGGER.info("[START] Generating 3 routes for conversationId: {}; city: {}; poiLimit: {}; lat/lon: {},{}",
                 conversationId, city, normalizedPoiLimit, lat, lon);
 
-        // Fetch POIs once and cache for all 3 routes
-        Flux<Poi> cachedPoiFlux = osmPort.findAmenitiesAround(lat, lon, poiCategories, radiusMeters)
-                .cache();
+        // ---- EVAL: request inputs ----
+        if (run != null) {
+            run.putRequest("conversationId", conversationId);
+            run.putRequest("userId", userId);
+            run.putRequest("city", city);
+            run.putRequest("lat", lat);
+            run.putRequest("lon", lon);
+            run.putRequest("radiusMeters", radiusMeters);
+            run.putRequest("tripDays", tripDays);
+            run.putRequest("poiLimitInput", poiLimit);
+            run.putRequest("poiLimitNormalized", normalizedPoiLimit);
+            run.putRequest("poiCategories", poiCategories != null ? poiCategories.stream().map(Enum::name).toList() : List.of());
+            run.putRequest("emotionWeights", emotionWeights);
+            run.putRequest("topEmotion", getTopEmotion(emotionWeights));
+        }
 
-        // Get all scoring configurations from properties
+        // Fetch POIs once and cache for all 3 routes
+        Flux<Poi> cachedPoiFlux = osmPort.findAmenitiesAround(lat, lon, poiCategories, radiusMeters).cache();
+
         ScoringConfig[] configs = scoringConfigFactory.allConfigs();
 
         String mood = getTopEmotion(emotionWeights);
         String cityName = (city != null && !city.trim().isEmpty()) ? city.trim() : "Unknown City";
 
-        // 1. Generate geometry-only routes in parallel
         return Flux.fromArray(configs)
-                .flatMap(config -> buildRouteWithConfig(userId, lat, lon, poiCategories, radiusMeters, emotionWeights, normalizedPoiLimit, cachedPoiFlux, config)
+                .flatMap(config -> buildRouteWithConfig(
+                                userId, lat, lon, poiCategories, radiusMeters, emotionWeights,
+                                normalizedPoiLimit, cachedPoiFlux, config, tripDays
+                        )
                         .timeout(ROUTE_TIMEOUT)
                         .map(route -> new ConfiguredRoute(config, route))
                         .onErrorResume(ex -> {
                             LOGGER.error("Error generating {} route for conversationId: {}", config.routeType(), conversationId, ex);
-                            // We return empty so we can continue with other routes
                             return Mono.empty();
                         })
                 )
@@ -116,49 +137,54 @@ public class RouteService {
                         return Mono.just(List.of(RouteGenerationResult.failure("Failed to generate any routes.")));
                     }
 
-                    // 2. Prepare context for batch AI generation
                     List<RouteGenerationContext> contexts = configuredRoutes.stream()
-                            .map(cr -> new RouteGenerationContext(
-                                    cr.config.routeType(),
-                                    cr.route.pois(),
-                                    tripDays
-                            ))
+                            .map(cr -> new RouteGenerationContext(cr.config.routeType(), cr.route.pois(), tripDays))
                             .toList();
 
-                    // 3. Call batch generation service
                     return routeDescriptionService.generateBatchRouteText(mood, cityName, contexts, isMocked)
-                            .flatMapMany(descriptions -> {
-                                // 4. Map descriptions back to routes and save
-                                return Flux.fromIterable(configuredRoutes)
-                                        .flatMap(configuredRoute -> {
-                                            RouteText text = descriptions.get(configuredRoute.config.routeType());
-                                            // Fallback to default if text is missing
-                                            if (text == null) {
-                                                text = new RouteText("Route", Map.of());
-                                            }
+                            .flatMapMany(descriptions -> Flux.fromIterable(configuredRoutes)
+                                    .flatMap(configuredRoute ->
+        Mono.deferContextual(ctx2 -> {
+            de.tum.moodtrip_backend.core.eval.EvalRun run2 =
+                    ctx2.hasKey(de.tum.moodtrip_backend.core.eval.EvalRun.CTX_KEY)
+                            ? ctx2.get(de.tum.moodtrip_backend.core.eval.EvalRun.CTX_KEY)
+                            : null;
 
-                                            Route originalRoute = configuredRoute.route.route();
-                                            Route routeWithTitleAndDesc = new Route(
-                                                    originalRoute.distanceMeters(),
-                                                    originalRoute.durationSeconds(),
-                                                    originalRoute.geometry(),
-                                                    originalRoute.legDistances(),
-                                                    originalRoute.legDurations(),
-                                                    originalRoute.waypointOrder(),
-                                                    text.title(),
-                                                    text.dayDescriptions()
-                                            );
-                                            PoiRouteResult finalResult = new PoiRouteResult(configuredRoute.route.pois(), routeWithTitleAndDesc);
+            RouteText text = descriptions.get(configuredRoute.config.routeType());
+            if (text == null) {
+                text = new RouteText("Route", Map.of());
+            }
 
-                                            return routeRecommendationPort.save(PoiRouteResultRouteRecommendationMapper.toDomain(finalResult, conversationId))
-                                                    .doOnNext(saved -> LOGGER.info("[STEP] Route ({}) generated and saved successfully for conversationId: {}", configuredRoute.config.routeType(), saved.conversationId()))
-                                                    .map(saved -> RouteGenerationResult.success(finalResult, configuredRoute.config.routeType()));
-                                        });
-                            })
+            Route originalRoute = configuredRoute.route.route();
+            Route routeWithTitleAndDesc = new Route(
+                    originalRoute.distanceMeters(),
+                    originalRoute.durationSeconds(),
+                    originalRoute.geometry(),
+                    originalRoute.legDistances(),
+                    originalRoute.legDurations(),
+                    originalRoute.waypointOrder(),
+                    text.title(),
+                    text.dayDescriptions()
+            );
+
+            PoiRouteResult finalResult = new PoiRouteResult(configuredRoute.route.pois(), routeWithTitleAndDesc);
+
+            // ✅ record itinerary metrics HERE (no dependency on RouteGenerationResult getters)
+            if (run2 != null) {
+                Map<String, Object> metrics = computeItineraryMetrics(finalResult, tripDays);
+                run2.markItineraryMetrics(configuredRoute.config.routeType().name(), metrics);
+            }
+
+            return routeRecommendationPort
+                    .save(PoiRouteResultRouteRecommendationMapper.toDomain(finalResult, conversationId))
+                    .map(saved -> RouteGenerationResult.success(finalResult, configuredRoute.config.routeType()));
+        })
+)
+
+                            )
                             .collectList();
                 })
                 .map(results -> {
-                    // Sort results to maintain consistent order: EMOTION_FOCUSED, CATEGORY_FOCUSED, BALANCED
                     results.sort((a, b) -> {
                         if (a.routeType() == null && b.routeType() == null) return 0;
                         if (a.routeType() == null) return 1;
@@ -167,8 +193,11 @@ public class RouteService {
                     });
                     return results;
                 })
+                // ---- EVAL: after we have results, compute EQ1 itinerary metrics ----
                 .doOnNext(results -> LOGGER.info("[COMPLETE] Batch generation finished for conversationId: {}. Generated {} routes.", conversationId, results.size()));
-    }
+    });
+}
+
     
     private String getTopEmotion(Map<Emotion, Double> emotionWeights) {
         return emotionWeights.entrySet().stream()
@@ -181,59 +210,120 @@ public class RouteService {
     private record ConfiguredRoute(ScoringConfig config, PoiRouteResult route) {}
 
     private Mono<PoiRouteResult> buildRouteWithConfig(
-            long userId,
-            double lat,
-            double lon,
-            List<PoiCategory> poiCategories,
-            int radiusMeters,
-            Map<Emotion, Double> emotionWeights,
-            int poiLimit,
-            Flux<Poi> cachedPoiFlux,
-            ScoringConfig config
-    ) {
-        return poiScoringService.scoreAndRank(cachedPoiFlux, userId, emotionWeights, poiCategories, lat, lon, poiLimit, config)
-                .flatMap(scoredPois -> {
-                    if (scoredPois.isEmpty()) {
-                        return Mono.error(new NotEnoughPoisException("No POIs found after categorization and scoring"));
-                    }
-                    return enrichPois(scoredPois)
-                            .collectList()
-                            .flatMap(enrichedPois -> {
-                                if (enrichedPois.size() < 2) {
-                                    return Mono.error(new NotEnoughPoisException("Not enough POIs to build a route"));
-                                }
+        long userId,
+        double lat,
+        double lon,
+        List<PoiCategory> poiCategories,
+        int radiusMeters,
+        Map<Emotion, Double> emotionWeights,
+        int poiLimit,
+        Flux<Poi> cachedPoiFlux,
+        ScoringConfig config,
+        int tripDays
+) {
+    return poiScoringService.scoreAndRank(cachedPoiFlux, userId, emotionWeights, poiCategories, lat, lon, poiLimit, config)
+            .flatMap(scoredPois -> {
+                if (scoredPois.isEmpty()) {
+                    return Mono.error(new NotEnoughPoisException("No POIs found after categorization and scoring"));
+                }
+                return enrichPois(scoredPois)
+                        .collectList()
+                        .flatMap(enrichedPois -> {
+                            if (enrichedPois.size() < 2) {
+                                return Mono.error(new NotEnoughPoisException("Not enough POIs to build a route"));
+                            }
 
-                                List<EnrichedPoi> reorderedInputPois = new java.util.ArrayList<>(enrichedPois);
-                                reorderedInputPois.sort((p1, p2) -> {
-                                    double dist1 = calculateHaversineDistance(lat, lon, p1.poi().latitude(), p1.poi().longitude());
-                                    double dist2 = calculateHaversineDistance(lat, lon, p2.poi().latitude(), p2.poi().longitude());
-                                    return Double.compare(dist1, dist2);
-                                });
-
-                                return routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(
-                                                reorderedInputPois.stream().map(EnrichedPoi::poi).toList()
-                                        ))
-                                        .map(route -> {
-                                            double totalDuration = route.durationSeconds() + (enrichedPois.size() * POI_VISITING_TIME_SECONDS);
-                                            List<EnrichedPoi> orderedPOIs = route.waypointOrder().stream()
-                                                    .filter(index -> index >= 0 && index < reorderedInputPois.size())
-                                                    .map(reorderedInputPois::get)
-                                                    .toList();
-
-                                            return new PoiRouteResult(orderedPOIs, new Route(
-                                                    route.distanceMeters(),
-                                                    totalDuration,
-                                                    route.geometry(),
-                                                    route.legDistances(),
-                                                    route.legDurations(),
-                                                    route.waypointOrder(),
-                                                    null,
-                                                    null
-                                            ));
-                                        });
+                            List<EnrichedPoi> reorderedInputPois = new java.util.ArrayList<>(enrichedPois);
+                            reorderedInputPois.sort((p1, p2) -> {
+                                double dist1 = calculateHaversineDistance(lat, lon, p1.poi().latitude(), p1.poi().longitude());
+                                double dist2 = calculateHaversineDistance(lat, lon, p2.poi().latitude(), p2.poi().longitude());
+                                return Double.compare(dist1, dist2);
                             });
-                });
+
+                            return routingPort.calculateRoute(PoiRouteCoordinatesMapper.toCoordinates(
+                                            reorderedInputPois.stream().map(EnrichedPoi::poi).toList()
+                                    ))
+                                    .contextWrite(ctx -> ctx.put(de.tum.moodtrip_backend.core.eval.EvalRun.CTX_ROUTE_TYPE_KEY, config.routeType().name()))
+                                    .map(route -> {
+                                        double totalDuration = route.durationSeconds() + (enrichedPois.size() * POI_VISITING_TIME_SECONDS);
+                                        List<EnrichedPoi> orderedPOIs = route.waypointOrder().stream()
+                                                .filter(index -> index >= 0 && index < reorderedInputPois.size())
+                                                .map(reorderedInputPois::get)
+                                                .toList();
+
+                                        return new PoiRouteResult(orderedPOIs, new Route(
+                                                route.distanceMeters(),
+                                                totalDuration,
+                                                route.geometry(),
+                                                route.legDistances(),
+                                                route.legDurations(),
+                                                route.waypointOrder(),
+                                                null,
+                                                null
+                                        ));
+                                    });
+                        });
+            });
+}
+    
+    private Map<String, Object> computeItineraryMetrics(PoiRouteResult pr, int tripDays) {
+    Map<String, Object> m = new java.util.LinkedHashMap<>();
+
+    int totalPois = (pr != null && pr.pois() != null) ? pr.pois().size() : 0;
+    m.put("totalPois", totalPois);
+    m.put("tripDays", tripDays);
+
+    // dailyPoiCounts (consistent with GeoJsonRouteMapper)
+    List<Integer> dailyCounts = new java.util.ArrayList<>();
+    for (int d = 1; d <= tripDays; d++) dailyCounts.add(0);
+
+    if (pr != null && pr.pois() != null && totalPois > 0) {
+        for (int i = 0; i < totalPois; i++) {
+            int day = (int) Math.floor((double) i * tripDays / totalPois) + 1; // 1..tripDays
+            dailyCounts.set(day - 1, dailyCounts.get(day - 1) + 1);
+        }
     }
+    m.put("dailyPoiCounts", dailyCounts);
+
+    // categoryHistogram
+    Map<String, Integer> hist = new java.util.LinkedHashMap<>();
+    if (pr != null && pr.pois() != null) {
+        for (EnrichedPoi ep : pr.pois()) {
+            if (ep == null || ep.poi() == null || ep.poi().category() == null) continue;
+            String cat = ep.poi().category().name();
+            hist.put(cat, hist.getOrDefault(cat, 0) + 1);
+        }
+    }
+    m.put("categoryHistogram", hist);
+
+    // route-level stats (schema-stable)
+    Route r = (pr != null) ? pr.route() : null;
+
+    if (r != null && r.legDistances() != null && !r.legDistances().isEmpty()) {
+        double mean = r.legDistances().stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        double max = r.legDistances().stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+        m.put("meanInterPoiDistM_fromRoute", mean);
+        m.put("maxInterPoiDistM_fromRoute", max);
+    } else {
+        m.put("meanInterPoiDistM_fromRoute", 0.0);
+        m.put("maxInterPoiDistM_fromRoute", 0.0);
+    }
+
+    if (r != null) {
+        m.put("totalRouteDistanceM_fromRoute", r.distanceMeters());
+        m.put("totalRouteDurationS_fromRoute", r.durationSeconds());
+        m.put("legsCount", (r.legDistances() != null) ? r.legDistances().size() : 0);
+    } else {
+        m.put("totalRouteDistanceM_fromRoute", 0.0);
+        m.put("totalRouteDurationS_fromRoute", 0.0);
+        m.put("legsCount", 0);
+    }
+
+    return m;
+}
+
+
+
 
     private Flux<EnrichedPoi> enrichPois(List<ScoredPoi> scoredPois) {
         return Flux.fromIterable(scoredPois)
