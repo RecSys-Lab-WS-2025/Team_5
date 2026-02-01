@@ -20,7 +20,7 @@ export function AuthInterceptor({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const handleUnauthorized = () => {
             const hasToken = !!getToken();
-            console.log("AuthInterceptor: 401 Unauthorized event received. Has token:", hasToken);
+
 
             if (!hasToken) {
                 // If there is no token locally, this is an unauthenticated visit; redirect to login directly without showing the renewal dialog.
@@ -50,15 +50,15 @@ export function AuthInterceptor({ children }: { children: React.ReactNode }) {
         }
 
         try {
-            console.log("AuthInterceptor: Attempting to extend session...");
+
             const data = await refreshToken();
-            console.log("AuthInterceptor: Refresh response data:", data);
+
 
             if (data.token && data.user) {
                 saveToken(data.token);
                 saveUser(data.user);
                 setIsOpen(false);
-                console.log("AuthInterceptor: Session extended successfully. Retrying failed requests...");
+
                 notifySessionUpdated();
             } else {
                 console.error("AuthInterceptor: Invalid response data format:", data);
@@ -73,7 +73,7 @@ export function AuthInterceptor({ children }: { children: React.ReactNode }) {
     };
 
     const handleLogout = () => {
-        console.log("AuthInterceptor: User chose to sign out. Clearing pending requests...");
+
         clearPendedRequests(); // Reject all waiting promises
         logout();
         window.location.href = "/login";

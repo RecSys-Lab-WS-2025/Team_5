@@ -97,7 +97,7 @@ let pendedQueue: PendedRequest[] = [];
  * Should be called when user explicitly logs out.
  */
 export function clearPendedRequests() {
-  console.log(`authFetch: Clearing ${pendedQueue.length} pended requests.`);
+
   pendedQueue.forEach(req => req.reject(new Error("Session terminated by user")));
   pendedQueue = [];
   isRefreshing = false;
