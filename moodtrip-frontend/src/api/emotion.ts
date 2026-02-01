@@ -40,7 +40,7 @@ export interface PoiRatingRequest {
 }
 
 export async function submitPoiRating(data: PoiRatingRequest): Promise<boolean> {
-  console.log("Submitting POI rating:", data, "to", `${BASE}/api/ratings`);
+
   try {
     const res = await authFetch(`${BASE}/api/ratings`, {
       method: "POST",
@@ -72,15 +72,15 @@ export interface PoiRating {
 
 export async function fetchPoiRating(poiId: string, emotion: string): Promise<PoiRating | null> {
   const url = `${BASE}/api/ratings?poiId=${encodeURIComponent(poiId)}&emotion=${encodeURIComponent(emotion)}`;
-  console.log("Fetching POI rating from:", url);
+
   try {
     const res = await authFetch(url);
     if (!res.ok) {
-      console.log("No existing rating found (status:", res.status, ")");
+
       return null;
     }
     const data = await res.json();
-    console.log("Fetched existing rating:", data);
+
     return data;
   } catch (err) {
     console.error("Failed to fetch POI rating error:", err);

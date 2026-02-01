@@ -65,7 +65,7 @@ export function HowItWorksDialog({ children }: { children: React.ReactNode }) {
                     <button
                         type="button"
                         className="w-full flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors cursor-pointer"
-                        onClick={() => window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank")} // Placeholder link
+                        onClick={() => window.open("https://youtu.be/l-z4m303NjQ", "_blank")} // Placeholder link
                     >
                         <PlayCircle className="w-4 h-4" />
                         Still confused? Watch a quick start video

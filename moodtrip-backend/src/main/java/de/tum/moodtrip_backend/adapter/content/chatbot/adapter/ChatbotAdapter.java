@@ -46,32 +46,6 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
 
     @Override
     public Mono<EmotionResult> extractEmotion(String historyAndNewMessage) {
-        if (historyAndNewMessage != null && historyAndNewMessage.toLowerCase().contains("mock123321")) {
-            String targetEmotionName = "JOYFUL";
-            if (historyAndNewMessage.contains(":")) {
-                String[] parts = historyAndNewMessage.split(":");
-                if (parts.length > 1) {
-                    targetEmotionName = parts[parts.length-1].trim();
-                }
-            }
-
-            Emotion emotion = Emotion.fromString(targetEmotionName);
-            
-            java.util.Map<Emotion, Double> scores = new java.util.HashMap<>();
-            for (Emotion e : Emotion.values()) {
-                scores.put(e, e == emotion ? 1.0 : 0.0);
-            }
-
-            EmotionResult mockResult = new EmotionResult(
-                    scores,
-                    emotion,
-                    1.0,
-                    "{THIS IS A MOCK RESPONSE} I noticed you are feeling " + emotion + "! If you answer a few questions, I can plan something wonderful for you.",
-                    true
-            );
-
-            return Mono.just(mockResult);
-        }
 
         Prompt prompt = new Prompt(
                 List.of(
@@ -102,9 +76,6 @@ public class ChatbotAdapter implements EmotionPort, ConversationTitlePort, Route
 
     @Override
     public Mono<String> generateConversationTitle(String transcript) {
-        if (transcript != null && transcript.toLowerCase().contains("mock123321")) {
-            return Mono.just("Mock Conversation Title");
-        }
 
         Prompt prompt = new Prompt(
                 List.of(
