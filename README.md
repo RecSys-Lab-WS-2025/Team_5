@@ -1,4 +1,20 @@
-# Moodtrip 
+# MoodTrip: An Emotion-Aware Tourism Recommender System
+
+MoodTrip is an intelligent itinerary planner that transforms your **emotional state** into personalized travel plans. Unlike traditional systems that focus only on location and budget, MoodTrip understands how you *feel* and curates a multi-day journey that matches your mood—whether you're stressed and need nature, or energized and seek adventure.
+
+## 🌟 Key Features
+
+*   **🧠 Emotion-Aware**: Uses Large Language Models (DeepSeek) to extract a normalized emotion vector from your natural conversation.
+*   **🗺️ Personalized Itineraries**: Generates 3 distinct route strategies to fit your needs:
+    *   **Balanced**: A mix of popularity and mood alignment.
+    *   **Your Picks**: Heavily biased towards your explicit category interests.
+    *   **Discovery**: Optimizes for diversity using MMR (Maximal Marginal Relevance) to help you explore the unknown.
+*   **🎵 Atmospheric Enrichment** (need authorization): Integrates with **Spotify** to generate accompanying playlists that match the route's emotional vibe.
+*   **📍 Trusted Data**: Built on **OpenStreetMap (OSM)** with strict quality filtering and Wikipedia enrichment.
+*   **📈 Continuous Learning**: Uses **Empirical Bayes Shrinkage** to rapidly adapt to your preferences from user feedback (ratings), solving the cold-start problem.
+
+---
+
 
 ##  Tech Stack
 
